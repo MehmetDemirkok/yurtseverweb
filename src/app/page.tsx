@@ -362,6 +362,13 @@ export default function Home() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [recordToDeleteId, setRecordToDeleteId] = useState<number | null>(null);
 
+  const [showExportFilterModal, setShowExportFilterModal] = useState<boolean>(false);
+  const [availableColumns, setAvailableColumns] = useState<{ key: keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret'; label: string }[]>([]);
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+
+  type ColumnKey = keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret';
+  type ColumnDef = { key: ColumnKey; label: string };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     setFormData((prevData) => ({
@@ -492,6 +499,14 @@ export default function Home() {
     });
   };
 
+  const calculateNumberOfNights = (girisTarihi: string, cikisTarihi: string): number => {
+    const start = new Date(girisTarihi);
+    const end = new Date(cikisTarihi);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
   const handlePuantajRaporu = () => {
     alert('Puantaj Raporu oluşturulacak.');
   };
@@ -499,39 +514,156 @@ export default function Home() {
   const handleImportExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      alert(`Dosya yüklendi: ${file.name}. İçe aktarma işlemi başlayacak.`);
-      // Gerçek dosya okuma ve işleme mantığı buraya eklenecek
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'array', raw: true, cellNF: false });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 });
+
+          if (!json || json.length < 2) {
+            alert('Excel dosyası boş veya beklenen formatta değil.');
+            return;
+          }
+
+          const headers = json[0]; // İlk satır başlıklar
+          let currentMaxId = records.length > 0 ? Math.max(...records.map(r => r.id)) : 0; // Mevcut en yüksek ID'yi al
+
+          const newRecords: AccommodationRecord[] = json.slice(1).map((row: any) => {
+            // Ensure headers are correctly mapped to row indices if json is array of arrays
+            // Assuming headers array contains the exact strings like 'Giriş Tarihi'
+            const getColumnValue = (headerName: string) => {
+              const headerIndex = headers.indexOf(headerName);
+              return headerIndex > -1 ? row[headerIndex] : undefined;
+            };
+
+            const girisTarihiRaw = getColumnValue('Giriş Tarihi');
+            const cikisTarihiRaw = getColumnValue('Çıkış Tarihi');
+
+            // Convert Excel date serial number to ISO string date
+            const excelDateToISO = (excelDateSerial: number | string): string => {
+              if (typeof excelDateSerial === 'number') {
+                return new Date(Math.round((excelDateSerial - 25569) * 86400 * 1000)).toISOString().split('T')[0];
+              } else if (typeof excelDateSerial === 'string' && excelDateSerial.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                return excelDateSerial; // Already in YYYY-MM-DD format
+              }
+              return '';
+            };
+
+            const girisTarihi = excelDateToISO(girisTarihiRaw);
+            const cikisTarihi = excelDateToISO(cikisTarihiRaw);
+
+            // Gecelik Ücreti işlerken formatlama yap
+            // Ensure the value is treated as a string, then remove thousands separators (if any) and replace comma with dot
+            const rawGecelikUcret = String(getColumnValue('Gecelik Ücret') || '0').replace(/\./g, '').replace(/,/g, '.');
+            const gecelikUcret = parseFloat(rawGecelikUcret);
+
+            const numberOfNights = girisTarihi && cikisTarihi ? calculateNumberOfNights(girisTarihi, cikisTarihi) : 0;
+            // Ensure toplamUcret is calculated correctly and is not NaN
+            const toplamUcret = isNaN(gecelikUcret * numberOfNights) ? 0 : gecelikUcret * numberOfNights;
+
+            return {
+              id: ++currentMaxId,
+              adiSoyadi: getColumnValue('Adı Soyadı') || '',
+              unvani: getColumnValue('Ünvanı') || '',
+              ulke: getColumnValue('Ülke') || '',
+              sehir: getColumnValue('Şehir') || '',
+              girisTarihi: girisTarihi,
+              cikisTarihi: cikisTarihi,
+              odaTipi: getColumnValue('Oda Tipi') || '',
+              gecelikUcret: gecelikUcret,
+              toplamUcret: toplamUcret,
+              organizasyonAdi: getColumnValue('Organizasyon Adı') || '',
+              otelAdi: getColumnValue('Otel Adı') || '',
+              kurumCari: getColumnValue('Kurum / Cari') || '',
+              numberOfNights: numberOfNights,
+            };
+          });
+
+          setRecords(prevRecords => [...prevRecords, ...newRecords]);
+          alert(`Başarıyla ${newRecords.length} kayıt içe aktarıldı.`);
+        } catch (error) {
+          console.error("Excel okuma hatası:", error);
+          alert('Excel dosyasını okurken bir hata oluştu.');
+        }
+      };
+
+      reader.onerror = () => {
+        alert('Dosya okuma başarısız oldu.');
+      };
+
+      reader.readAsArrayBuffer(file);
+    } else {
+      alert('Lütfen bir Excel dosyası seçin.');
     }
   };
 
   const handleExportExcel = () => {
-    const headers = ["ID", "Kurum / Cari", "Organizasyon Adı", "Otel Adı", "Adı Soyadı", "Unvanı", "Ülke", "Şehir", "Giriş Tarihi", "Çıkış Tarihi", "Oda Tipi", "Gece Sayısı", "Gecelik Ücret", "Toplam Ücret"];
+    const allColumns: ColumnDef[] = [
+      { key: 'id', label: 'ID' },
+      { key: 'kurumCari', label: 'Kurum / Cari' },
+      { key: 'organizasyonAdi', label: 'Organizasyon Adı' },
+      { key: 'otelAdi', label: 'Otel Adı' },
+      { key: 'adiSoyadi', label: 'Adı Soyadı' },
+      { key: 'unvani', label: 'Unvanı' },
+      { key: 'ulke', label: 'Ülke' },
+      { key: 'sehir', label: 'Şehir' },
+      { key: 'girisTarihi', label: 'Giriş Tarihi' },
+      { key: 'cikisTarihi', label: 'Çıkış Tarihi' },
+      { key: 'odaTipi', label: 'Oda Tipi' },
+      { key: 'numberOfNights', label: 'Gece Sayısı' },
+      { key: 'gecelikUcret', label: 'Gecelik Ücret' },
+      { key: 'toplamUcret', label: 'Toplam Ücret' },
+    ];
+    setAvailableColumns(allColumns);
+    setSelectedColumns(allColumns.map(col => col.key as string)); // Başlangıçta tüm sütunlar seçili gelsin
+    setShowExportFilterModal(true);
+  };
 
-    const data = records.map(record => [
-      record.id,
-      record.kurumCari,
-      record.organizasyonAdi,
-      record.otelAdi,
-      record.adiSoyadi,
-      record.unvani,
-      record.ulke,
-      record.sehir,
-      record.girisTarihi,
-      record.cikisTarihi,
-      record.odaTipi,
-      record.numberOfNights,
-      record.gecelikUcret,
-      record.toplamUcret,
-    ]);
+  const closeExportFilterModal = () => {
+    setShowExportFilterModal(false);
+  };
 
-    // Başlıkları ve veriyi birleştir
+  const handleColumnToggle = (columnKey: string) => {
+    setSelectedColumns(prevSelected =>
+      prevSelected.includes(columnKey)
+        ? prevSelected.filter(key => key !== columnKey)
+        : [...prevSelected, columnKey]
+    );
+  };
+
+  const handleExportFilteredExcel = () => {
+    const headers = availableColumns
+      .filter(col => selectedColumns.includes(col.key as string))
+      .map(col => col.label);
+
+    const data = records.map(record => {
+      const row: (string | number | undefined)[] = [];
+      selectedColumns.forEach(key => {
+        const recordKey = key as keyof AccommodationRecord;
+        let value: string | number | undefined = record[recordKey];
+
+        if (key === 'gecelikUcret' || key === 'toplamUcret') {
+          value = (record[recordKey] as number).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        } else if (key === 'id' || key === 'numberOfNights') {
+          value = record[recordKey] as number;
+        } else if (key === 'girisTarihi' || key === 'cikisTarihi') {
+          value = record[recordKey] as string;
+        }
+        row.push(value);
+      });
+      return row;
+    });
+
     const ws_data = [headers, ...data];
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Konaklama Kayıtları");
-
-    // XLSX dosyasını oluştur ve indir
-    XLSX.writeFile(wb, "konaklama_kayitlari.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Filtrelenmiş Kayıtlar");
+    XLSX.writeFile(wb, "filtrelenmis_konaklama_kayitlari.xlsx");
+    closeExportFilterModal();
   };
 
   const handleDownloadExcelTemplate = () => {
@@ -543,85 +675,155 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-6 bg-gray-100 text-gray-900">
-      <div className="w-full max-w-6xl mx-auto bg-white shadow-lg rounded-lg p-6 mb-8">
+    <main className="min-h-screen w-full bg-gray-100">
+      <div className="container-fluid px-4 py-6 mx-auto">
         <h1 className="text-3xl font-bold text-center mb-6 text-blue-800">Konaklama Kayıt Sistemi</h1>
 
-        {/* Kayıt Ekleme/Düzenleme Formu */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
-          <div>
-            <label htmlFor="kurumCari" className="block text-sm font-semibold text-gray-700 mb-1">Kurum / Cari</label>
-            <input type="text" id="kurumCari" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2.5 text-gray-900 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" value={formData.kurumCari} onChange={handleInputChange}/>
+        {/* Form Section */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-3">Konaklama Kaydı</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div>
+              <label htmlFor="kurumCari" className="block text-xs font-semibold text-gray-700 mb-1">Kurum / Cari</label>
+              <input
+                type="text"
+                id="kurumCari"
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.kurumCari}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label htmlFor="organizasyonAdi" className="block text-xs font-semibold text-gray-700 mb-1">Organizasyon Adı</label>
+              <input
+                type="text"
+                id="organizasyonAdi"
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.organizasyonAdi}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label htmlFor="otelAdi" className="block text-xs font-semibold text-gray-700 mb-1">Otel Adı</label>
+              <input
+                type="text"
+                id="otelAdi"
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.otelAdi}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label htmlFor="adiSoyadi" className="block text-xs font-semibold text-gray-700 mb-1">Adı Soyadı</label>
+              <input
+                type="text"
+                id="adiSoyadi"
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.adiSoyadi}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label htmlFor="unvani" className="block text-xs font-semibold text-gray-700 mb-1">Unvanı</label>
+              <input
+                type="text"
+                id="unvani"
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.unvani}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label htmlFor="ulke" className="block text-xs font-semibold text-gray-700 mb-1">Ülke</label>
+              <input
+                type="text"
+                id="ulke"
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.ulke}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label htmlFor="sehir" className="block text-xs font-semibold text-gray-700 mb-1">Şehir</label>
+              <input
+                type="text"
+                id="sehir"
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.sehir}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label htmlFor="girisTarihi" className="block text-xs font-semibold text-gray-700 mb-1">Giriş Tarihi</label>
+              <input
+                type="date"
+                id="girisTarihi"
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.girisTarihi}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label htmlFor="cikisTarihi" className="block text-xs font-semibold text-gray-700 mb-1">Çıkış Tarihi</label>
+              <input
+                type="date"
+                id="cikisTarihi"
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.cikisTarihi}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div>
+              <label htmlFor="odaTipi" className="block text-xs font-semibold text-gray-700 mb-1">Oda Tipi</label>
+              <select
+                id="odaTipi"
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm text-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                value={formData.odaTipi}
+                onChange={handleInputChange}
+              >
+                <option value="Single Oda">Single Oda</option>
+                <option value="Double Oda">Double Oda</option>
+                <option value="Suit Oda">Suit Oda</option>
+                <option value="King Oda">King Oda</option>
+                <option value="Queen Oda">Queen Oda</option>
+                <option value="Studio Oda">Studio Oda</option>
+                <option value="Deluxe Oda">Deluxe Oda</option>
+                <option value="Family Oda">Family Oda</option>
+                <option value="Connected Oda">Connected Oda</option>
+                <option value="Accessible Oda">Accessible Oda</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="gecelikUcret" className="block text-xs font-semibold text-gray-700 mb-1">Gecelik Ücret</label>
+              <input 
+                type="number" 
+                id="gecelikUcret" 
+                className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm text-gray-900 focus:ring-blue-500 focus:border-blue-500" 
+                value={formData.gecelikUcret} 
+                onChange={handleInputChange} 
+                step="1"
+                min="0"
+              />
+            </div>
           </div>
-          <div>
-            <label htmlFor="organizasyonAdi" className="block text-sm font-semibold text-gray-700 mb-1">Organizasyon Adı</label>
-            <input type="text" id="organizasyonAdi" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2.5 text-gray-900 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" value={formData.organizasyonAdi} onChange={handleInputChange}/>
-          </div>
-          <div>
-            <label htmlFor="otelAdi" className="block text-sm font-semibold text-gray-700 mb-1">Otel Adı</label>
-            <input type="text" id="otelAdi" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2.5 text-gray-900 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" value={formData.otelAdi} onChange={handleInputChange}/>
-          </div>
-          <div>
-            <label htmlFor="adiSoyadi" className="block text-sm font-semibold text-gray-700 mb-1">Adı Soyadı</label>
-            <input type="text" id="adiSoyadi" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2.5 text-gray-900 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" value={formData.adiSoyadi} onChange={handleInputChange}/>
-          </div>
-          <div>
-            <label htmlFor="unvani" className="block text-sm font-semibold text-gray-700 mb-1">Unvanı</label>
-            <input type="text" id="unvani" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2.5 text-gray-900 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" value={formData.unvani} onChange={handleInputChange}/>
-          </div>
-          <div>
-            <label htmlFor="ulke" className="block text-sm font-semibold text-gray-700 mb-1">Ülke</label>
-            <input type="text" id="ulke" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2.5 text-gray-900 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" value={formData.ulke} onChange={handleInputChange}/>
-          </div>
-          <div>
-            <label htmlFor="sehir" className="block text-sm font-semibold text-gray-700 mb-1">Şehir</label>
-            <input type="text" id="sehir" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2.5 text-gray-900 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" value={formData.sehir} onChange={handleInputChange}/>
-          </div>
-          <div>
-            <label htmlFor="girisTarihi" className="block text-sm font-semibold text-gray-700 mb-1">Giriş Tarihi</label>
-            <input type="date" id="girisTarihi" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2.5 text-gray-900 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" value={formData.girisTarihi} onChange={handleInputChange}/>
-          </div>
-          <div>
-            <label htmlFor="cikisTarihi" className="block text-sm font-semibold text-gray-700 mb-1">Çıkış Tarihi</label>
-            <input type="date" id="cikisTarihi" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2.5 text-gray-900 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" value={formData.cikisTarihi} onChange={handleInputChange}/>
-          </div>
-          <div>
-            <label htmlFor="odaTipi" className="block text-sm font-semibold text-gray-700 mb-1">Oda Tipi</label>
-            <select id="odaTipi" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2.5 text-gray-900 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" value={formData.odaTipi} onChange={handleInputChange}>
-              <option value="Single Oda">Single Oda</option>
-              <option value="Double Oda">Double Oda</option>
-              <option value="Suit Oda">Suit Oda</option>
-              <option value="King Oda">King Oda</option>
-              <option value="Queen Oda">Queen Oda</option>
-              <option value="Studio Oda">Studio Oda</option>
-              <option value="Deluxe Oda">Deluxe Oda</option>
-              <option value="Family Oda">Family Oda</option>
-              <option value="Connected Oda">Connected Oda</option>
-              <option value="Accessible Oda">Accessible Oda</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="gecelikUcret" className="block text-sm font-semibold text-gray-700 mb-1">Gecelik Ücret</label>
-            <input type="number" id="gecelikUcret" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2.5 text-gray-900 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out" value={formData.gecelikUcret.toFixed(2)} onChange={handleInputChange} step="any"/>
+
+          <div className="flex flex-wrap justify-center gap-3 mt-6">
+            <button
+              onClick={handleAddRecord}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-md shadow-md transition duration-150 ease-in-out"
+            >
+              Kaydı Ekle
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-3 mt-6">
-          <button
-            onClick={handleAddRecord}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-md shadow-md transition duration-150 ease-in-out"
-          >
-            Kaydı Ekle
-          </button>
-        </div>
-
-        {/* Yeni Eklenen Butonlar */}
-        <div className="flex flex-wrap justify-end gap-3 mt-6 mb-8">
+        {/* Action Buttons */}
+        <div className="flex flex-wrap justify-end gap-2 mb-4">
           <button
             onClick={handlePuantajRaporu}
-            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2.5 px-6 rounded-md shadow-md transition duration-150 ease-in-out flex items-center justify-center"
+            className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out flex items-center justify-center text-xs"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             Puantaj Raporu
           </button>
           <input
@@ -633,94 +835,88 @@ export default function Home() {
           />
           <button
             onClick={() => document.getElementById('excelImportInput')?.click()}
-            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2.5 px-6 rounded-md shadow-md transition duration-150 ease-in-out flex items-center justify-center"
+            className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out flex items-center justify-center text-xs"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
             Excel'den İçe Aktar
           </button>
           <button
             onClick={handleExportExcel}
-            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2.5 px-6 rounded-md shadow-md transition duration-150 ease-in-out flex items-center justify-center"
+            className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out flex items-center justify-center text-xs"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" transform="rotate(180 12 12)" /></svg>
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" transform="rotate(180 12 12)" /></svg>
             Excel'e Aktar
           </button>
           <button
             onClick={handleDownloadExcelTemplate}
-            className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2.5 px-6 rounded-md shadow-md transition duration-150 ease-in-out flex items-center justify-center"
+            className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out flex items-center justify-center text-xs"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
             Excel Şablonu İndir
           </button>
         </div>
 
-        {/* Kayıt Tablosu */}
-        <div className="mt-8 overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md overflow-hidden shadow-md table-fixed">
-            <thead>
-              <tr className="bg-gray-200 border-b border-gray-300">
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">ID</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">KURUM / CARİ</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">ORG. ADI</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">OTEL ADI</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">ADI SOYADI</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">ÜNVANI</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">ÜLKE</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">ŞEHİR</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">GİRİŞ</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">ÇIKIŞ</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">ODA</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">GECE</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">GECELİK ÜCRET</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">TOPLAM ÜCRET</th>
-                <th className="py-2 px-2 text-left text-xs font-semibold text-gray-700 break-words">İŞLEMLER</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map((record) => (
-                <tr key={record.id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.id}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.kurumCari}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.organizasyonAdi}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.otelAdi}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.adiSoyadi}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.unvani}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.ulke}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.sehir}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.girisTarihi}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.cikisTarihi}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.odaTipi}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.numberOfNights}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.gecelikUcret.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">{record.toplamUcret.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  <td className="py-2 px-2 text-xs text-gray-800 break-words">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleEditClick(record.id)}
-                        className="p-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white shadow-sm transition duration-150 ease-in-out flex items-center justify-center"
-                        title="Düzenle"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L15.232 5.232z" />
-                        </svg>
-                        <span className="ml-1 text-xs">Düzenle</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(record.id)}
-                        className="p-1.5 rounded-md bg-red-500 hover:bg-red-600 text-white shadow-sm transition duration-150 ease-in-out flex items-center justify-center"
-                        title="Sil"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        <span className="ml-1 text-xs">Sil</span>
-                      </button>
-                    </div>
-                  </td>
+        {/* Table Section */}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="w-full">
+            <table className="w-full table-auto text-xs">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">KURUM / CARİ</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ORG. ADI</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">OTEL ADI</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ADI SOYADI</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ÜNVANI</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ÜLKE</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ŞEHİR</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">GİRİŞ</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ÇIKIŞ</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">ODA</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">GECE</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">GECELİK ÜCRET</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">TOPLAM ÜCRET</th>
+                  <th className="px-3 py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider">İŞLEMLER</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {records.map((record) => (
+                  <tr key={record.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.id}</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.kurumCari}</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.organizasyonAdi}</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.otelAdi}</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.adiSoyadi}</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.unvani}</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.ulke}</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.sehir}</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.girisTarihi}</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.cikisTarihi}</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.odaTipi}</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.numberOfNights}</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.gecelikUcret.toLocaleString('tr-TR')} ₺</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">{record.toplamUcret.toLocaleString('tr-TR')} ₺</td>
+                    <td className="px-3 py-2 text-[11px] text-gray-900">
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => handleEditClick(record.id)}
+                          className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-1 px-2 rounded text-[10px] shadow-sm transition duration-150 ease-in-out"
+                        >
+                          Düzenle
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(record.id)}
+                          className="bg-red-500 hover:bg-red-600 text-white font-medium py-1 px-2 rounded text-[10px] shadow-sm transition duration-150 ease-in-out"
+                        >
+                          Sil
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -849,13 +1045,14 @@ export default function Home() {
               </div>
               <div className="flex flex-col">
                 <label htmlFor="gecelikUcret" className="mb-1 text-sm font-medium text-gray-300">Gecelik Ücret</label>
-                <input
-                  type="number"
-                  id="gecelikUcret"
-                  className="border border-gray-600 bg-gray-700 text-white p-2.5 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  value={formData.gecelikUcret.toFixed(2)}
-                  onChange={handleInputChange}
-                  step="any"
+                <input 
+                  type="number" 
+                  id="gecelikUcret" 
+                  className="border border-gray-600 bg-gray-700 text-white p-2.5 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+                  value={formData.gecelikUcret} 
+                  onChange={handleInputChange} 
+                  step="1"
+                  min="0"
                 />
               </div>
             </div>
@@ -896,6 +1093,51 @@ export default function Home() {
                 className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2.5 px-6 rounded-md shadow-md transition duration-150 ease-in-out"
               >
                 Hayır, İptal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export Filter Modal */}
+      {showExportFilterModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl p-6 max-w-lg border border-gray-700 relative">
+            <h2 className="text-2xl font-bold text-white mb-6 text-center">Excel'e Aktar - Sütun Seçimi</h2>
+            <button
+              onClick={closeExportFilterModal}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-200 transition duration-150 ease-in-out"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
+              {availableColumns.map(column => (
+                <div key={column.key} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id={`col-${column.key}`}
+                    checked={selectedColumns.includes(column.key as string)}
+                    onChange={() => handleColumnToggle(column.key as string)}
+                    className="form-checkbox h-5 w-5 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor={`col-${column.key}`} className="ml-2 text-gray-300 text-sm cursor-pointer">{column.label}</label>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={handleExportFilteredExcel}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-md shadow-md transition duration-150 ease-in-out"
+              >
+                Aktar
+              </button>
+              <button
+                onClick={closeExportFilterModal}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2.5 px-6 rounded-md shadow-md transition duration-150 ease-in-out"
+              >
+                İptal
               </button>
             </div>
           </div>
