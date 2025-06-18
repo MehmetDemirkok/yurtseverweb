@@ -366,6 +366,26 @@ export default function Home() {
   const [availableColumns, setAvailableColumns] = useState<{ key: keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret'; label: string }[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
 
+  const [showPuantajFilterModal, setShowPuantajFilterModal] = useState<boolean>(false);
+  const [puantajFilters, setPuantajFilters] = useState<{
+    kurumCari: string;
+    organizasyonAdi: string;
+    unvani: string;
+    baslangicTarihi: string;
+    bitisTarihi: string;
+  }>({
+    kurumCari: '',
+    organizasyonAdi: '',
+    unvani: '',
+    baslangicTarihi: '',
+    bitisTarihi: ''
+  });
+  
+  // Filtreleme için öneriler
+  const [kurumCariOptions, setKurumCariOptions] = useState<string[]>([]);
+  const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
+  const [unvanOptions, setUnvanOptions] = useState<string[]>([]);
+
   type ColumnKey = keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret';
   type ColumnDef = { key: ColumnKey; label: string };
 
@@ -508,7 +528,290 @@ export default function Home() {
   };
 
   const handlePuantajRaporu = () => {
-    alert('Puantaj Raporu oluşturulacak.');
+    // Benzersiz kurum/cari, organizasyon adı ve ünvan seçeneklerini oluştur
+    const uniqueKurumCari = Array.from(new Set(records.map(record => record.kurumCari).filter(Boolean) as string[]));
+    const uniqueOrganizasyon = Array.from(new Set(records.map(record => record.organizasyonAdi).filter(Boolean) as string[]));
+    const uniqueUnvan = Array.from(new Set(records.map(record => record.unvani)));
+    
+    setKurumCariOptions(uniqueKurumCari);
+    setOrganizasyonOptions(uniqueOrganizasyon);
+    setUnvanOptions(uniqueUnvan);
+    
+    // Varsayılan tarih aralığını belirle (tüm kayıtları kapsayacak şekilde)
+    if (records.length > 0) {
+      // En erken giriş tarihi ve en geç çıkış tarihini bul
+      const allDates = records.flatMap(record => [new Date(record.girisTarihi), new Date(record.cikisTarihi)]);
+      const minDate = new Date(Math.min(...allDates.map(date => date.getTime())));
+      const maxDate = new Date(Math.max(...allDates.map(date => date.getTime())));
+      
+      // Tarihleri YYYY-MM-DD formatına çevir
+      const minDateStr = minDate.toISOString().split('T')[0];
+      const maxDateStr = maxDate.toISOString().split('T')[0];
+      
+      // Filtreleme değerlerini güncelle
+      setPuantajFilters(prev => ({
+        ...prev,
+        baslangicTarihi: minDateStr,
+        bitisTarihi: maxDateStr
+      }));
+    }
+    
+    // Filtreleme modalını aç
+    setShowPuantajFilterModal(true);
+  };
+
+  const closePuantajFilterModal = () => {
+    setShowPuantajFilterModal(false);
+  };
+
+  const handlePuantajFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setPuantajFilters(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+  
+  const getFilteredOptions = (type: 'kurumCari' | 'organizasyonAdi' | 'unvani') => {
+    const searchValue = puantajFilters[type].toLowerCase();
+    let options: string[] = [];
+    
+    switch(type) {
+      case 'kurumCari':
+        options = kurumCariOptions;
+        break;
+      case 'organizasyonAdi':
+        options = organizasyonOptions;
+        break;
+      case 'unvani':
+        options = unvanOptions;
+        break;
+    }
+    
+    if (!searchValue) return options;
+    return options.filter(option => option.toLowerCase().includes(searchValue));
+  };
+  
+  const handleOptionSelect = (type: 'kurumCari' | 'organizasyonAdi' | 'unvani', value: string) => {
+    setPuantajFilters(prev => ({
+      ...prev,
+      [type]: value
+    }));
+  };
+
+  const generatePuantajRaporu = () => {
+    // Filtreleme modalını kapat
+    setShowPuantajFilterModal(false);
+
+    // Kayıtları filtrele
+    let filteredRecords = [...records];
+    
+    // Metin bazlı filtreler
+    if (puantajFilters.kurumCari) {
+      filteredRecords = filteredRecords.filter(record => 
+        record.kurumCari?.toLowerCase().includes(puantajFilters.kurumCari.toLowerCase())
+      );
+    }
+    
+    if (puantajFilters.organizasyonAdi) {
+      filteredRecords = filteredRecords.filter(record => 
+        record.organizasyonAdi?.toLowerCase().includes(puantajFilters.organizasyonAdi.toLowerCase())
+      );
+    }
+    
+    if (puantajFilters.unvani) {
+      filteredRecords = filteredRecords.filter(record => 
+        record.unvani.toLowerCase().includes(puantajFilters.unvani.toLowerCase())
+      );
+    }
+    
+    // Tarih aralığı filtresi
+    if (puantajFilters.baslangicTarihi && puantajFilters.bitisTarihi) {
+      const baslangicDate = new Date(puantajFilters.baslangicTarihi);
+      const bitisDate = new Date(puantajFilters.bitisTarihi);
+      
+      // Tarih aralığında en az bir gün kesişen kayıtları filtrele
+      filteredRecords = filteredRecords.filter(record => {
+        const recordBaslangic = new Date(record.girisTarihi);
+        const recordBitis = new Date(record.cikisTarihi);
+        
+        // İki tarih aralığının kesişimi var mı kontrol et
+        return (
+          (recordBaslangic <= bitisDate && recordBitis >= baslangicDate)
+        );
+      });
+    }
+
+    // Tüm kayıtları tarih aralıklarına göre düzenle
+    const sortedRecords = [...filteredRecords].sort((a, b) => {
+      // Önce giriş tarihine göre sırala
+      const dateA = new Date(a.girisTarihi).getTime();
+      const dateB = new Date(b.girisTarihi).getTime();
+      return dateA - dateB;
+    });
+
+    // Tüm tarihleri bul (benzersiz giriş ve çıkış tarihleri)
+    const allDatesSet = new Set<string>();
+    sortedRecords.forEach(record => {
+      // Giriş ve çıkış tarihleri arasındaki tün günleri ekle
+      const startDate = new Date(record.girisTarihi);
+      const endDate = new Date(record.cikisTarihi);
+      
+      // Her gün için döngü
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        allDatesSet.add(currentDate.toISOString().split('T')[0]); // YYYY-MM-DD formatında ekle
+        currentDate.setDate(currentDate.getDate() + 1); // Bir sonraki güne geç
+      }
+    });
+
+    // Tarihleri sırala
+    const allDates = Array.from(allDatesSet).sort();
+
+    // Başlık satırını oluştur (İsim, Unvan, Kurum/Cari, Otel ve tüm tarihler)
+    const headers = [
+      "Adı Soyadı", 
+      "Unvanı", 
+      "Kurum / Cari", 
+      "Organizasyon Adı", 
+      "Otel Adı", 
+      "Oda Tipi", 
+      "Gecelik Ücret", 
+      "Toplam Ücret", 
+      ...allDates.map(date => {
+        // Tarihi daha okunabilir formata çevir (örn: 01.07.2024)
+        const [year, month, day] = date.split('-');
+        return `${day}.${month}.${year}`;
+      })
+    ];
+
+    // Her kişi için puantaj verilerini oluştur
+    const data = sortedRecords.map(record => {
+      const row: (string | number | boolean)[] = [
+        record.adiSoyadi,
+        record.unvani,
+        record.kurumCari || "",
+        record.organizasyonAdi || "",
+        record.otelAdi || "",
+        record.odaTipi,
+        record.gecelikUcret.toLocaleString('tr-TR'),
+        record.toplamUcret.toLocaleString('tr-TR')
+      ];
+
+      // Her tarih için kişinin o tarihte konaklamada olup olmadığını kontrol et
+      allDates.forEach(date => {
+        const checkDate = new Date(date);
+        const startDate = new Date(record.girisTarihi);
+        const endDate = new Date(record.cikisTarihi);
+        
+        // Eğer kişi o tarihte konaklamadaysa "X" işareti koy, değilse boş bırak
+        if (checkDate >= startDate && checkDate <= endDate) {
+          row.push("X");
+        } else {
+          row.push("");
+        }
+      });
+
+      return row;
+    });
+
+    // Excel dosyasını oluştur
+    const ws_data = [headers, ...data];
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    
+    // Sütun genişliklerini ayarla
+    const wscols = [
+      { wch: 20 }, // Adı Soyadı
+      { wch: 15 }, // Unvanı
+      { wch: 20 }, // Kurum / Cari
+      { wch: 25 }, // Organizasyon Adı
+      { wch: 20 }, // Otel Adı
+      { wch: 15 }, // Oda Tipi
+      { wch: 15 }, // Gecelik Ücret
+      { wch: 15 }, // Toplam Ücret
+      ...allDates.map(() => ({ wch: 10 })) // Tarihler için genişlik
+    ];
+    ws['!cols'] = wscols;
+    
+    // Tüm hücreleri biçimlendir
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    
+    // Başlık satırını biçimlendir (kalın yazı, arka plan rengi)
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const headerCell = XLSX.utils.encode_cell({ r: 0, c: C });
+      if (!ws[headerCell]) continue;
+      if (!ws[headerCell].s) ws[headerCell].s = {};
+      
+      // Başlık hücresi stili (kalın, ortalanmış, arka plan rengi)
+      ws[headerCell].s = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "4472C4" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thin" },
+          bottom: { style: "thin" },
+          left: { style: "thin" },
+          right: { style: "thin" }
+        }
+      };
+    }
+    
+    // Veri hücrelerini biçimlendir
+    for (let R = 1; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cell = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cell]) continue;
+        if (!ws[cell].s) ws[cell].s = {};
+        
+        // Tarih sütunları için özel stil (8. sütundan sonrası)
+        if (C >= 8) {
+          if (ws[cell].v === "X") {
+            // Konaklama olan günler için arka plan rengi
+            ws[cell].s = {
+              fill: { fgColor: { rgb: "C6E0B4" } },
+              alignment: { horizontal: "center" },
+              border: {
+                top: { style: "thin" },
+                bottom: { style: "thin" },
+                left: { style: "thin" },
+                right: { style: "thin" }
+              }
+            };
+          } else {
+            // Boş günler için stil
+            ws[cell].s = {
+              alignment: { horizontal: "center" },
+              border: {
+                top: { style: "thin" },
+                bottom: { style: "thin" },
+                left: { style: "thin" },
+                right: { style: "thin" }
+              }
+            };
+          }
+        } else {
+          // Normal veri hücreleri için stil
+          ws[cell].s = {
+            border: {
+              top: { style: "thin" },
+              bottom: { style: "thin" },
+              left: { style: "thin" },
+              right: { style: "thin" }
+            },
+            alignment: { vertical: "center" }
+          };
+          
+          // Sayısal değerler için sağa hizalama
+          if (C === 6 || C === 7) { // Gecelik Ücret ve Toplam Ücret sütunları
+            ws[cell].s.alignment = { horizontal: "right", vertical: "center" };
+          }
+        }
+      }
+    }
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Puantaj Raporu");
+    XLSX.writeFile(wb, "konaklama_puantaj_raporu.xlsx");
   };
 
   const handleImportExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -522,7 +825,7 @@ export default function Home() {
           const workbook = XLSX.read(data, { type: 'array', raw: true, cellNF: false });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const json = XLSX.utils.sheet_to_json<any>(worksheet, { header: 1 });
+          const json = XLSX.utils.sheet_to_json<(string | number | null)[]>(worksheet, { header: 1 });
 
           if (!json || json.length < 2) {
             alert('Excel dosyası boş veya beklenen formatta değil.');
@@ -532,22 +835,20 @@ export default function Home() {
           const headers = json[0]; // İlk satır başlıklar
           let currentMaxId = records.length > 0 ? Math.max(...records.map(r => r.id)) : 0; // Mevcut en yüksek ID'yi al
 
-          const newRecords: AccommodationRecord[] = json.slice(1).map((row: any) => {
+          const newRecords: AccommodationRecord[] = json.slice(1).map((row: (string | number | null)[]) => {
             // Ensure headers are correctly mapped to row indices if json is array of arrays
             // Assuming headers array contains the exact strings like 'Giriş Tarihi'
-            const getColumnValue = (headerName: string) => {
-              const headerIndex = headers.indexOf(headerName);
-              return headerIndex > -1 ? row[headerIndex] : undefined;
+            const getColumnValue = (headerName: string): string => {
+              const headerIndex = (headers as string[]).indexOf(headerName);
+              return headerIndex > -1 ? String(row[headerIndex] || '') : '';
             };
 
             const girisTarihiRaw = getColumnValue('Giriş Tarihi');
             const cikisTarihiRaw = getColumnValue('Çıkış Tarihi');
 
             // Convert Excel date serial number to ISO string date
-            const excelDateToISO = (excelDateSerial: number | string): string => {
-              if (typeof excelDateSerial === 'number') {
-                return new Date(Math.round((excelDateSerial - 25569) * 86400 * 1000)).toISOString().split('T')[0];
-              } else if (typeof excelDateSerial === 'string' && excelDateSerial.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            const excelDateToISO = (excelDateSerial: string): string => {
+              if (excelDateSerial.match(/^\d{4}-\d{2}-\d{2}$/)) {
                 return excelDateSerial; // Already in YYYY-MM-DD format
               }
               return '';
@@ -567,18 +868,18 @@ export default function Home() {
 
             return {
               id: ++currentMaxId,
-              adiSoyadi: getColumnValue('Adı Soyadı') || '',
-              unvani: getColumnValue('Ünvanı') || '',
-              ulke: getColumnValue('Ülke') || '',
-              sehir: getColumnValue('Şehir') || '',
+              adiSoyadi: getColumnValue('Adı Soyadı'),
+              unvani: getColumnValue('Ünvanı'),
+              ulke: getColumnValue('Ülke'),
+              sehir: getColumnValue('Şehir'),
               girisTarihi: girisTarihi,
               cikisTarihi: cikisTarihi,
-              odaTipi: getColumnValue('Oda Tipi') || '',
+              odaTipi: getColumnValue('Oda Tipi'),
               gecelikUcret: gecelikUcret,
               toplamUcret: toplamUcret,
-              organizasyonAdi: getColumnValue('Organizasyon Adı') || '',
-              otelAdi: getColumnValue('Otel Adı') || '',
-              kurumCari: getColumnValue('Kurum / Cari') || '',
+              organizasyonAdi: getColumnValue('Organizasyon Adı'),
+              otelAdi: getColumnValue('Otel Adı'),
+              kurumCari: getColumnValue('Kurum / Cari'),
               numberOfNights: numberOfNights,
             };
           });
@@ -668,7 +969,20 @@ export default function Home() {
 
   const handleDownloadExcelTemplate = () => {
     const headers = ["Kurum / Cari", "Organizasyon Adı", "Otel Adı", "Adı Soyadı", "Unvanı", "Ülke", "Şehir", "Giriş Tarihi", "Çıkış Tarihi", "Oda Tipi", "Gecelik Ücret"];
-    const ws = XLSX.utils.aoa_to_sheet([headers]);
+    
+    // Örnek veriler ekleniyor
+    const exampleData = [
+      ["ABC Şirketi", "Yıllık Toplantı", "Grand Hotel", "Ahmet Yılmaz", "Genel Müdür", "Türkiye", "İstanbul", "2024-06-15", "2024-06-18", "Double Oda", "2500"],
+      ["XYZ Holding", "Eğitim Semineri", "Seaside Resort", "Ayşe Kaya", "Eğitim Uzmanı", "Türkiye", "Antalya", "2024-07-10", "2024-07-15", "Single Oda", "1800"]
+    ];
+    
+    const ws_data = [headers, ...exampleData];
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    
+    // Sütun genişliklerini ayarla
+    const wscols = headers.map(() => ({ wch: 20 })); // Her sütun için 20 karakter genişlik
+    ws['!cols'] = wscols;
+    
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Şablon");
     XLSX.writeFile(wb, "konaklama_sablonu.xlsx");
@@ -838,14 +1152,14 @@ export default function Home() {
             className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out flex items-center justify-center text-xs"
           >
             <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Excel'den İçe Aktar
+            Excel&apos;den İçe Aktar
           </button>
           <button
             onClick={handleExportExcel}
             className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md shadow-md transition duration-150 ease-in-out flex items-center justify-center text-xs"
           >
             <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" transform="rotate(180 12 12)" /></svg>
-            Excel'e Aktar
+            Excel&apos;e Aktar
           </button>
           <button
             onClick={handleDownloadExcelTemplate}
@@ -1103,7 +1417,7 @@ export default function Home() {
       {showExportFilterModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg shadow-xl p-6 max-w-lg border border-gray-700 relative">
-            <h2 className="text-2xl font-bold text-white mb-6 text-center">Excel'e Aktar - Sütun Seçimi</h2>
+            <h2 className="text-2xl font-bold text-white mb-6 text-center">Excel&apos;e Aktar - Sütun Seçimi</h2>
             <button
               onClick={closeExportFilterModal}
               className="absolute top-3 right-3 text-gray-400 hover:text-gray-200 transition duration-150 ease-in-out"
@@ -1139,6 +1453,199 @@ export default function Home() {
               >
                 İptal
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Puantaj Filter Modal */}
+      {showPuantajFilterModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl p-6 max-w-xl w-full border border-gray-700 relative">
+            <h2 className="text-2xl font-bold text-white mb-6 text-center">Puantaj Raporu Filtreleme</h2>
+            <button
+              onClick={closePuantajFilterModal}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-200 transition duration-150 ease-in-out"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+
+            <div className="space-y-6 mb-6">
+              {/* Tarih Aralığı Filtreleme */}
+              <div className="bg-gray-700 p-4 rounded-md border border-gray-600 mb-4">
+                <h3 className="text-white font-medium mb-3 text-center">Tarih Aralığı</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <label htmlFor="baslangicTarihi" className="mb-1 text-sm font-medium text-gray-300">Başlangıç Tarihi</label>
+                    <input
+                      type="date"
+                      id="baslangicTarihi"
+                      className="border border-gray-600 bg-gray-700 text-white p-2.5 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      value={puantajFilters.baslangicTarihi}
+                      onChange={handlePuantajFilterChange}
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label htmlFor="bitisTarihi" className="mb-1 text-sm font-medium text-gray-300">Bitiş Tarihi</label>
+                    <input
+                      type="date"
+                      id="bitisTarihi"
+                      className="border border-gray-600 bg-gray-700 text-white p-2.5 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                      value={puantajFilters.bitisTarihi}
+                      onChange={handlePuantajFilterChange}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Kurum/Cari Filtreleme */}
+              <div className="flex flex-col relative">
+                <label htmlFor="kurumCari" className="mb-1 text-sm font-medium text-gray-300">Kurum / Cari</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="kurumCari"
+                    className="border border-gray-600 bg-gray-700 text-white p-2.5 rounded-md focus:ring-blue-500 focus:border-blue-500 w-full pr-8"
+                    value={puantajFilters.kurumCari}
+                    onChange={handlePuantajFilterChange}
+                    placeholder="Kurum/Cari adına göre filtrele"
+                    autoComplete="off"
+                  />
+                  {puantajFilters.kurumCari && (
+                    <button 
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                      onClick={() => handleOptionSelect('kurumCari', '')}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {puantajFilters.kurumCari && getFilteredOptions('kurumCari').length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-gray-700 border border-gray-600 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto">
+                    {getFilteredOptions('kurumCari').map((option, index) => (
+                      <div 
+                        key={index} 
+                        className="p-2 hover:bg-gray-600 cursor-pointer text-white text-sm"
+                        onClick={() => handleOptionSelect('kurumCari', option)}
+                      >
+                        {option}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Organizasyon Adı Filtreleme */}
+              <div className="flex flex-col relative">
+                <label htmlFor="organizasyonAdi" className="mb-1 text-sm font-medium text-gray-300">Organizasyon Adı</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="organizasyonAdi"
+                    className="border border-gray-600 bg-gray-700 text-white p-2.5 rounded-md focus:ring-blue-500 focus:border-blue-500 w-full pr-8"
+                    value={puantajFilters.organizasyonAdi}
+                    onChange={handlePuantajFilterChange}
+                    placeholder="Organizasyon adına göre filtrele"
+                    autoComplete="off"
+                  />
+                  {puantajFilters.organizasyonAdi && (
+                    <button 
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                      onClick={() => handleOptionSelect('organizasyonAdi', '')}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {puantajFilters.organizasyonAdi && getFilteredOptions('organizasyonAdi').length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-gray-700 border border-gray-600 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto">
+                    {getFilteredOptions('organizasyonAdi').map((option, index) => (
+                      <div 
+                        key={index} 
+                        className="p-2 hover:bg-gray-600 cursor-pointer text-white text-sm"
+                        onClick={() => handleOptionSelect('organizasyonAdi', option)}
+                      >
+                        {option}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* Ünvan Filtreleme */}
+              <div className="flex flex-col relative">
+                <label htmlFor="unvani" className="mb-1 text-sm font-medium text-gray-300">Ünvan</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    id="unvani"
+                    className="border border-gray-600 bg-gray-700 text-white p-2.5 rounded-md focus:ring-blue-500 focus:border-blue-500 w-full pr-8"
+                    value={puantajFilters.unvani}
+                    onChange={handlePuantajFilterChange}
+                    placeholder="Ünvana göre filtrele"
+                    autoComplete="off"
+                  />
+                  {puantajFilters.unvani && (
+                    <button 
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                      onClick={() => handleOptionSelect('unvani', '')}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {puantajFilters.unvani && getFilteredOptions('unvani').length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-gray-700 border border-gray-600 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto">
+                    {getFilteredOptions('unvani').map((option, index) => (
+                      <div 
+                        key={index} 
+                        className="p-2 hover:bg-gray-600 cursor-pointer text-white text-sm"
+                        onClick={() => handleOptionSelect('unvani', option)}
+                      >
+                        {option}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-between mt-6">
+              <button
+                onClick={() => {
+                  // Tüm filtreleri temizle
+                  setPuantajFilters({
+                    kurumCari: '',
+                    organizasyonAdi: '',
+                    unvani: '',
+                    baslangicTarihi: puantajFilters.baslangicTarihi,
+                    bitisTarihi: puantajFilters.bitisTarihi
+                  });
+                }}
+                className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2.5 px-6 rounded-md shadow-md transition duration-150 ease-in-out"
+              >
+                Filtreleri Temizle
+              </button>
+              <div className="flex space-x-3">
+                <button
+                  onClick={closePuantajFilterModal}
+                  className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2.5 px-6 rounded-md shadow-md transition duration-150 ease-in-out"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={generatePuantajRaporu}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-md shadow-md transition duration-150 ease-in-out"
+                >
+                  Raporu Oluştur
+                </button>
+              </div>
             </div>
           </div>
         </div>
