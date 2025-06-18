@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
+import Statistics from './components/Statistics';
 
 interface AccommodationRecord {
   id: number;
@@ -989,7 +990,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen w-full bg-gray-100">
+    <main className="min-h-screen p-8">
       <div className="container-fluid px-4 py-6 mx-auto">
         <h1 className="text-3xl font-bold text-center mb-6 text-blue-800">Konaklama Kayıt Sistemi</h1>
 
@@ -1650,6 +1651,9 @@ export default function Home() {
           </div>
         </div>
       )}
+      
+      {/* İstatistikler */}
+      <Statistics records={records} />
     </main>
   );
 }
