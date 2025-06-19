@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import Statistics from './components/Statistics';
+import AccommodationFormModal from './components/AccommodationFormModal';
 
 interface AccommodationRecord {
   id: number;
@@ -430,6 +431,8 @@ export default function Home() {
   const [kurumCariOptions, setKurumCariOptions] = useState<string[]>([]);
   const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
   const [unvanOptions, setUnvanOptions] = useState<string[]>([]);
+
+  const [showAccommodationModal, setShowAccommodationModal] = useState(false);
 
   type ColumnKey = keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret';
   type ColumnDef = { key: ColumnKey; label: string };
@@ -1067,8 +1070,12 @@ export default function Home() {
     return `${day}.${month}.${year}`;
   }
 
+  const handleAccommodationCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, faturaEdildi: e.target.checked }));
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <>
       {/* Modern Header with Logo */}
       <header className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 shadow-2xl">
         <div className="absolute inset-0 bg-black opacity-10"></div>
@@ -1093,212 +1100,25 @@ export default function Home() {
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-white opacity-10 rounded-full"></div>
         </div>
       </header>
-
+      {/* ... existing code ... */}
       <main className="container mx-auto px-6 py-8">
         {/* Statistics Section */}
         <div className="mb-8 animate-slide-in">
           <Statistics records={records} />
         </div>
 
-        {/* Form Section */}
-        <div className="card p-8 mb-8 animate-scale-in">
-          <div className="flex items-center mb-6">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-4">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800">Yeni Konaklama Kaydı</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <div className="space-y-2">
-              <label htmlFor="kurumCari" className="block text-sm font-semibold text-gray-700">
-                Kurum / Cari
-              </label>
-              <input
-                type="text"
-                id="kurumCari"
-                className="input"
-                value={formData.kurumCari}
-                onChange={handleInputChange}
-                placeholder="Kurum adını girin"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="organizasyonAdi" className="block text-sm font-semibold text-gray-700">
-                Organizasyon Adı
-              </label>
-              <input
-                type="text"
-                id="organizasyonAdi"
-                className="input"
-                value={formData.organizasyonAdi}
-                onChange={handleInputChange}
-                placeholder="Organizasyon adını girin"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="otelAdi" className="block text-sm font-semibold text-gray-700">
-                Otel Adı
-              </label>
-              <input
-                type="text"
-                id="otelAdi"
-                className="input"
-                value={formData.otelAdi}
-                onChange={handleInputChange}
-                placeholder="Otel adını girin"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="adiSoyadi" className="block text-sm font-semibold text-gray-700">
-                Adı Soyadı
-              </label>
-              <input
-                type="text"
-                id="adiSoyadi"
-                className="input"
-                value={formData.adiSoyadi}
-                onChange={handleInputChange}
-                placeholder="Kişi adını girin"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="unvani" className="block text-sm font-semibold text-gray-700">
-                Unvanı
-              </label>
-              <input
-                type="text"
-                id="unvani"
-                className="input"
-                value={formData.unvani}
-                onChange={handleInputChange}
-                placeholder="Unvanını girin"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="ulke" className="block text-sm font-semibold text-gray-700">
-                Ülke
-              </label>
-              <input
-                type="text"
-                id="ulke"
-                className="input"
-                value={formData.ulke}
-                onChange={handleInputChange}
-                placeholder="Ülke adını girin"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="sehir" className="block text-sm font-semibold text-gray-700">
-                Şehir
-              </label>
-              <input
-                type="text"
-                id="sehir"
-                className="input"
-                value={formData.sehir}
-                onChange={handleInputChange}
-                placeholder="Şehir adını girin"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="girisTarihi" className="block text-sm font-semibold text-gray-700">
-                Giriş Tarihi
-              </label>
-              <input
-                type="date"
-                id="girisTarihi"
-                className="input"
-                value={formData.girisTarihi}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="cikisTarihi" className="block text-sm font-semibold text-gray-700">
-                Çıkış Tarihi
-              </label>
-              <input
-                type="date"
-                id="cikisTarihi"
-                className="input"
-                value={formData.cikisTarihi}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="odaTipi" className="block text-sm font-semibold text-gray-700">
-                Oda Tipi
-              </label>
-              <select
-                id="odaTipi"
-                className="input"
-                value={formData.odaTipi}
-                onChange={handleInputChange}
-              >
-                <option value="Single Oda">Single Oda</option>
-                <option value="Double Oda">Double Oda</option>
-                <option value="Triple Oda">Triple Oda</option>
-                <option value="Suit Oda">Suit Oda</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="konaklamaTipi" className="block text-sm font-semibold text-gray-700">Konaklama Tipi</label>
-              <select
-                id="konaklamaTipi"
-                className="input"
-                value={formData.konaklamaTipi}
-                onChange={handleInputChange}
-              >
-                <option value="BB">BB</option>
-                <option value="HB">HB</option>
-                <option value="FB">FB</option>
-                <option value="UHD">UHD</option>
-              </select>
-            </div>
-            <div className="space-y-2 flex items-center mt-2">
-              <input
-                id="faturaEdildi"
-                type="checkbox"
-                checked={formData.faturaEdildi}
-                onChange={e => setFormData(prev => ({ ...prev, faturaEdildi: e.target.checked }))}
-                className="mr-2 w-5 h-5 accent-blue-600"
-              />
-              <label htmlFor="faturaEdildi" className="text-sm font-semibold text-gray-700">Fatura Edildi mi?</label>
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="gecelikUcret" className="block text-sm font-semibold text-gray-700">
-                Gecelik Ücret (₺)
-              </label>
-              <input 
-                type="number" 
-                id="gecelikUcret" 
-                className="input" 
-                value={formData.gecelikUcret} 
-                onChange={handleInputChange} 
-                step="1"
-                min="0"
-                placeholder="0"
-              />
-            </div>
-          </div>
+        {/* Action Buttons - Hepsi aynı hizada */}
+        <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mb-8">
+          <button
+            onClick={() => setShowAccommodationModal(true)}
+            className="btn btn-primary text-lg px-8 py-3 flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Yeni Konaklama Kaydı Oluştur
+          </button>
 
-          <div className="flex justify-center mt-8">
-            <button
-              onClick={handleAddRecord}
-              className="btn btn-primary text-lg px-8 py-3"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Kaydı Ekle
-            </button>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-wrap justify-end gap-3 mb-6">
           <button
             onClick={handlePuantajRaporu}
             className="btn btn-secondary"
@@ -1322,7 +1142,7 @@ export default function Home() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Excel&apos;den İçe Aktar
+            Excel'den İçe Aktar
           </button>
           <button
             onClick={handleExportExcel}
@@ -1331,18 +1151,31 @@ export default function Home() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" transform="rotate(180 12 12)" />
             </svg>
-            Excel&apos;e Aktar
+            Excel'e Aktar
           </button>
           <button
             onClick={handleDownloadExcelTemplate}
             className="btn btn-warning"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             Excel Şablonu İndir
           </button>
         </div>
+
+        {/* Modal */}
+        <AccommodationFormModal
+          isOpen={showAccommodationModal}
+          onClose={() => setShowAccommodationModal(false)}
+          formData={formData}
+          onChange={handleInputChange}
+          onCheckboxChange={handleAccommodationCheckbox}
+          onSubmit={() => {
+            handleAddRecord();
+            setShowAccommodationModal(false);
+          }}
+        />
 
         {/* Table Section */}
         <div className="card overflow-hidden">
@@ -1982,6 +1815,6 @@ export default function Home() {
           </div>
         )}
       </main>
-    </div>
+    </>
   );
 }
