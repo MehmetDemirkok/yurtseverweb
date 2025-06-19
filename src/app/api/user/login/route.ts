@@ -11,7 +11,14 @@ export async function POST(request: Request) {
   if (!email || !password) {
     return NextResponse.json({ success: false, error: 'Kullanıcı adı ve şifre zorunlu.' }, { status: 400 });
   }
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email },
+        { name: email }
+      ]
+    }
+  });
   if (!user || user.password !== password) {
     return NextResponse.json({ success: false, error: 'Kullanıcı adı veya şifre hatalı.' }, { status: 401 });
   }
