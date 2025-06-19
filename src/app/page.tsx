@@ -13,6 +13,8 @@ interface AccommodationRecord {
   girisTarihi: string;
   cikisTarihi: string;
   odaTipi: string;
+  konaklamaTipi: "BB" | "HB" | "FB" | "UHD";
+  faturaEdildi: boolean;
   gecelikUcret: number;
   toplamUcret: number;
   organizasyonAdi?: string;
@@ -32,6 +34,8 @@ export default function Home() {
       girisTarihi: "2024-07-01",
       cikisTarihi: "2024-07-08",
       odaTipi: "Double Oda",
+      konaklamaTipi: "BB",
+      faturaEdildi: true,
       gecelikUcret: 1800,
       toplamUcret: 12600,
       organizasyonAdi: "Tekno Ltd.",
@@ -48,6 +52,8 @@ export default function Home() {
       girisTarihi: "2024-07-10",
       cikisTarihi: "2024-07-13",
       odaTipi: "Single Oda",
+      konaklamaTipi: "HB",
+      faturaEdildi: false,
       gecelikUcret: 1500,
       toplamUcret: 4500,
       organizasyonAdi: "Dijital A.Ş.",
@@ -64,6 +70,8 @@ export default function Home() {
       girisTarihi: "2024-07-15",
       cikisTarihi: "2024-07-19",
       odaTipi: "Triple Oda",
+      konaklamaTipi: "FB",
+      faturaEdildi: true,
       gecelikUcret: 2200,
       toplamUcret: 8800,
       organizasyonAdi: "Sanat Stüdyosu",
@@ -80,6 +88,8 @@ export default function Home() {
       girisTarihi: "2024-08-01",
       cikisTarihi: "2024-08-05",
       odaTipi: "Suit Oda",
+      konaklamaTipi: "UHD",
+      faturaEdildi: false,
       gecelikUcret: 3500,
       toplamUcret: 14000,
       organizasyonAdi: "Global Finans",
@@ -96,6 +106,8 @@ export default function Home() {
       girisTarihi: "2024-08-10",
       cikisTarihi: "2024-08-14",
       odaTipi: "Double Oda",
+      konaklamaTipi: "BB",
+      faturaEdildi: true,
       gecelikUcret: 2800,
       toplamUcret: 11200,
       organizasyonAdi: "Yükseliş A.Ş.",
@@ -112,6 +124,8 @@ export default function Home() {
       girisTarihi: "2024-09-01",
       cikisTarihi: "2024-09-03",
       odaTipi: "Single Oda",
+      konaklamaTipi: "HB",
+      faturaEdildi: false,
       gecelikUcret: 1700,
       toplamUcret: 3400,
       organizasyonAdi: "İK Çözümleri",
@@ -128,6 +142,8 @@ export default function Home() {
       girisTarihi: "2024-09-15",
       cikisTarihi: "2024-09-18",
       odaTipi: "Triple Oda",
+      konaklamaTipi: "FB",
+      faturaEdildi: true,
       gecelikUcret: 2500,
       toplamUcret: 7500,
       organizasyonAdi: "Lojistik Global",
@@ -144,6 +160,8 @@ export default function Home() {
       girisTarihi: "2024-10-01",
       cikisTarihi: "2024-10-06",
       odaTipi: "Double Oda",
+      konaklamaTipi: "UHD",
+      faturaEdildi: false,
       gecelikUcret: 2000,
       toplamUcret: 10000,
       organizasyonAdi: "Ticaret Grubu",
@@ -160,6 +178,8 @@ export default function Home() {
       girisTarihi: "2024-10-10",
       cikisTarihi: "2024-10-12",
       odaTipi: "Single Oda",
+      konaklamaTipi: "BB",
+      faturaEdildi: true,
       gecelikUcret: 1600,
       toplamUcret: 3200,
       organizasyonAdi: "Hizmet Ltd.",
@@ -176,6 +196,8 @@ export default function Home() {
       girisTarihi: "2024-11-01",
       cikisTarihi: "2024-11-04",
       odaTipi: "Suit Oda",
+      konaklamaTipi: "HB",
+      faturaEdildi: false,
       gecelikUcret: 3000,
       toplamUcret: 9000,
       organizasyonAdi: "Yenilik A.Ş.",
@@ -192,6 +214,8 @@ export default function Home() {
       girisTarihi: "2024-11-10",
       cikisTarihi: "2024-11-13",
       odaTipi: "Double Oda",
+      konaklamaTipi: "FB",
+      faturaEdildi: true,
       gecelikUcret: 1900,
       toplamUcret: 5700,
       organizasyonAdi: "Finans Çözümleri",
@@ -208,6 +232,8 @@ export default function Home() {
       girisTarihi: "2024-12-01",
       cikisTarihi: "2024-12-07",
       odaTipi: "Suit Oda",
+      konaklamaTipi: "UHD",
+      faturaEdildi: false,
       gecelikUcret: 4000,
       toplamUcret: 24000,
       organizasyonAdi: "Gelişim Pazarlama",
@@ -224,6 +250,8 @@ export default function Home() {
       girisTarihi: "2024-12-15",
       cikisTarihi: "2024-12-19",
       odaTipi: "Single Oda",
+      konaklamaTipi: "BB",
+      faturaEdildi: true,
       gecelikUcret: 2000,
       toplamUcret: 8000,
       organizasyonAdi: "Eğitim Akademisi",
@@ -240,6 +268,8 @@ export default function Home() {
       girisTarihi: "2025-01-05",
       cikisTarihi: "2025-01-10",
       odaTipi: "Double Oda",
+      konaklamaTipi: "HB",
+      faturaEdildi: false,
       gecelikUcret: 2700,
       toplamUcret: 13500,
       organizasyonAdi: "İletişim Grubu",
@@ -256,6 +286,8 @@ export default function Home() {
       girisTarihi: "2025-01-20",
       cikisTarihi: "2025-01-24",
       odaTipi: "Suit Oda",
+      konaklamaTipi: "FB",
+      faturaEdildi: true,
       gecelikUcret: 5000,
       toplamUcret: 20000,
       organizasyonAdi: "Tasarım Mimarlık",
@@ -272,6 +304,8 @@ export default function Home() {
       girisTarihi: "2025-02-01",
       cikisTarihi: "2025-02-03",
       odaTipi: "Single Oda",
+      konaklamaTipi: "UHD",
+      faturaEdildi: false,
       gecelikUcret: 1400,
       toplamUcret: 2800,
       organizasyonAdi: "Sağlık Grubu",
@@ -288,6 +322,8 @@ export default function Home() {
       girisTarihi: "2025-02-10",
       cikisTarihi: "2025-02-15",
       odaTipi: "Triple Oda",
+      konaklamaTipi: "BB",
+      faturaEdildi: true,
       gecelikUcret: 1600,
       toplamUcret: 8000,
       organizasyonAdi: "Eğitim Vakfı",
@@ -304,6 +340,8 @@ export default function Home() {
       girisTarihi: "2025-03-01",
       cikisTarihi: "2025-03-04",
       odaTipi: "Double Oda",
+      konaklamaTipi: "HB",
+      faturaEdildi: false,
       gecelikUcret: 2100,
       toplamUcret: 6300,
       organizasyonAdi: "Diş Klinikleri",
@@ -320,6 +358,8 @@ export default function Home() {
       girisTarihi: "2025-03-10",
       cikisTarihi: "2025-03-12",
       odaTipi: "Single Oda",
+      konaklamaTipi: "FB",
+      faturaEdildi: true,
       gecelikUcret: 1300,
       toplamUcret: 2600,
       organizasyonAdi: "Eczacılık Odası",
@@ -336,6 +376,8 @@ export default function Home() {
       girisTarihi: "2025-03-18",
       cikisTarihi: "2025-03-22",
       odaTipi: "Triple Oda",
+      konaklamaTipi: "UHD",
+      faturaEdildi: false,
       gecelikUcret: 1750,
       toplamUcret: 7000,
       organizasyonAdi: "Hayvan Sağlığı",
@@ -353,6 +395,8 @@ export default function Home() {
     girisTarihi: '',
     cikisTarihi: '',
     odaTipi: 'Single Oda',
+    konaklamaTipi: 'BB',
+    faturaEdildi: false,
     gecelikUcret: 0,
     organizasyonAdi: '',
     otelAdi: '',
@@ -422,6 +466,8 @@ export default function Home() {
       girisTarihi: '',
       cikisTarihi: '',
       odaTipi: 'Single Oda',
+      konaklamaTipi: 'BB',
+      faturaEdildi: false,
       gecelikUcret: 0,
       organizasyonAdi: '',
       otelAdi: '',
@@ -441,6 +487,8 @@ export default function Home() {
         girisTarihi: recordToEdit.girisTarihi,
         cikisTarihi: recordToEdit.cikisTarihi,
         odaTipi: recordToEdit.odaTipi,
+        konaklamaTipi: recordToEdit.konaklamaTipi,
+        faturaEdildi: recordToEdit.faturaEdildi,
         gecelikUcret: recordToEdit.gecelikUcret,
         organizasyonAdi: recordToEdit.organizasyonAdi || '',
         otelAdi: recordToEdit.otelAdi || '',
@@ -481,6 +529,8 @@ export default function Home() {
       girisTarihi: '',
       cikisTarihi: '',
       odaTipi: 'Single Oda',
+      konaklamaTipi: 'BB',
+      faturaEdildi: false,
       gecelikUcret: 0,
       organizasyonAdi: '',
       otelAdi: '',
@@ -513,6 +563,8 @@ export default function Home() {
       girisTarihi: '',
       cikisTarihi: '',
       odaTipi: 'Single Oda',
+      konaklamaTipi: 'BB',
+      faturaEdildi: false,
       gecelikUcret: 0,
       organizasyonAdi: '',
       otelAdi: '',
@@ -677,6 +729,8 @@ export default function Home() {
       "Organizasyon Adı", 
       "Otel Adı", 
       "Oda Tipi", 
+      "Konaklama Tipi", 
+      "Fatura Edildi mi?", 
       "Gecelik Ücret", 
       "Toplam Ücret", 
       ...allDates.map(date => {
@@ -695,6 +749,8 @@ export default function Home() {
         record.organizasyonAdi || "",
         record.otelAdi || "",
         record.odaTipi,
+        record.konaklamaTipi,
+        record.faturaEdildi,
         record.gecelikUcret.toLocaleString('tr-TR'),
         record.toplamUcret.toLocaleString('tr-TR')
       ];
@@ -728,6 +784,8 @@ export default function Home() {
       { wch: 25 }, // Organizasyon Adı
       { wch: 20 }, // Otel Adı
       { wch: 15 }, // Oda Tipi
+      { wch: 15 }, // Konaklama Tipi
+      { wch: 15 }, // Fatura Edildi mi?
       { wch: 15 }, // Gecelik Ücret
       { wch: 15 }, // Toplam Ücret
       ...allDates.map(() => ({ wch: 10 })) // Tarihler için genişlik
@@ -876,6 +934,8 @@ export default function Home() {
               girisTarihi: girisTarihi,
               cikisTarihi: cikisTarihi,
               odaTipi: getColumnValue('Oda Tipi'),
+              konaklamaTipi: getColumnValue('Konaklama Tipi') as "BB" | "HB" | "FB" | "UHD",
+              faturaEdildi: getColumnValue('Fatura Edildi mi?') === 'Evet',
               gecelikUcret: gecelikUcret,
               toplamUcret: toplamUcret,
               organizasyonAdi: getColumnValue('Organizasyon Adı'),
@@ -916,6 +976,8 @@ export default function Home() {
       { key: 'girisTarihi', label: 'Giriş Tarihi' },
       { key: 'cikisTarihi', label: 'Çıkış Tarihi' },
       { key: 'odaTipi', label: 'Oda Tipi' },
+      { key: 'konaklamaTipi', label: 'Konaklama Tipi' },
+      { key: 'faturaEdildi', label: 'Fatura Edildi mi?' },
       { key: 'numberOfNights', label: 'Gece Sayısı' },
       { key: 'gecelikUcret', label: 'Gecelik Ücret' },
       { key: 'toplamUcret', label: 'Toplam Ücret' },
@@ -945,17 +1007,24 @@ export default function Home() {
     const data = records.map(record => {
       const row: (string | number | undefined)[] = [];
       selectedColumns.forEach(key => {
-        const recordKey = key as keyof AccommodationRecord;
-        let value: string | number | undefined = record[recordKey];
-
-        if (key === 'gecelikUcret' || key === 'toplamUcret') {
-          value = (record[recordKey] as number).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        } else if (key === 'id' || key === 'numberOfNights') {
-          value = record[recordKey] as number;
-        } else if (key === 'girisTarihi' || key === 'cikisTarihi') {
-          value = record[recordKey] as string;
+        if (key === 'faturaEdildi') {
+          row.push(record.faturaEdildi ? 'Evet' : 'Hayır');
+        } else {
+          const recordKey = key as keyof AccommodationRecord;
+          let value: string | number | boolean | undefined = record[recordKey];
+          if (key === 'gecelikUcret' || key === 'toplamUcret') {
+            value = (record[recordKey] as number).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          } else if (key === 'id' || key === 'numberOfNights') {
+            value = record[recordKey] as number;
+          } else if (key === 'girisTarihi' || key === 'cikisTarihi') {
+            value = record[recordKey] as string;
+          }
+          if (typeof value === 'boolean') {
+            row.push(value ? 'Evet' : 'Hayır');
+          } else {
+            row.push(value);
+          }
         }
-        row.push(value);
       });
       return row;
     });
@@ -969,12 +1038,12 @@ export default function Home() {
   };
 
   const handleDownloadExcelTemplate = () => {
-    const headers = ["Kurum / Cari", "Organizasyon Adı", "Otel Adı", "Adı Soyadı", "Unvanı", "Ülke", "Şehir", "Giriş Tarihi", "Çıkış Tarihi", "Oda Tipi", "Gecelik Ücret"];
+    const headers = ["Kurum / Cari", "Organizasyon Adı", "Otel Adı", "Adı Soyadı", "Unvanı", "Ülke", "Şehir", "Giriş Tarihi", "Çıkış Tarihi", "Oda Tipi", "Konaklama Tipi", "Fatura Edildi mi?", "Gecelik Ücret"];
     
     // Örnek veriler ekleniyor
     const exampleData = [
-      ["ABC Şirketi", "Yıllık Toplantı", "Grand Hotel", "Ahmet Yılmaz", "Genel Müdür", "Türkiye", "İstanbul", "2024-06-15", "2024-06-18", "Double Oda", "2500"],
-      ["XYZ Holding", "Eğitim Semineri", "Seaside Resort", "Ayşe Kaya", "Eğitim Uzmanı", "Türkiye", "Antalya", "2024-07-10", "2024-07-15", "Single Oda", "1800"]
+      ["ABC Şirketi", "Yıllık Toplantı", "Grand Hotel", "Ahmet Yılmaz", "Genel Müdür", "Türkiye", "İstanbul", "2024-06-15", "2024-06-18", "Double Oda", "BB", "Evet", "2500"],
+      ["XYZ Holding", "Eğitim Semineri", "Seaside Resort", "Ayşe Kaya", "Eğitim Uzmanı", "Türkiye", "Antalya", "2024-07-10", "2024-07-15", "Single Oda", "HB", "Hayır", "1800"]
     ];
     
     const ws_data = [headers, ...exampleData];
@@ -1175,6 +1244,30 @@ export default function Home() {
               </select>
             </div>
             <div className="space-y-2">
+              <label htmlFor="konaklamaTipi" className="block text-sm font-semibold text-gray-700">Konaklama Tipi</label>
+              <select
+                id="konaklamaTipi"
+                className="input"
+                value={formData.konaklamaTipi}
+                onChange={handleInputChange}
+              >
+                <option value="BB">BB</option>
+                <option value="HB">HB</option>
+                <option value="FB">FB</option>
+                <option value="UHD">UHD</option>
+              </select>
+            </div>
+            <div className="space-y-2 flex items-center mt-2">
+              <input
+                id="faturaEdildi"
+                type="checkbox"
+                checked={formData.faturaEdildi}
+                onChange={e => setFormData(prev => ({ ...prev, faturaEdildi: e.target.checked }))}
+                className="mr-2 w-5 h-5 accent-blue-600"
+              />
+              <label htmlFor="faturaEdildi" className="text-sm font-semibold text-gray-700">Fatura Edildi mi?</label>
+            </div>
+            <div className="space-y-2">
               <label htmlFor="gecelikUcret" className="block text-sm font-semibold text-gray-700">
                 Gecelik Ücret (₺)
               </label>
@@ -1276,6 +1369,8 @@ export default function Home() {
                   <th>Giriş</th>
                   <th>Çıkış</th>
                   <th>Oda</th>
+                  <th>Konaklama</th>
+                  <th>Fatura Edildi mi?</th>
                   <th>Gece</th>
                   <th>Gecelik Ücret</th>
                   <th>Toplam Ücret</th>
@@ -1296,9 +1391,25 @@ export default function Home() {
                     <td>{formatDate(record.girisTarihi)}</td>
                     <td>{formatDate(record.cikisTarihi)}</td>
                     <td>
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mr-1">
                         {record.odaTipi}
                       </span>
+                    </td>
+                    <td>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${record.konaklamaTipi === 'BB' ? 'bg-yellow-100 text-yellow-800' : record.konaklamaTipi === 'HB' ? 'bg-green-100 text-green-800' : record.konaklamaTipi === 'FB' ? 'bg-purple-100 text-purple-800' : 'bg-pink-100 text-pink-800'}`}>{record.konaklamaTipi}</span>
+                    </td>
+                    <td>
+                      {record.faturaEdildi ? (
+                        <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          Evet
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          Hayır
+                        </span>
+                      )}
                     </td>
                     <td className="text-center">
                       <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
@@ -1488,6 +1599,30 @@ export default function Home() {
                     <option value="Triple Oda">Triple Oda</option>
                     <option value="Suit Oda">Suit Oda</option>
                   </select>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="edit-konaklamaTipi" className="block text-sm font-semibold text-gray-700">Konaklama Tipi</label>
+                  <select
+                    id="edit-konaklamaTipi"
+                    className="input"
+                    value={formData.konaklamaTipi}
+                    onChange={handleInputChange}
+                  >
+                    <option value="BB">BB</option>
+                    <option value="HB">HB</option>
+                    <option value="FB">FB</option>
+                    <option value="UHD">UHD</option>
+                  </select>
+                </div>
+                <div className="space-y-2 flex items-center mt-2">
+                  <input
+                    id="edit-faturaEdildi"
+                    type="checkbox"
+                    checked={formData.faturaEdildi}
+                    onChange={e => setFormData(prev => ({ ...prev, faturaEdildi: e.target.checked }))}
+                    className="mr-2 w-5 h-5 accent-blue-600"
+                  />
+                  <label htmlFor="edit-faturaEdildi" className="text-sm font-semibold text-gray-700">Fatura Edildi mi?</label>
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="edit-gecelikUcret" className="block text-sm font-semibold text-gray-700">
