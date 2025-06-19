@@ -16,11 +16,10 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: username, password }),
+        credentials: "include",
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("currentUser", JSON.stringify(data.user));
         router.push("/");
       } else {
         setError(data.error || "Kullanıcı adı veya şifre hatalı!");

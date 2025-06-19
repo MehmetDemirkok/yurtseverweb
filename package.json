@@ -20,8 +20,10 @@
     "@radix-ui/themes": "^3.2.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cookie": "^1.0.2",
     "exceljs": "^4.4.0",
     "faker": "^5.5.3",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.517.0",
     "mongodb": "^6.17.0",
     "next": "15.3.3",
@@ -37,6 +39,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

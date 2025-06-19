@@ -12,23 +12,7 @@ import {
   ResponsiveContainer,
   TooltipProps,
 } from 'recharts';
-
-interface AccommodationRecord {
-  id: number;
-  adiSoyadi: string;
-  unvani: string;
-  ulke: string;
-  sehir: string;
-  girisTarihi: string;
-  cikisTarihi: string;
-  odaTipi: string;
-  gecelikUcret: number;
-  toplamUcret: number;
-  organizasyonAdi?: string;
-  otelAdi?: string;
-  kurumCari?: string;
-  numberOfNights?: number;
-}
+import type { AccommodationRecord } from '../page';
 
 interface StatisticsProps {
   records: AccommodationRecord[];

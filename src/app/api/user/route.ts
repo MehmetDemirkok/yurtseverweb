@@ -1,12 +1,24 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import jwt from 'jsonwebtoken';
+import { cookies } from 'next/headers';
 
 const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 // Kullanıcı listeleme
 export async function GET() {
-  const users = await prisma.user.findMany();
-  return NextResponse.json(users);
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 });
+    }
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return NextResponse.json({ user: decoded });
+  } catch {
+    return NextResponse.json({ error: 'Geçersiz oturum.' }, { status: 401 });
+  }
 }
 
 // Kullanıcı ekleme
