@@ -1,4 +1,4 @@
-import { Card, CardContent, Typography, useTheme, useMediaQuery } from '@mui/material';
+import { useTheme, useMediaQuery } from '@mui/material';
 import {
   BarChart,
   Bar,
@@ -6,7 +6,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   PieChart,
   Pie,
   Cell,
@@ -41,7 +40,7 @@ interface ChartDataPoint {
   revenue?: number;
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d', '#ffc658'];
+const COLORS = ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#8B5A2B'];
 
 export default function Statistics({ records }: StatisticsProps) {
   const theme = useTheme();
@@ -105,11 +104,11 @@ export default function Statistics({ records }: StatisticsProps) {
     if (active && payload && payload.length) {
       const data = payload[0].payload as ChartDataPoint;
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
-          <p className="font-semibold">{label}</p>
-          <p className="text-blue-600">{`Konaklama Sayısı: ${data.value}`}</p>
+        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-semibold text-gray-800">{label}</p>
+          <p className="text-blue-600 font-medium">{`Konaklama Sayısı: ${data.value}`}</p>
           {data.revenue && (
-            <p className="text-green-600">{`Toplam Gelir: ${data.revenue.toLocaleString('tr-TR')} ₺`}</p>
+            <p className="text-green-600 font-medium">{`Toplam Gelir: ${data.revenue.toLocaleString('tr-TR')} ₺`}</p>
           )}
         </div>
       );
@@ -118,138 +117,174 @@ export default function Statistics({ records }: StatisticsProps) {
   };
 
   return (
-    <div className="mt-8 p-4 bg-white rounded-lg shadow-lg">
-      <Typography variant="h5" className="mb-6 font-bold text-center text-gray-800">
-        İstatistikler
-      </Typography>
+    <div className="space-y-6">
+      {/* Ana İstatistik Kartları */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="card p-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+          <div className="flex items-center">
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mr-4">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Toplam Konaklama</p>
+              <p className="text-3xl font-bold text-blue-600">{totalRecords}</p>
+            </div>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <Card className="h-full transform transition-transform hover:scale-105">
-          <CardContent className="text-center">
-            <Typography color="textSecondary" gutterBottom className="text-lg">
-              Toplam Konaklama
-            </Typography>
-            <Typography variant="h4" className="text-blue-600 font-bold">
-              {totalRecords}
-            </Typography>
-          </CardContent>
-        </Card>
-        <Card className="h-full transform transition-transform hover:scale-105">
-          <CardContent className="text-center">
-            <Typography color="textSecondary" gutterBottom className="text-lg">
-              Toplam Gelir
-            </Typography>
-            <Typography variant="h4" className="text-green-600 font-bold">
-              {totalRevenue.toLocaleString('tr-TR')} ₺
-            </Typography>
-          </CardContent>
-        </Card>
-        <Card className="h-full transform transition-transform hover:scale-105">
-          <CardContent className="text-center">
-            <Typography color="textSecondary" gutterBottom className="text-lg">
-              Ortalama Konaklama Süresi
-            </Typography>
-            <Typography variant="h4" className="text-purple-600 font-bold">
-              {averageNights.toFixed(1)} Gün
-            </Typography>
-          </CardContent>
-        </Card>
+        <div className="card p-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <div className="flex items-center">
+            <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-xl flex items-center justify-center mr-4">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Toplam Gelir</p>
+              <p className="text-3xl font-bold text-green-600">{totalRevenue.toLocaleString('tr-TR')} ₺</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-6 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+          <div className="flex items-center">
+            <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mr-4">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Ortalama Süre</p>
+              <p className="text-3xl font-bold text-purple-600">{averageNights.toFixed(1)} Gün</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="h-full">
-          <CardContent>
-            <Typography variant="h6" className="mb-4 text-center text-gray-700">
-              Oda Tiplerine Göre Dağılım
-            </Typography>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={roomTypeChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={isMobile ? 80 : 100}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) => 
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
-                  >
-                    {roomTypeChartData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={COLORS[index % COLORS.length]} 
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
+      {/* Grafik Kartları */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Oda Tiplerine Göre Dağılım */}
+        <div className="card p-6 animate-slide-in">
+          <div className="flex items-center mb-6">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
             </div>
-          </CardContent>
-        </Card>
+            <h3 className="text-xl font-bold text-gray-800">Oda Tiplerine Göre Dağılım</h3>
+          </div>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={roomTypeChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={isMobile ? 80 : 100}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => 
+                    `${name} ${(percent * 100).toFixed(0)}%`
+                  }
+                >
+                  {roomTypeChartData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={COLORS[index % COLORS.length]} 
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
-        <Card className="h-full">
-          <CardContent>
-            <Typography variant="h6" className="mb-4 text-center text-gray-700">
-              Aylık Konaklama Dağılımı
-            </Typography>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="name" 
-                    angle={isMobile ? -45 : 0}
-                    textAnchor={isMobile ? "end" : "middle"}
-                    height={isMobile ? 100 : 60}
-                  />
-                  <YAxis />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Bar 
-                    dataKey="value" 
-                    fill="#8884d8" 
-                    name="Konaklama Sayısı"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+        {/* Aylık Konaklama Dağılımı */}
+        <div className="card p-6 animate-slide-in" style={{ animationDelay: '0.1s' }}>
+          <div className="flex items-center mb-6">
+            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-cyan-600 rounded-lg flex items-center justify-center mr-3">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
             </div>
-          </CardContent>
-        </Card>
+            <h3 className="text-xl font-bold text-gray-800">Aylık Konaklama Dağılımı</h3>
+          </div>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis 
+                  dataKey="name" 
+                  stroke="#6b7280"
+                  fontSize={12}
+                />
+                <YAxis 
+                  stroke="#6b7280"
+                  fontSize={12}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar 
+                  dataKey="value" 
+                  fill="url(#gradientBar)"
+                  radius={[4, 4, 0, 0]}
+                />
+                <defs>
+                  <linearGradient id="gradientBar" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3B82F6" />
+                    <stop offset="100%" stopColor="#1D4ED8" />
+                  </linearGradient>
+                </defs>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
 
-        <Card className="col-span-1 md:col-span-2">
-          <CardContent>
-            <Typography variant="h6" className="mb-4 text-center text-gray-700">
-              Kurumlara Göre Dağılım
-            </Typography>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={organizationChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="name" 
-                    angle={isMobile ? -45 : 0}
-                    textAnchor={isMobile ? "end" : "middle"}
-                    height={isMobile ? 100 : 60}
-                  />
-                  <YAxis />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Bar 
-                    dataKey="value" 
-                    fill="#82ca9d" 
-                    name="Konaklama Sayısı"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Organizasyonlara Göre Dağılım */}
+      <div className="card p-6 animate-scale-in">
+        <div className="flex items-center mb-6">
+          <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg flex items-center justify-center mr-3">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-800">Organizasyonlara Göre Dağılım</h3>
+        </div>
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={organizationChartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis 
+                dataKey="name" 
+                stroke="#6b7280"
+                fontSize={11}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis 
+                stroke="#6b7280"
+                fontSize={12}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar 
+                dataKey="value" 
+                fill="url(#gradientBar2)"
+                radius={[4, 4, 0, 0]}
+              />
+              <defs>
+                <linearGradient id="gradientBar2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#8B5CF6" />
+                  <stop offset="100%" stopColor="#7C3AED" />
+                </linearGradient>
+              </defs>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
