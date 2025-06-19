@@ -1,9 +1,10 @@
 import React from 'react';
+import type { AccommodationRecord } from '../page';
 
 interface AccommodationFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  formData: any;
+  formData: Omit<AccommodationRecord, 'id' | 'toplamUcret' | 'numberOfNights'>;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   onCheckboxChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: () => void;
