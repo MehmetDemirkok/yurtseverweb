@@ -8,18 +8,25 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  // Hardcoded credentials (ileride DB'den alınacak)
-  const validUser = "admin";
-  const validPass = "123456";
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === validUser && password === validPass) {
-      localStorage.setItem("isLoggedIn", "true");
-      setError("");
-      router.push("/");
-    } else {
-      setError("Kullanıcı adı veya şifre hatalı!");
+    setError("");
+    try {
+      const res = await fetch("/api/user/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: username, password }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("currentUser", JSON.stringify(data.user));
+        router.push("/");
+      } else {
+        setError(data.error || "Kullanıcı adı veya şifre hatalı!");
+      }
+    } catch {
+      setError("Bir hata oluştu. Lütfen tekrar deneyin.");
     }
   };
 

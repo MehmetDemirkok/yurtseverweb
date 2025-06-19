@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import Statistics from './components/Statistics';
 import AccommodationFormModal from './components/AccommodationFormModal';
@@ -84,22 +84,35 @@ export default function Home() {
     }));
   };
 
-  const handleAddRecord = () => {
-    const newId = records.length > 0 ? Math.max(...records.map(record => record.id)) + 1 : 1;
+  // API'den kayıtları çek
+  useEffect(() => {
+    fetch('/api/accommodation')
+      .then(res => res.json())
+      .then(data => setRecords(data));
+  }, []);
+
+  // Kayıt ekleme fonksiyonunu API'ye bağla
+  const handleAddRecord = async () => {
     const girisDate = new Date(formData.girisTarihi);
     const cikisDate = new Date(formData.cikisTarihi);
     const diffTime = Math.abs(cikisDate.getTime() - girisDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     const calculatedToplamUcret = formData.gecelikUcret * (diffDays > 0 ? diffDays : 1);
 
-    const newRecord: AccommodationRecord = {
-      id: newId,
+    const newRecord = {
       ...formData,
       toplamUcret: calculatedToplamUcret,
       numberOfNights: diffDays > 0 ? diffDays : 0,
     };
-    setRecords((prevRecords) => [...prevRecords, newRecord]);
-    // Clear form after adding
+    // API'ye gönder
+    const res = await fetch('/api/accommodation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newRecord),
+    });
+    const created = await res.json();
+    setRecords(prev => [...prev, created]);
+    // Formu temizle
     setFormData({
       adiSoyadi: '',
       unvani: '',
@@ -270,19 +283,9 @@ export default function Home() {
   const getFilteredOptions = (type: 'kurumCari' | 'organizasyonAdi' | 'unvani') => {
     const searchValue = puantajFilters[type].toLowerCase();
     let options: string[] = [];
-    
-    switch(type) {
-      case 'kurumCari':
-        options = kurumCariOptions;
-        break;
-      case 'organizasyonAdi':
-        options = organizasyonOptions;
-        break;
-      case 'unvani':
-        options = unvanOptions;
-        break;
-    }
-    
+    if (type === 'kurumCari') options = kurumCariOptions;
+    else if (type === 'organizasyonAdi') options = organizasyonOptions;
+    else if (type === 'unvani') options = unvanOptions;
     if (!searchValue) return options;
     return options.filter(option => option.toLowerCase().includes(searchValue));
   };
@@ -781,7 +784,7 @@ export default function Home() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Excel'den İçe Aktar
+            Excel&apos;den İçe Aktar
           </button>
           <button
             onClick={handleExportExcel}
@@ -790,7 +793,7 @@ export default function Home() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" transform="rotate(180 12 12)" />
             </svg>
-            Excel'e Aktar
+            Excel&apos;e Aktar
           </button>
           <button
             onClick={handleDownloadExcelTemplate}
@@ -817,7 +820,7 @@ export default function Home() {
         />
 
         {/* Table Section */}
-        <div className="card overflow-hidden">
+        <div className="card">
           <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
             <h3 className="text-xl font-bold text-gray-800 flex items-center">
               <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -826,27 +829,26 @@ export default function Home() {
               Konaklama Kayıtları
             </h3>
           </div>
-          {/* overflow-x-auto kaldırıldı, responsive için w-full ve max-w-full eklendi */}
-          <div>
-            <table className="table w-full max-w-full">
+          <div className="overflow-x-auto">
+            <table className="table w-full text-xs">
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>Kurum / Cari</th>
-                  <th>Organizasyon</th>
-                  <th>Otel</th>
+                  <th className="hidden md:table-cell">Kurum / Cari</th>
+                  <th className="hidden lg:table-cell">Organizasyon</th>
+                  <th className="hidden lg:table-cell">Otel</th>
                   <th>Adı Soyadı</th>
-                  <th>Unvanı</th>
-                  <th>Ülke</th>
+                  <th className="hidden md:table-cell">Unvanı</th>
+                  <th className="hidden md:table-cell">Ülke</th>
                   <th>Şehir</th>
                   <th>Giriş</th>
                   <th>Çıkış</th>
                   <th>Oda</th>
                   <th>Konaklama</th>
-                  <th>Fatura Edildi mi?</th>
+                  <th className="hidden md:table-cell">Fatura</th>
                   <th>Gece</th>
-                  <th>Gecelik Ücret</th>
-                  <th>Toplam Ücret</th>
+                  <th className="hidden md:table-cell">Gecelik Ücret</th>
+                  <th className="hidden md:table-cell">Toplam Ücret</th>
                   <th>İşlemler</th>
                 </tr>
               </thead>
@@ -854,13 +856,13 @@ export default function Home() {
                 {records.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                     <td className="font-medium text-blue-600">{record.id}</td>
-                    <td>{record.kurumCari || '-'}</td>
-                    <td>{record.organizasyonAdi || '-'}</td>
-                    <td>{record.otelAdi || '-'}</td>
-                    <td className="font-semibold">{record.adiSoyadi}</td>
-                    <td>{record.unvani}</td>
-                    <td>{record.ulke}</td>
-                    <td>{record.sehir}</td>
+                    <td className="truncate max-w-[80px] hidden md:table-cell">{record.kurumCari || '-'}</td>
+                    <td className="truncate max-w-[80px] hidden lg:table-cell">{record.organizasyonAdi || '-'}</td>
+                    <td className="truncate max-w-[80px] hidden lg:table-cell">{record.otelAdi || '-'}</td>
+                    <td className="truncate max-w-[90px]">{record.adiSoyadi}</td>
+                    <td className="truncate max-w-[80px] hidden md:table-cell">{record.unvani}</td>
+                    <td className="truncate max-w-[60px] hidden md:table-cell">{record.ulke}</td>
+                    <td className="truncate max-w-[60px]">{record.sehir}</td>
                     <td>{formatDate(record.girisTarihi)}</td>
                     <td>{formatDate(record.cikisTarihi)}</td>
                     <td>
@@ -871,7 +873,7 @@ export default function Home() {
                     <td>
                       <span className={`px-2 py-1 rounded-full text-xs font-bold ${record.konaklamaTipi === 'BB' ? 'bg-yellow-100 text-yellow-800' : record.konaklamaTipi === 'HB' ? 'bg-green-100 text-green-800' : record.konaklamaTipi === 'FB' ? 'bg-purple-100 text-purple-800' : 'bg-pink-100 text-pink-800'}`}>{record.konaklamaTipi}</span>
                     </td>
-                    <td>
+                    <td className="hidden md:table-cell">
                       {record.faturaEdildi ? (
                         <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
                           <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -884,13 +886,9 @@ export default function Home() {
                         </span>
                       )}
                     </td>
-                    <td className="text-center">
-                      <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                        {record.numberOfNights || 0}
-                      </span>
-                    </td>
-                    <td className="font-medium">{record.gecelikUcret.toLocaleString('tr-TR')} ₺</td>
-                    <td className="font-bold text-green-600">{record.toplamUcret.toLocaleString('tr-TR')} ₺</td>
+                    <td className="text-center">{record.numberOfNights || 0}</td>
+                    <td className="font-medium hidden md:table-cell">{record.gecelikUcret.toLocaleString('tr-TR')} ₺</td>
+                    <td className="font-bold text-green-600 hidden md:table-cell">{record.toplamUcret.toLocaleString('tr-TR')} ₺</td>
                     <td>
                       <div className="flex space-x-2">
                         <button
@@ -908,7 +906,7 @@ export default function Home() {
                           title="Sil"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
                       </div>
