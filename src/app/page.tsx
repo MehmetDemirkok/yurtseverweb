@@ -77,7 +77,12 @@ export default function Home() {
   type ColumnDef = { key: ColumnKey; label: string };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { id, value } = e.target;
+    let { id } = e.target;
+    const { value } = e.target;
+    // Eğer id "edit-" ile başlıyorsa, öneki kaldır
+    if (id.startsWith('edit-')) {
+      id = id.replace('edit-', '');
+    }
     setFormData((prevData) => ({
       ...prevData,
       [id]: (id === 'gecelikUcret') ? (value === '' ? 0 : parseFloat(value)) : value,
