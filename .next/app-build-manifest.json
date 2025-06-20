@@ -7,6 +7,13 @@
       "static/chunks/main-app-036e1b3c7d4a9d51.js",
       "static/chunks/app/_not-found/page-33ee865b99e176ee.js"
     ],
+    "/api/accommodation/route": [
+      "static/chunks/webpack-ad967276a8926d54.js",
+      "static/chunks/4bd1b696-cdd2b24244631483.js",
+      "static/chunks/684-b4db9b2c1624333d.js",
+      "static/chunks/main-app-036e1b3c7d4a9d51.js",
+      "static/chunks/app/api/accommodation/route-f65e8071cdfd2ce2.js"
+    ],
     "/layout": [
       "static/chunks/webpack-ad967276a8926d54.js",
       "static/chunks/4bd1b696-cdd2b24244631483.js",
@@ -15,12 +22,12 @@
       "static/css/fd571747aec95071.css",
       "static/chunks/app/layout-39bc32120f5b9e1c.js"
     ],
-    "/api/accommodation/route": [
+    "/api/user/logout/route": [
       "static/chunks/webpack-ad967276a8926d54.js",
       "static/chunks/4bd1b696-cdd2b24244631483.js",
       "static/chunks/684-b4db9b2c1624333d.js",
       "static/chunks/main-app-036e1b3c7d4a9d51.js",
-      "static/chunks/app/api/accommodation/route-f65e8071cdfd2ce2.js"
+      "static/chunks/app/api/user/logout/route-601ccfaa05e22433.js"
     ],
     "/api/user/login/route": [
       "static/chunks/webpack-ad967276a8926d54.js",
@@ -28,13 +35,6 @@
       "static/chunks/684-b4db9b2c1624333d.js",
       "static/chunks/main-app-036e1b3c7d4a9d51.js",
       "static/chunks/app/api/user/login/route-acf39495adae6314.js"
-    ],
-    "/api/user/logout/route": [
-      "static/chunks/webpack-ad967276a8926d54.js",
-      "static/chunks/4bd1b696-cdd2b24244631483.js",
-      "static/chunks/684-b4db9b2c1624333d.js",
-      "static/chunks/main-app-036e1b3c7d4a9d51.js",
-      "static/chunks/app/api/user/logout/route-601ccfaa05e22433.js"
     ],
     "/api/user/route": [
       "static/chunks/webpack-ad967276a8926d54.js",
@@ -57,7 +57,7 @@
       "static/chunks/main-app-036e1b3c7d4a9d51.js",
       "static/chunks/2170a4aa-13c64878ae21dea5.js",
       "static/chunks/797-da130d3dcb24af18.js",
-      "static/chunks/app/page-0c5003d26bbf5f27.js"
+      "static/chunks/app/page-2c49c9f0d4009680.js"
     ]
   }
 }

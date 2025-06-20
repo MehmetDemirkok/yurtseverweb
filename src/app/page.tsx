@@ -158,7 +158,7 @@ export default function Home() {
     }
   };
 
-  const handleUpdateRecord = () => {
+  const handleUpdateRecord = async () => {
     if (selectedRecordId === null) return;
 
     const girisDate = new Date(formData.girisTarihi);
@@ -167,18 +167,32 @@ export default function Home() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     const calculatedToplamUcret = formData.gecelikUcret * (diffDays > 0 ? diffDays : 1);
 
-    setRecords((prevRecords) =>
-      prevRecords.map((record) =>
-        record.id === selectedRecordId
-          ? {
-              ...record,
-              ...formData,
-              toplamUcret: calculatedToplamUcret,
-              numberOfNights: diffDays > 0 ? diffDays : 0,
-            }
-          : record
-      )
-    );
+    const updatedRecord = {
+      id: selectedRecordId,
+      ...formData,
+      toplamUcret: calculatedToplamUcret,
+      numberOfNights: diffDays > 0 ? diffDays : 0,
+    };
+
+    // API'ye PATCH isteği gönder
+    const res = await fetch('/api/accommodation', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedRecord),
+    });
+
+    if (res.ok) {
+      const updated = await res.json();
+      setRecords((prevRecords) =>
+        prevRecords.map((record) =>
+          record.id === selectedRecordId ? updated : record
+        )
+      );
+    } else {
+      // Hata yönetimi
+      alert('Kayıt güncellenemedi!');
+    }
+
     setShowEditModal(false);
     setSelectedRecordId(null);
     setFormData({
@@ -202,9 +216,21 @@ export default function Home() {
     setRecordToDeleteId(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (recordToDeleteId === null) return;
-    setRecords((prevRecords) => prevRecords.filter((record) => record.id !== recordToDeleteId));
+
+    // API'ye DELETE isteği gönder
+    const res = await fetch('/api/accommodation', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: recordToDeleteId }),
+    });
+
+    if (res.ok) {
+      setRecords((prevRecords) => prevRecords.filter((record) => record.id !== recordToDeleteId));
+    } else {
+      alert('Kayıt silinemedi!');
+    }
     setRecordToDeleteId(null);
   };
 
