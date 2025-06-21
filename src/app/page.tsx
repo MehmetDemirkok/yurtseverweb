@@ -53,23 +53,17 @@ export default function Home() {
 
   const [showPuantajFilterModal, setShowPuantajFilterModal] = useState<boolean>(false);
   const [puantajFilters, setPuantajFilters] = useState<{
-    kurumCari: string;
     organizasyonAdi: string;
-    unvani: string;
     baslangicTarihi: string;
     bitisTarihi: string;
   }>({
-    kurumCari: '',
     organizasyonAdi: '',
-    unvani: '',
     baslangicTarihi: '',
     bitisTarihi: ''
   });
   
   // Filtreleme için öneriler
-  const [kurumCariOptions, setKurumCariOptions] = useState<string[]>([]);
   const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
-  const [unvanOptions, setUnvanOptions] = useState<string[]>([]);
 
   const [showAccommodationModal, setShowAccommodationModal] = useState(false);
 
@@ -94,6 +88,10 @@ export default function Home() {
     fetch('/api/accommodation')
       .then(res => res.json())
       .then(data => setRecords(data));
+
+    fetch('/api/organizations')
+      .then(res => res.json())
+      .then(data => setOrganizasyonOptions(data));
   }, []);
 
   // Kayıt ekleme fonksiyonunu API'ye bağla
@@ -133,6 +131,7 @@ export default function Home() {
       otelAdi: '',
       kurumCari: '',
     });
+    setShowPuantajFilterModal(false);
   };
 
   const handleEditClick = (id: number) => {
@@ -267,15 +266,6 @@ export default function Home() {
   };
 
   const handlePuantajRaporu = () => {
-    // Benzersiz kurum/cari, organizasyon adı ve ünvan seçeneklerini oluştur
-    const uniqueKurumCari = Array.from(new Set(records.map(record => record.kurumCari).filter(Boolean) as string[]));
-    const uniqueOrganizasyon = Array.from(new Set(records.map(record => record.organizasyonAdi).filter(Boolean) as string[]));
-    const uniqueUnvan = Array.from(new Set(records.map(record => record.unvani)));
-    
-    setKurumCariOptions(uniqueKurumCari);
-    setOrganizasyonOptions(uniqueOrganizasyon);
-    setUnvanOptions(uniqueUnvan);
-    
     // Varsayılan tarih aralığını belirle (tüm kayıtları kapsayacak şekilde)
     if (records.length > 0) {
       // En erken giriş tarihi ve en geç çıkış tarihini bul
@@ -305,30 +295,25 @@ export default function Home() {
 
   const handlePuantajFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    setPuantajFilters(prev => ({
-      ...prev,
-      [id]: value
-    }));
+    setPuantajFilters(prev => ({ ...prev, [id.replace('puantaj-', '')]: value }));
   };
-  
-  const getFilteredOptions = (type: 'kurumCari' | 'organizasyonAdi' | 'unvani') => {
-    const searchValue = puantajFilters[type].toLowerCase();
-    let options: string[] = [];
-    if (type === 'kurumCari') options = kurumCariOptions;
-    else if (type === 'organizasyonAdi') options = organizasyonOptions;
-    else if (type === 'unvani') options = unvanOptions;
-    if (!searchValue) return options;
-    return options.filter(option => option.toLowerCase().includes(searchValue));
+
+  const getFilteredOptions = (type: 'organizasyonAdi') => {
+    const value = puantajFilters[type].toLowerCase();
+    if (!value) return [];
+    if (type === 'organizasyonAdi') {
+      return organizasyonOptions.filter(option => option.toLowerCase().includes(value));
+    }
+    return [];
   };
-  
-  const handleOptionSelect = (type: 'kurumCari' | 'organizasyonAdi' | 'unvani', value: string) => {
-    setPuantajFilters(prev => ({
-      ...prev,
-      [type]: value
-    }));
+
+  const handleOptionSelect = (type: 'organizasyonAdi', value: string) => {
+    setPuantajFilters(prev => ({ ...prev, [type]: value }));
   };
 
   const generatePuantajRaporu = () => {
+    const { organizasyonAdi, baslangicTarihi, bitisTarihi } = puantajFilters;
+    
     // Filtreleme modalını kapat
     setShowPuantajFilterModal(false);
 
@@ -336,28 +321,16 @@ export default function Home() {
     let filteredRecords = [...records];
     
     // Metin bazlı filtreler
-    if (puantajFilters.kurumCari) {
+    if (organizasyonAdi) {
       filteredRecords = filteredRecords.filter(record => 
-        record.kurumCari?.toLowerCase().includes(puantajFilters.kurumCari.toLowerCase())
-      );
-    }
-    
-    if (puantajFilters.organizasyonAdi) {
-      filteredRecords = filteredRecords.filter(record => 
-        record.organizasyonAdi?.toLowerCase().includes(puantajFilters.organizasyonAdi.toLowerCase())
-      );
-    }
-    
-    if (puantajFilters.unvani) {
-      filteredRecords = filteredRecords.filter(record => 
-        record.unvani.toLowerCase().includes(puantajFilters.unvani.toLowerCase())
+        record.organizasyonAdi?.toLowerCase().includes(organizasyonAdi.toLowerCase())
       );
     }
     
     // Tarih aralığı filtresi
-    if (puantajFilters.baslangicTarihi && puantajFilters.bitisTarihi) {
-      const baslangicDate = new Date(puantajFilters.baslangicTarihi);
-      const bitisDate = new Date(puantajFilters.bitisTarihi);
+    if (baslangicTarihi && bitisTarihi) {
+      const baslangicDate = new Date(baslangicTarihi);
+      const bitisDate = new Date(bitisTarihi);
       
       // Tarih aralığında en az bir gün kesişen kayıtları filtrele
       filteredRecords = filteredRecords.filter(record => {
@@ -1319,47 +1292,6 @@ export default function Home() {
                 
                 {/* Filtreler */}
                 <div className="space-y-4">
-                  {/* Kurum/Cari Filtreleme */}
-                  <div className="space-y-2 relative">
-                    <label htmlFor="puantaj-kurumCari" className="block text-sm font-semibold text-gray-700">
-                      Kurum / Cari
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        id="puantaj-kurumCari"
-                        className="input pr-10"
-                        value={puantajFilters.kurumCari}
-                        onChange={handlePuantajFilterChange}
-                        placeholder="Kurum/Cari adına göre filtrele"
-                        autoComplete="off"
-                      />
-                      {puantajFilters.kurumCari && (
-                        <button 
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          onClick={() => handleOptionSelect('kurumCari', '')}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                    {puantajFilters.kurumCari && getFilteredOptions('kurumCari').length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto">
-                        {getFilteredOptions('kurumCari').map((option, index) => (
-                          <div 
-                            key={index} 
-                            className="p-3 hover:bg-gray-50 cursor-pointer text-gray-700 text-sm border-b border-gray-100 last:border-b-0"
-                            onClick={() => handleOptionSelect('kurumCari', option)}
-                          >
-                            {option}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
                   {/* Organizasyon Adı Filtreleme */}
                   <div className="space-y-2 relative">
                     <label htmlFor="puantaj-organizasyonAdi" className="block text-sm font-semibold text-gray-700">
@@ -1400,47 +1332,6 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-                  
-                  {/* Ünvan Filtreleme */}
-                  <div className="space-y-2 relative">
-                    <label htmlFor="puantaj-unvani" className="block text-sm font-semibold text-gray-700">
-                      Ünvan
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        id="puantaj-unvani"
-                        className="input pr-10"
-                        value={puantajFilters.unvani}
-                        onChange={handlePuantajFilterChange}
-                        placeholder="Ünvana göre filtrele"
-                        autoComplete="off"
-                      />
-                      {puantajFilters.unvani && (
-                        <button 
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          onClick={() => handleOptionSelect('unvani', '')}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                    {puantajFilters.unvani && getFilteredOptions('unvani').length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto">
-                        {getFilteredOptions('unvani').map((option, index) => (
-                          <div 
-                            key={index} 
-                            className="p-3 hover:bg-gray-50 cursor-pointer text-gray-700 text-sm border-b border-gray-100 last:border-b-0"
-                            onClick={() => handleOptionSelect('unvani', option)}
-                          >
-                            {option}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
 
@@ -1448,9 +1339,7 @@ export default function Home() {
                 <button
                   onClick={() => {
                     setPuantajFilters({
-                      kurumCari: '',
                       organizasyonAdi: '',
-                      unvani: '',
                       baslangicTarihi: puantajFilters.baslangicTarihi,
                       bitisTarihi: puantajFilters.bitisTarihi
                     });
