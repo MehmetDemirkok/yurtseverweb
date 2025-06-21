@@ -26,6 +26,7 @@ export interface AccommodationRecord {
 
 export default function Home() {
   const [records, setRecords] = useState<AccommodationRecord[]>([]);
+  const [isTableCollapsed, setIsTableCollapsed] = useState(false);
 
   const [formData, setFormData] = useState<Omit<AccommodationRecord, 'id' | 'toplamUcret' | 'numberOfNights'>>({
     adiSoyadi: '',
@@ -64,6 +65,7 @@ export default function Home() {
   
   // Filtreleme için öneriler
   const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
+  const [showOrganizasyonOptions, setShowOrganizasyonOptions] = useState(false);
 
   const [showAccommodationModal, setShowAccommodationModal] = useState(false);
 
@@ -295,7 +297,10 @@ export default function Home() {
 
   const handlePuantajFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    setPuantajFilters(prev => ({ ...prev, [id.replace('puantaj-', '')]: value }));
+    setPuantajFilters(prev => ({ ...prev, [id]: value }));
+    if (id === 'organizasyonAdi') {
+      setShowOrganizasyonOptions(true);
+    }
   };
 
   const getFilteredOptions = (type: 'organizasyonAdi') => {
@@ -309,6 +314,7 @@ export default function Home() {
 
   const handleOptionSelect = (type: 'organizasyonAdi', value: string) => {
     setPuantajFilters(prev => ({ ...prev, [type]: value }));
+    setShowOrganizasyonOptions(false);
   };
 
   const generatePuantajRaporu = () => {
@@ -527,7 +533,7 @@ export default function Home() {
     if (file) {
       const reader = new FileReader();
 
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
           const data = e.target?.result;
           const workbook = XLSX.read(data, { type: 'array', raw: true, cellNF: false });
@@ -541,9 +547,8 @@ export default function Home() {
           }
 
           const headers = json[0]; // İlk satır başlıklar
-          let currentMaxId = records.length > 0 ? Math.max(...records.map(r => r.id)) : 0; // Mevcut en yüksek ID'yi al
 
-          const newRecords: AccommodationRecord[] = json.slice(1).map((row: (string | number | null)[]) => {
+          const newRecords: Omit<AccommodationRecord, 'id'>[] = json.slice(1).map((row: (string | number | null)[]) => {
             // Ensure headers are correctly mapped to row indices if json is array of arrays
             // Assuming headers array contains the exact strings like 'Giriş Tarihi'
             const getColumnValue = (headerName: string): string => {
@@ -575,7 +580,6 @@ export default function Home() {
             const toplamUcret = isNaN(gecelikUcret * numberOfNights) ? 0 : gecelikUcret * numberOfNights;
 
             return {
-              id: ++currentMaxId,
               adiSoyadi: getColumnValue('Adı Soyadı'),
               unvani: getColumnValue('Ünvanı'),
               ulke: getColumnValue('Ülke'),
@@ -594,8 +598,37 @@ export default function Home() {
             };
           });
 
-          setRecords(prevRecords => [...prevRecords, ...newRecords]);
-          alert(`Başarıyla ${newRecords.length} kayıt içe aktarıldı.`);
+          // API'ye gönder
+          fetch('/api/accommodation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newRecords),
+          })
+          .then(res => {
+            if (!res.ok) {
+              // If response is not ok, get the error message from the body
+              return res.text().then(text => {
+                throw new Error(`Server error: ${res.status} ${res.statusText}. Body: ${text}`);
+              });
+            }
+            // Check content-type to avoid parsing non-json response
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+              return res.json();
+            } else {
+              return res.text().then(text => {
+                throw new Error(`Expected JSON response, but got ${contentType}. Body: ${text}`);
+              });
+            }
+          })
+          .then(createdRecords => {
+            setRecords(prev => [...prev, ...createdRecords]);
+            alert(`Başarıyla ${createdRecords.length} kayıt içe aktarıldı.`);
+          })
+          .catch(error => {
+            console.error("Error importing records:", error);
+            alert(`Kayıtları içe aktarırken hata oluştu: ${error.message}`);
+          });
         } catch (error) {
           console.error("Excel okuma hatası:", error);
           alert('Excel dosyasını okurken bir hata oluştu.');
@@ -687,24 +720,89 @@ export default function Home() {
   };
 
   const handleDownloadExcelTemplate = () => {
-    const headers = ["Kurum / Cari", "Organizasyon Adı", "Otel Adı", "Adı Soyadı", "Unvanı", "Ülke", "Şehir", "Giriş Tarihi", "Çıkış Tarihi", "Oda Tipi", "Konaklama Tipi", "Fatura Edildi mi?", "Gecelik Ücret"];
+    // İçe aktarma mantığıyla tam uyumlu, düzeltilmiş başlıklar
+    const headers = [
+      "Kurum / Cari", 
+      "Organizasyon Adı", 
+      "Otel Adı", 
+      "Adı Soyadı", 
+      "Ünvanı", // İçe aktarmadaki 'Ünvanı' ile eşleşmesi için düzeltildi
+      "Ülke", 
+      "Şehir", 
+      "Giriş Tarihi", 
+      "Çıkış Tarihi", 
+      "Oda Tipi", 
+      "Konaklama Tipi", 
+      "Fatura Edildi mi?", 
+      "Gecelik Ücret"
+    ];
     
-    // Örnek veriler ekleniyor
+    // Güncel yapıya uygun örnek veriler
     const exampleData = [
-      ["ABC Şirketi", "Yıllık Toplantı", "Grand Hotel", "Ahmet Yılmaz", "Genel Müdür", "Türkiye", "İstanbul", "2024-06-15", "2024-06-18", "Double Oda", "BB", "Evet", "2500"],
-      ["XYZ Holding", "Eğitim Semineri", "Seaside Resort", "Ayşe Kaya", "Eğitim Uzmanı", "Türkiye", "Antalya", "2024-07-10", "2024-07-15", "Single Oda", "HB", "Hayır", "1800"]
+      ["ABC Şirketi", "Yıllık Toplantı", "Grand Hotel", "Ahmet Yılmaz", "Genel Müdür", "Türkiye", "İstanbul", "2024-06-15", "2024-06-18", "Double Oda", "BB", "Evet", 2500],
+      ["XYZ Holding", "Eğitim Semineri", "Seaside Resort", "Ayşe Kaya", "Eğitim Uzmanı", "Türkiye", "Antalya", "2024-07-10", "2024-07-15", "Single Oda", "HB", "Hayır", 1800]
     ];
     
     const ws_data = [headers, ...exampleData];
     const ws = XLSX.utils.aoa_to_sheet(ws_data);
     
     // Sütun genişliklerini ayarla
-    const wscols = headers.map(() => ({ wch: 20 })); // Her sütun için 20 karakter genişlik
+    const wscols = headers.map(() => ({ wch: 20 }));
     ws['!cols'] = wscols;
-    
+
+    // Başlıklara yol gösterici notlar ekle
+    const addComment = (cell: string, text: string) => {
+      if (!ws[cell].c) ws[cell].c = [];
+      ws[cell].c.push({ a: "Sistem Notu", t: text });
+    };
+    addComment('H1', 'Tarih formatı YYYY-MM-DD şeklinde olmalıdır. Örnek: 2024-12-31');
+    addComment('I1', 'Tarih formatı YYYY-MM-DD şeklinde olmalıdır. Örnek: 2024-12-31');
+
+    // Veri doğrulama için arayüz tanımı
+    interface DataValidation {
+      type: 'list';
+      formula1: string;
+    }
+
+    // Belirli sütunlar için veri doğrulama (açılır menü) ekle
+    const validations: { [key: string]: DataValidation } = {
+      'Oda Tipi': {
+        type: 'list',
+        formula1: '"Single Oda,Double Oda,Triple Oda,Suit Oda"'
+      },
+      'Konaklama Tipi': {
+        type: 'list',
+        formula1: '"BB,HB,FB,UHD"'
+      },
+      'Fatura Edildi mi?': {
+        type: 'list',
+        formula1: '"Evet,Hayır"'
+      }
+    };
+
+    const maxRows = 1000; // İlk 1000 satır için doğrulama uygula
+    if (!ws['!dataValidation']) ws['!dataValidation'] = [];
+
+    headers.forEach((header, index) => {
+      if (validations[header]) {
+        const col = XLSX.utils.encode_col(index);
+        ws['!dataValidation'].push({
+          sqref: `${col}2:${col}${maxRows}`,
+          ...validations[header],
+          allowBlank: true,
+          showInputMessage: true,
+          showErrorMessage: true,
+          promptTitle: `${header} Seçimi`,
+          prompt: `Lütfen listeden geçerli bir değer seçin.`,
+          errorTitle: `Geçersiz Değer`,
+          error: `Lütfen ${header} için listeden geçerli bir değer seçin.`,
+        });
+      }
+    });
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Şablon");
-    XLSX.writeFile(wb, "konaklama_sablonu.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Konaklama Şablonu");
+    XLSX.writeFile(wb, "konaklama_sablonu_guncel.xlsx");
   };
 
   // Tabloya tarih yazarken kullanılacak fonksiyon
@@ -825,101 +923,118 @@ export default function Home() {
 
         {/* Table Section */}
         <div className="card">
-          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex justify-between items-center">
             <h3 className="text-xl font-bold text-gray-800 flex items-center">
               <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
               Konaklama Kayıtları
             </h3>
+            <button
+              onClick={() => setIsTableCollapsed(!isTableCollapsed)}
+              className="p-2 text-gray-500 hover:text-gray-700 transition-colors rounded-full hover:bg-gray-200"
+              title={isTableCollapsed ? "Genişlet" : "Küçült"}
+            >
+              {isTableCollapsed ? (
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              ) : (
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                </svg>
+              )}
+            </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="table w-full text-xs">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th className="hidden md:table-cell">Kurum / Cari</th>
-                  <th className="hidden lg:table-cell">Organizasyon</th>
-                  <th className="hidden lg:table-cell">Otel</th>
-                  <th>Adı Soyadı</th>
-                  <th className="hidden md:table-cell">Unvanı</th>
-                  <th className="hidden md:table-cell">Ülke</th>
-                  <th>Şehir</th>
-                  <th>Giriş</th>
-                  <th>Çıkış</th>
-                  <th>Oda</th>
-                  <th>Konaklama</th>
-                  <th className="hidden md:table-cell">Fatura</th>
-                  <th>Gece</th>
-                  <th className="hidden md:table-cell">Gecelik Ücret</th>
-                  <th className="hidden md:table-cell">Toplam Ücret</th>
-                  <th>İşlemler</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="font-medium text-blue-600">{record.id}</td>
-                    <td className="truncate max-w-[80px] hidden md:table-cell">{record.kurumCari || '-'}</td>
-                    <td className="truncate max-w-[80px] hidden lg:table-cell">{record.organizasyonAdi || '-'}</td>
-                    <td className="truncate max-w-[80px] hidden lg:table-cell">{record.otelAdi || '-'}</td>
-                    <td className="truncate max-w-[90px]">{record.adiSoyadi}</td>
-                    <td className="truncate max-w-[80px] hidden md:table-cell">{record.unvani}</td>
-                    <td className="truncate max-w-[60px] hidden md:table-cell">{record.ulke}</td>
-                    <td className="truncate max-w-[60px]">{record.sehir}</td>
-                    <td>{formatDate(record.girisTarihi)}</td>
-                    <td>{formatDate(record.cikisTarihi)}</td>
-                    <td>
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mr-1">
-                        {record.odaTipi}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${record.konaklamaTipi === 'BB' ? 'bg-yellow-100 text-yellow-800' : record.konaklamaTipi === 'HB' ? 'bg-green-100 text-green-800' : record.konaklamaTipi === 'FB' ? 'bg-purple-100 text-purple-800' : 'bg-pink-100 text-pink-800'}`}>{record.konaklamaTipi}</span>
-                    </td>
-                    <td className="hidden md:table-cell">
-                      {record.faturaEdildi ? (
-                        <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                          Evet
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                          Hayır
-                        </span>
-                      )}
-                    </td>
-                    <td className="text-center">{record.numberOfNights || 0}</td>
-                    <td className="font-medium hidden md:table-cell">{record.gecelikUcret.toLocaleString('tr-TR')} ₺</td>
-                    <td className="font-bold text-green-600 hidden md:table-cell">{record.toplamUcret.toLocaleString('tr-TR')} ₺</td>
-                    <td>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleEditClick(record.id)}
-                          className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
-                          title="Düzenle"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClick(record.id)}
-                          className="p-1 text-red-600 hover:text-red-800 transition-colors"
-                          title="Sil"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
+          {!isTableCollapsed && (
+            <div className="overflow-x-auto">
+              <table className="table w-full text-xs">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th className="hidden md:table-cell">Kurum / Cari</th>
+                    <th className="hidden lg:table-cell">Organizasyon</th>
+                    <th className="hidden lg:table-cell">Otel</th>
+                    <th>Adı Soyadı</th>
+                    <th className="hidden md:table-cell">Unvanı</th>
+                    <th className="hidden md:table-cell">Ülke</th>
+                    <th>Şehir</th>
+                    <th>Giriş</th>
+                    <th>Çıkış</th>
+                    <th>Oda</th>
+                    <th>Konaklama</th>
+                    <th className="hidden md:table-cell">Fatura</th>
+                    <th>Gece</th>
+                    <th className="hidden md:table-cell">Gecelik Ücret</th>
+                    <th className="hidden md:table-cell">Toplam Ücret</th>
+                    <th>İşlemler</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {records.map((record) => (
+                    <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="font-medium text-blue-600">{record.id}</td>
+                      <td className="truncate max-w-[80px] hidden md:table-cell">{record.kurumCari || '-'}</td>
+                      <td className="truncate max-w-[80px] hidden lg:table-cell">{record.organizasyonAdi || '-'}</td>
+                      <td className="truncate max-w-[80px] hidden lg:table-cell">{record.otelAdi || '-'}</td>
+                      <td className="truncate max-w-[90px]">{record.adiSoyadi}</td>
+                      <td className="truncate max-w-[80px] hidden md:table-cell">{record.unvani}</td>
+                      <td className="truncate max-w-[60px] hidden md:table-cell">{record.ulke}</td>
+                      <td className="truncate max-w-[60px]">{record.sehir}</td>
+                      <td>{formatDate(record.girisTarihi)}</td>
+                      <td>{formatDate(record.cikisTarihi)}</td>
+                      <td>
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mr-1">
+                          {record.odaTipi}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${record.konaklamaTipi === 'BB' ? 'bg-yellow-100 text-yellow-800' : record.konaklamaTipi === 'HB' ? 'bg-green-100 text-green-800' : record.konaklamaTipi === 'FB' ? 'bg-purple-100 text-purple-800' : 'bg-pink-100 text-pink-800'}`}>{record.konaklamaTipi}</span>
+                      </td>
+                      <td className="hidden md:table-cell">
+                        {record.faturaEdildi ? (
+                          <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                            Evet
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            Hayır
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-center">{record.numberOfNights || 0}</td>
+                      <td className="font-medium hidden md:table-cell">{record.gecelikUcret.toLocaleString('tr-TR')} ₺</td>
+                      <td className="font-bold text-green-600 hidden md:table-cell">{record.toplamUcret.toLocaleString('tr-TR')} ₺</td>
+                      <td>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleEditClick(record.id)}
+                            className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                            title="Düzenle"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(record.id)}
+                            className="p-1 text-red-600 hover:text-red-800 transition-colors"
+                            title="Sil"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Edit Modal */}
@@ -1294,43 +1409,35 @@ export default function Home() {
                 <div className="space-y-4">
                   {/* Organizasyon Adı Filtreleme */}
                   <div className="space-y-2 relative">
-                    <label htmlFor="puantaj-organizasyonAdi" className="block text-sm font-semibold text-gray-700">
+                    <label htmlFor="organizasyonAdi" className="block text-sm font-semibold text-gray-700">
                       Organizasyon Adı
                     </label>
                     <div className="relative">
                       <input
                         type="text"
-                        id="puantaj-organizasyonAdi"
+                        id="organizasyonAdi"
                         className="input pr-10"
                         value={puantajFilters.organizasyonAdi}
                         onChange={handlePuantajFilterChange}
+                        onFocus={() => setShowOrganizasyonOptions(true)}
+                        onBlur={() => setTimeout(() => setShowOrganizasyonOptions(false), 200)}
                         placeholder="Organizasyon adına göre filtrele"
                         autoComplete="off"
                       />
-                      {puantajFilters.organizasyonAdi && (
-                        <button 
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          onClick={() => handleOptionSelect('organizasyonAdi', '')}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
+                      {showOrganizasyonOptions && getFilteredOptions('organizasyonAdi').length > 0 && (
+                        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-gray-700 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                          {getFilteredOptions('organizasyonAdi').map((option, index) => (
+                            <li
+                              key={index}
+                              onMouseDown={() => handleOptionSelect('organizasyonAdi', option)}
+                              className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-white hover:bg-gray-600"
+                            >
+                              {option}
+                            </li>
+                          ))}
+                        </ul>
                       )}
                     </div>
-                    {puantajFilters.organizasyonAdi && getFilteredOptions('organizasyonAdi').length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-40 overflow-y-auto">
-                        {getFilteredOptions('organizasyonAdi').map((option, index) => (
-                          <div 
-                            key={index} 
-                            className="p-3 hover:bg-gray-50 cursor-pointer text-gray-700 text-sm border-b border-gray-100 last:border-b-0"
-                            onClick={() => handleOptionSelect('organizasyonAdi', option)}
-                          >
-                            {option}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

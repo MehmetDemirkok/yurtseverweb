@@ -11,8 +11,17 @@ export async function GET() {
 export async function POST(request: Request) {
   const data = await request.json();
   try {
-    const record = await prisma.accommodation.create({ data });
-    return NextResponse.json(record);
+    if (Array.isArray(data)) {
+      // Toplu kayıt ekleme
+      const createdRecords = await prisma.$transaction(
+        data.map((record) => prisma.accommodation.create({ data: record }))
+      );
+      return NextResponse.json(createdRecords);
+    } else {
+      // Tek kayıt ekleme
+      const record = await prisma.accommodation.create({ data });
+      return NextResponse.json(record);
+    }
   } catch (error: unknown) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
