@@ -99,7 +99,7 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
           </div>
           <div className="space-y-2">
             <label htmlFor="gecelikUcret" className="block text-sm font-semibold text-gray-700">Gecelik Ücret (₺)</label>
-            <input type="number" id="gecelikUcret" className="input" value={formData.gecelikUcret} onChange={onChange} step="1" min="0" placeholder="0" />
+            <input type="number" id="gecelikUcret" className="input" value={formData.gecelikUcret || ''} onChange={onChange} step="1" min="0" placeholder="0" />
           </div>
         </div>
         <div className="flex justify-center mt-8">

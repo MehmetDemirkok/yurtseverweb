@@ -69,6 +69,10 @@ export default function Home() {
 
   const [showAccommodationModal, setShowAccommodationModal] = useState(false);
 
+  // Sıralama state'leri
+  const [sortColumn, setSortColumn] = useState<keyof AccommodationRecord | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
+
   type ColumnKey = keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret';
   type ColumnDef = { key: ColumnKey; label: string };
 
@@ -818,6 +822,108 @@ export default function Home() {
     setFormData(prev => ({ ...prev, faturaEdildi: e.target.checked }));
   };
 
+  // Sıralama fonksiyonu
+  const handleSort = (column: keyof AccommodationRecord) => {
+    if (sortColumn === column) {
+      // Aynı sütuna tıklandıysa sıralama yönünü değiştir
+      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
+      if (sortDirection === 'desc') {
+        setSortColumn(null);
+      }
+    } else {
+      // Yeni sütuna tıklandıysa o sütunu artan sırada sırala
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sıralama sıfırlama fonksiyonu
+  const clearSort = () => {
+    setSortColumn(null);
+    setSortDirection(null);
+  };
+
+  // Sıralanmış kayıtları hesapla
+  const sortedRecords = [...records].sort((a, b) => {
+    if (!sortColumn || !sortDirection) return 0;
+
+    const aValue = a[sortColumn];
+    const bValue = b[sortColumn];
+
+    // numberOfNights için özel kontrol
+    if (sortColumn === 'numberOfNights') {
+      const aValueNum = a.numberOfNights || 0;
+      const bValueNum = b.numberOfNights || 0;
+      if (aValueNum < bValueNum) return sortDirection === 'asc' ? -1 : 1;
+      if (aValueNum > bValueNum) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    }
+
+    // Null/undefined değerleri en sona koy
+    if (aValue === null || aValue === undefined) return 1;
+    if (bValue === null || bValue === undefined) return -1;
+
+    // String değerler için
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      const aStr = aValue.toLowerCase();
+      const bStr = bValue.toLowerCase();
+      if (aStr < bStr) return sortDirection === 'asc' ? -1 : 1;
+      if (aStr > bStr) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    }
+
+    // Tarih değerleri için
+    if (sortColumn === 'girisTarihi' || sortColumn === 'cikisTarihi') {
+      const aDate = new Date(aValue as string).getTime();
+      const bDate = new Date(bValue as string).getTime();
+      if (aDate < bDate) return sortDirection === 'asc' ? -1 : 1;
+      if (aDate > bDate) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    }
+
+    // Boolean değerler için
+    if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
+      const aBool = aValue ? 1 : 0;
+      const bBool = bValue ? 1 : 0;
+      if (aBool < bBool) return sortDirection === 'asc' ? -1 : 1;
+      if (aBool > bBool) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    }
+
+    // Sayısal karşılaştırma
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+    }
+
+    return 0;
+  });
+
+  // Sıralama ikonu bileşeni
+  const SortIcon = ({ column }: { column: keyof AccommodationRecord }) => {
+    if (sortColumn !== column) {
+      return (
+        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      );
+    }
+    
+    if (sortDirection === 'asc') {
+      return (
+        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+        </svg>
+      );
+    }
+    
+    return (
+      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    );
+  };
+
   return (
     <>
       {/* Modern Header with Logo */}
@@ -924,12 +1030,51 @@ export default function Home() {
         {/* Table Section */}
         <div className="card">
           <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex justify-between items-center">
-            <h3 className="text-xl font-bold text-gray-800 flex items-center">
-              <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              Konaklama Kayıtları
-            </h3>
+            <div className="flex items-center space-x-4">
+              <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Konaklama Kayıtları
+              </h3>
+              {sortColumn && sortDirection && (
+                <div className="flex items-center space-x-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+                  </svg>
+                  <span>
+                    {sortColumn === 'id' && 'ID'}
+                    {sortColumn === 'adiSoyadi' && 'Adı Soyadı'}
+                    {sortColumn === 'unvani' && 'Unvanı'}
+                    {sortColumn === 'ulke' && 'Ülke'}
+                    {sortColumn === 'sehir' && 'Şehir'}
+                    {sortColumn === 'girisTarihi' && 'Giriş Tarihi'}
+                    {sortColumn === 'cikisTarihi' && 'Çıkış Tarihi'}
+                    {sortColumn === 'odaTipi' && 'Oda Tipi'}
+                    {sortColumn === 'konaklamaTipi' && 'Konaklama Tipi'}
+                    {sortColumn === 'faturaEdildi' && 'Fatura Durumu'}
+                    {sortColumn === 'numberOfNights' && 'Gece Sayısı'}
+                    {sortColumn === 'gecelikUcret' && 'Gecelik Ücret'}
+                    {sortColumn === 'toplamUcret' && 'Toplam Ücret'}
+                    {sortColumn === 'organizasyonAdi' && 'Organizasyon'}
+                    {sortColumn === 'otelAdi' && 'Otel'}
+                    {sortColumn === 'kurumCari' && 'Kurum/Cari'}
+                  </span>
+                  <span className="font-medium">
+                    {sortDirection === 'asc' ? 'A-Z' : 'Z-A'}
+                  </span>
+                  <button
+                    onClick={clearSort}
+                    className="ml-2 p-1 text-blue-600 hover:text-blue-800 transition-colors rounded-full hover:bg-blue-100"
+                    title="Sıralamayı Sıfırla"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               onClick={() => setIsTableCollapsed(!isTableCollapsed)}
               className="p-2 text-gray-500 hover:text-gray-700 transition-colors rounded-full hover:bg-gray-200"
@@ -951,27 +1096,155 @@ export default function Home() {
               <table className="table w-full text-xs">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th className="hidden md:table-cell">Kurum / Cari</th>
-                    <th className="hidden lg:table-cell">Organizasyon</th>
-                    <th className="hidden lg:table-cell">Otel</th>
-                    <th>Adı Soyadı</th>
-                    <th className="hidden md:table-cell">Unvanı</th>
-                    <th className="hidden md:table-cell">Ülke</th>
-                    <th>Şehir</th>
-                    <th>Giriş</th>
-                    <th>Çıkış</th>
-                    <th>Oda</th>
-                    <th>Konaklama</th>
-                    <th className="hidden md:table-cell">Fatura</th>
-                    <th>Gece</th>
-                    <th className="hidden md:table-cell">Gecelik Ücret</th>
-                    <th className="hidden md:table-cell">Toplam Ücret</th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('id')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>ID</span>
+                        <SortIcon column="id" />
+                      </div>
+                    </th>
+                    <th 
+                      className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('kurumCari')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Kurum / Cari</span>
+                        <SortIcon column="kurumCari" />
+                      </div>
+                    </th>
+                    <th 
+                      className="hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('organizasyonAdi')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Organizasyon</span>
+                        <SortIcon column="organizasyonAdi" />
+                      </div>
+                    </th>
+                    <th 
+                      className="hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('otelAdi')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Otel</span>
+                        <SortIcon column="otelAdi" />
+                      </div>
+                    </th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('adiSoyadi')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Adı Soyadı</span>
+                        <SortIcon column="adiSoyadi" />
+                      </div>
+                    </th>
+                    <th 
+                      className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('unvani')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Unvanı</span>
+                        <SortIcon column="unvani" />
+                      </div>
+                    </th>
+                    <th 
+                      className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('ulke')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Ülke</span>
+                        <SortIcon column="ulke" />
+                      </div>
+                    </th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('sehir')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Şehir</span>
+                        <SortIcon column="sehir" />
+                      </div>
+                    </th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('girisTarihi')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Giriş</span>
+                        <SortIcon column="girisTarihi" />
+                      </div>
+                    </th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('cikisTarihi')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Çıkış</span>
+                        <SortIcon column="cikisTarihi" />
+                      </div>
+                    </th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('odaTipi')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Oda</span>
+                        <SortIcon column="odaTipi" />
+                      </div>
+                    </th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('konaklamaTipi')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Konaklama</span>
+                        <SortIcon column="konaklamaTipi" />
+                      </div>
+                    </th>
+                    <th 
+                      className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('faturaEdildi')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Fatura</span>
+                        <SortIcon column="faturaEdildi" />
+                      </div>
+                    </th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('numberOfNights')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Gece</span>
+                        <SortIcon column="numberOfNights" />
+                      </div>
+                    </th>
+                    <th 
+                      className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('gecelikUcret')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Gecelik Ücret</span>
+                        <SortIcon column="gecelikUcret" />
+                      </div>
+                    </th>
+                    <th 
+                      className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      onClick={() => handleSort('toplamUcret')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Toplam Ücret</span>
+                        <SortIcon column="toplamUcret" />
+                      </div>
+                    </th>
                     <th>İşlemler</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map((record) => (
+                  {sortedRecords.map((record) => (
                     <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                       <td className="font-medium text-blue-600">{record.id}</td>
                       <td className="truncate max-w-[80px] hidden md:table-cell">{record.kurumCari || '-'}</td>
@@ -1222,7 +1495,7 @@ export default function Home() {
                     type="number" 
                     id="edit-gecelikUcret" 
                     className="input" 
-                    value={formData.gecelikUcret} 
+                    value={formData.gecelikUcret || ''} 
                     onChange={handleInputChange} 
                     step="1"
                     min="0"
