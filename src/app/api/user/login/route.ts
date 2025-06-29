@@ -24,8 +24,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Kullanıcı adı veya şifre hatalı.' }, { status: 401 });
     }
 
-    // JWT oluştur
-    const token = jwt.sign({ id: user.id, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
+    // JWT oluştur - role bilgisini de dahil et
+    const token = jwt.sign({ 
+      id: user.id, 
+      email: user.email, 
+      name: user.name,
+      role: user.role 
+    }, JWT_SECRET, { expiresIn: '7d' });
+    
     // Cookie olarak set et
     const cookie = serialize('token', token, {
       httpOnly: true,
@@ -35,7 +41,15 @@ export async function POST(request: Request) {
       secure: process.env.NODE_ENV === 'production',
     });
 
-    const response = NextResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.name } });
+    const response = NextResponse.json({ 
+      success: true, 
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        name: user.name,
+        role: user.role 
+      } 
+    });
     response.headers.set('Set-Cookie', cookie);
     return response;
   } catch (error) {

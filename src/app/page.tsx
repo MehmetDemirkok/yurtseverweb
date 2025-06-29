@@ -24,9 +24,17 @@ export interface AccommodationRecord {
   numberOfNights?: number;
 }
 
+interface User {
+  id: number;
+  email: string;
+  name?: string;
+  role: 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER';
+}
+
 export default function Home() {
   const [records, setRecords] = useState<AccommodationRecord[]>([]);
   const [isTableCollapsed, setIsTableCollapsed] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [formData, setFormData] = useState<Omit<AccommodationRecord, 'id' | 'toplamUcret' | 'numberOfNights'>>({
     adiSoyadi: '',
@@ -76,6 +84,20 @@ export default function Home() {
   type ColumnKey = keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret';
   type ColumnDef = { key: ColumnKey; label: string };
 
+  // Role tabanlı yetki kontrolü fonksiyonları
+  const hasRole = (requiredRole: string): boolean => {
+    if (!currentUser) return false;
+    const roleHierarchy: Record<string, number> = { 'ADMIN': 4, 'MANAGER': 3, 'USER': 2, 'VIEWER': 1 };
+    const userRole = currentUser.role as string;
+    return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+  };
+
+  const canAdd = () => hasRole('USER');
+  const canEdit = () => hasRole('USER');
+  const canDelete = () => hasRole('MANAGER');
+  const canImport = () => hasRole('USER');
+  const canExport = () => hasRole('VIEWER');
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     let { id } = e.target;
     const { value } = e.target;
@@ -91,6 +113,12 @@ export default function Home() {
 
   // API'den kayıtları çek
   useEffect(() => {
+    // Kullanıcı bilgisini al
+    fetch('/api/user', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => setCurrentUser(data.user))
+      .catch(err => console.error('Kullanıcı bilgisi alınamadı:', err));
+
     fetch('/api/accommodation')
       .then(res => res.json())
       .then(data => setRecords(data));
@@ -959,15 +987,30 @@ export default function Home() {
 
         {/* Action Buttons - Hepsi aynı hizada */}
         <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mb-8">
-          <button
-            onClick={() => setShowAccommodationModal(true)}
-            className="btn btn-primary text-lg px-8 py-3 flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Yeni Konaklama Kaydı Oluştur
-          </button>
+          {/* Admin Link - Sadece ADMIN görebilir */}
+          {currentUser?.role === 'ADMIN' && (
+            <a
+              href="/admin"
+              className="btn btn-warning text-lg px-6 py-3 flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+              </svg>
+              Kullanıcı Yönetimi
+            </a>
+          )}
+
+          {canAdd() && (
+            <button
+              onClick={() => setShowAccommodationModal(true)}
+              className="btn btn-primary text-lg px-8 py-3 flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Yeni Konaklama Kaydı Oluştur
+            </button>
+          )}
 
           <button
             onClick={handlePuantajRaporu}
@@ -978,40 +1021,50 @@ export default function Home() {
             </svg>
             Puantaj Raporu
           </button>
-          <input
-            type="file"
-            id="excelImportInput"
-            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-            onChange={handleImportExcel}
-            className="hidden"
-          />
-          <button
-            onClick={() => document.getElementById('excelImportInput')?.click()}
-            className="btn btn-secondary"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Excel&apos;den İçe Aktar
-          </button>
-          <button
-            onClick={handleExportExcel}
-            className="btn btn-success"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" transform="rotate(180 12 12)" />
-            </svg>
-            Excel&apos;e Aktar
-          </button>
-          <button
-            onClick={handleDownloadExcelTemplate}
-            className="btn btn-warning"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Excel Şablonu İndir
-          </button>
+          
+          {canImport() && (
+            <>
+              <input
+                type="file"
+                id="excelImportInput"
+                accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                onChange={handleImportExcel}
+                className="hidden"
+              />
+              <button
+                onClick={() => document.getElementById('excelImportInput')?.click()}
+                className="btn btn-secondary"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Excel&apos;den İçe Aktar
+              </button>
+            </>
+          )}
+          
+          {canExport() && (
+            <>
+              <button
+                onClick={handleExportExcel}
+                className="btn btn-success"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" transform="rotate(180 12 12)" />
+                </svg>
+                Excel&apos;e Aktar
+              </button>
+              <button
+                onClick={handleDownloadExcelTemplate}
+                className="btn btn-warning"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Excel Şablonu İndir
+              </button>
+            </>
+          )}
         </div>
 
         {/* Modal */}
@@ -1282,24 +1335,28 @@ export default function Home() {
                       <td className="font-bold text-green-600 hidden md:table-cell">{record.toplamUcret.toLocaleString('tr-TR')} ₺</td>
                       <td>
                         <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEditClick(record.id)}
-                            className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
-                            title="Düzenle"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(record.id)}
-                            className="p-1 text-red-600 hover:text-red-800 transition-colors"
-                            title="Sil"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
+                          {canEdit() && (
+                            <button
+                              onClick={() => handleEditClick(record.id)}
+                              className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                              title="Düzenle"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          )}
+                          {canDelete() && (
+                            <button
+                              onClick={() => handleDeleteClick(record.id)}
+                              className="p-1 text-red-600 hover:text-red-800 transition-colors"
+                              title="Sil"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
