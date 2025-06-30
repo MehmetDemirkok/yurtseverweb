@@ -1,17 +1,50 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  password  String
+  role      Role     @default(USER)
+}
+
+model Accommodation {
+  id              Int     @id @default(autoincrement())
+  adiSoyadi       String
+  unvani          String
+  ulke            String
+  sehir           String
+  girisTarihi     String
+  cikisTarihi     String
+  odaTipi         String
+  konaklamaTipi   String
+  faturaEdildi    Boolean
+  gecelikUcret    Float
+  toplamUcret     Float
+  organizasyonAdi String?
+  otelAdi         String?
+  kurumCari       String?
+  numberOfNights  Int?
+  sales           Sale[]
+}
+
+model Sale {
+  id              Int        @id @default(autoincrement())
+  accommodation   Accommodation @relation(fields: [accommodationId], references: [id])
+  accommodationId Int
+  organizasyonAdi String
+  fiyat           Float
+  createdAt       DateTime   @default(now())
+  status          SaleStatus @default(AKTARILDI)
 }
 
 enum Role {
@@ -21,30 +54,8 @@ enum Role {
   VIEWER
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  password  String
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-}
-
-model Accommodation {
-  id        Int      @id @default(autoincrement())
-  adiSoyadi String
-  unvani    String
-  ulke      String
-  sehir     String
-  girisTarihi String
-  cikisTarihi String
-  odaTipi   String
-  konaklamaTipi String
-  faturaEdildi Boolean
-  gecelikUcret Float
-  toplamUcret Float
-  organizasyonAdi String?
-  otelAdi   String?
-  kurumCari String?
-  numberOfNights Int?
+enum SaleStatus {
+  AKTARILDI
+  FATURALANDI
+  IPTAL
 }

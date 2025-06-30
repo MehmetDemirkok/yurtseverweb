@@ -128,18 +128,23 @@ export default function Home() {
       .then(data => setOrganizasyonOptions(data));
   }, []);
 
+  // Doğru gün sayısı hesaplama fonksiyonu (çıkış günü hariç)
+  function calculateNumberOfNights(girisTarihi: string, cikisTarihi: string): number {
+    const start = new Date(girisTarihi);
+    const end = new Date(cikisTarihi);
+    const diffTime = end.getTime() - start.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  }
+
   // Kayıt ekleme fonksiyonunu API'ye bağla
   const handleAddRecord = async () => {
-    const girisDate = new Date(formData.girisTarihi);
-    const cikisDate = new Date(formData.cikisTarihi);
-    const diffTime = Math.abs(cikisDate.getTime() - girisDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const calculatedToplamUcret = formData.gecelikUcret * (diffDays > 0 ? diffDays : 1);
-
+    const diffDays = calculateNumberOfNights(formData.girisTarihi, formData.cikisTarihi);
+    const calculatedToplamUcret = formData.gecelikUcret * diffDays;
     const newRecord = {
       ...formData,
       toplamUcret: calculatedToplamUcret,
-      numberOfNights: diffDays > 0 ? diffDays : 0,
+      numberOfNights: diffDays,
     };
     // API'ye gönder
     const res = await fetch('/api/accommodation', {
@@ -193,27 +198,20 @@ export default function Home() {
 
   const handleUpdateRecord = async () => {
     if (selectedRecordId === null) return;
-
-    const girisDate = new Date(formData.girisTarihi);
-    const cikisDate = new Date(formData.cikisTarihi);
-    const diffTime = Math.abs(cikisDate.getTime() - girisDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const calculatedToplamUcret = formData.gecelikUcret * (diffDays > 0 ? diffDays : 1);
-
+    const diffDays = calculateNumberOfNights(formData.girisTarihi, formData.cikisTarihi);
+    const calculatedToplamUcret = formData.gecelikUcret * diffDays;
     const updatedRecord = {
       id: selectedRecordId,
       ...formData,
       toplamUcret: calculatedToplamUcret,
-      numberOfNights: diffDays > 0 ? diffDays : 0,
+      numberOfNights: diffDays,
     };
-
     // API'ye PATCH isteği gönder
     const res = await fetch('/api/accommodation', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedRecord),
     });
-
     if (res.ok) {
       const updated = await res.json();
       setRecords((prevRecords) =>
@@ -222,10 +220,8 @@ export default function Home() {
         )
       );
     } else {
-      // Hata yönetimi
       alert('Kayıt güncellenemedi!');
     }
-
     setShowEditModal(false);
     setSelectedRecordId(null);
     setFormData({
@@ -289,14 +285,6 @@ export default function Home() {
       otelAdi: '',
       kurumCari: '',
     });
-  };
-
-  const calculateNumberOfNights = (girisTarihi: string, cikisTarihi: string): number => {
-    const start = new Date(girisTarihi);
-    const end = new Date(cikisTarihi);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
   };
 
   const handlePuantajRaporu = () => {
@@ -447,9 +435,9 @@ export default function Home() {
         const checkDate = new Date(date);
         const startDate = new Date(record.girisTarihi);
         const endDate = new Date(record.cikisTarihi);
-        
         // Eğer kişi o tarihte konaklamadaysa "X" işareti koy, değilse boş bırak
-        if (checkDate >= startDate && checkDate <= endDate) {
+        // Çıkış günü hariç!
+        if (checkDate >= startDate && checkDate < endDate) {
           row.push("X");
         } else {
           row.push("");
@@ -952,6 +940,82 @@ export default function Home() {
     );
   };
 
+  // Yeni state: seçili kayıtlar ve fiyatlar
+  const [selectedRecordIds, setSelectedRecordIds] = useState<number[]>([]);
+  const [saleModalOpen, setSaleModalOpen] = useState(false);
+  const [salePrices, setSalePrices] = useState<{ [userId: number]: number }>({});
+
+  // Checkbox değişimi
+  const handleSelectRecord = (id: number) => {
+    setSelectedRecordIds(prev => {
+      const newSelected = prev.includes(id) ? prev.filter(rid => rid !== id) : [...prev, id];
+      // Fiyat state'ini de güncelle
+      setSalePrices(prices => {
+        const updated = { ...prices };
+        if (!newSelected.includes(id)) delete updated[id];
+        return updated;
+      });
+      return newSelected;
+    });
+  };
+  const handleSelectAll = () => {
+    if (selectedRecordIds.length === sortedRecords.length) {
+      setSelectedRecordIds([]);
+      setSalePrices({});
+    } else {
+      setSelectedRecordIds(sortedRecords.map(r => r.id));
+      setSalePrices(Object.fromEntries(sortedRecords.map(r => [r.id, 0])));
+    }
+  };
+
+  // Satışa aktar fonksiyonu
+  const handleSaleTransfer = () => {
+    // Seçili kayıtlar için fiyatları başlat
+    setSalePrices(prices => {
+      const updated = { ...prices };
+      selectedRecordIds.forEach(id => { if (!(id in updated)) updated[id] = 0; });
+      return updated;
+    });
+    setSaleModalOpen(true);
+  };
+  const handleSalePriceChange = (accommodationId: number, value: number) => {
+    if (isNaN(value) || value < 0) {
+      setSalePrices(prices => ({ ...prices, [accommodationId]: 0 }));
+    } else {
+      setSalePrices(prices => ({ ...prices, [accommodationId]: value }));
+    }
+  };
+  const confirmSaleTransfer = async () => {
+    if (selectedRecordIds.length === 0) return;
+    const selectedRecords = records.filter(r => selectedRecordIds.includes(r.id));
+    const orgNames = Array.from(new Set(selectedRecords.map(r => r.organizasyonAdi)));
+    if (orgNames.length !== 1 || !orgNames[0]) {
+      alert('Satışa aktarılacak kayıtların organizasyon adı aynı olmalı ve boş olmamalı!');
+      return;
+    }
+    // Her konaklama için fiyatı topla, sadece geçerli number olanları gönder
+    const sales = selectedRecordIds.map(accommodationId => ({ accommodationId, fiyat: Number(salePrices[accommodationId]) || 0 }));
+    if (sales.some(s => !s.fiyat || s.fiyat <= 0 || isNaN(s.fiyat))) {
+      alert('Tüm kişiler için geçerli bir fiyat girilmelidir!');
+      return;
+    }
+    const res = await fetch('/api/sales', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sales, organizasyonAdi: orgNames[0] }),
+    });
+    const result = await res.json();
+    if (result.success) {
+      alert('Satışa aktarıldı!');
+      setSaleModalOpen(false);
+      setSelectedRecordIds([]);
+      setSalePrices({});
+      fetch('/api/accommodation').then(res => res.json()).then(data => setRecords(data));
+    } else {
+      alert(result.error || 'Satışa aktarma başarısız!');
+    }
+  };
+
   return (
     <>
       {/* Modern Header with Logo */}
@@ -999,6 +1063,17 @@ export default function Home() {
               Kullanıcı Yönetimi
             </a>
           )}
+
+          {/* Satışlar Sayfası Butonu */}
+          <a
+            href="/sales"
+            className="btn btn-success text-lg px-6 py-3 flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 17v-2a4 4 0 014-4h10a4 4 0 014 4v2M16 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            </svg>
+            Satışlar
+          </a>
 
           {canAdd() && (
             <button
@@ -1149,6 +1224,9 @@ export default function Home() {
               <table className="table w-full text-xs">
                 <thead>
                   <tr>
+                    <th>
+                      <input type="checkbox" checked={selectedRecordIds.length === sortedRecords.length && sortedRecords.length > 0} onChange={handleSelectAll} />
+                    </th>
                     <th 
                       className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('id')}
@@ -1299,6 +1377,9 @@ export default function Home() {
                 <tbody>
                   {sortedRecords.map((record) => (
                     <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                      <td>
+                        <input type="checkbox" checked={selectedRecordIds.includes(record.id)} onChange={() => handleSelectRecord(record.id)} />
+                      </td>
                       <td className="font-medium text-blue-600">{record.id}</td>
                       <td className="truncate max-w-[80px] hidden md:table-cell">{record.kurumCari || '-'}</td>
                       <td className="truncate max-w-[80px] hidden lg:table-cell">{record.organizasyonAdi || '-'}</td>
@@ -1366,6 +1447,76 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {/* Satışa Aktar butonu */}
+        {selectedRecordIds.length > 0 && (
+          <div className="fixed bottom-8 right-8 z-50">
+            <button className="btn btn-primary px-6 py-3 text-lg shadow-lg" onClick={handleSaleTransfer}>
+              Seçili Kişileri Satışa Aktar
+            </button>
+          </div>
+        )}
+        {/* Satış fiyatı modalı */}
+        {saleModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setSaleModalOpen(false); }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8 relative animate-fade-in border border-blue-100">
+              <button
+                onClick={() => setSaleModalOpen(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                aria-label="Kapat"
+              >
+                ×
+              </button>
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800">Seçili Kişiler İçin Satış Fiyatı</h2>
+              </div>
+              <div className="space-y-3 max-h-80 overflow-y-auto mb-4">
+                {selectedRecordIds.map(accommodationId => {
+                  const rec = records.find(r => r.id === accommodationId);
+                  const isInvalid = !salePrices[accommodationId] || salePrices[accommodationId] <= 0;
+                  return (
+                    <div key={accommodationId} className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-800 truncate">{rec?.adiSoyadi || accommodationId}</div>
+                        <div className="text-xs text-gray-500 flex flex-wrap gap-2 mt-1">
+                          <span className="inline-flex items-center gap-1"><svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" /></svg> {rec?.odaTipi}</span>
+                          <span className="inline-flex items-center gap-1"><svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10" /></svg> {rec?.numberOfNights || 0} gece</span>
+                          <span className="inline-flex items-center gap-1"><svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" /></svg> {rec?.gecelikUcret?.toLocaleString('tr-TR')} ₺ gecelik</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2 md:mt-0">
+                        <input
+                          type="number"
+                          className={`input w-28 text-base border ${isInvalid ? 'border-red-400 bg-red-50' : 'border-gray-300'} focus:border-blue-500 focus:ring-2 focus:ring-blue-200`}
+                          value={salePrices[accommodationId] || ''}
+                          onChange={e => handleSalePriceChange(accommodationId, Number(e.target.value))}
+                          placeholder="Fiyat"
+                          min={0}
+                        />
+                        <span className="text-gray-500 font-bold">₺</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {selectedRecordIds.some(accommodationId => !salePrices[accommodationId] || salePrices[accommodationId] <= 0) && (
+                <div className="text-red-600 text-sm mb-2 font-semibold flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-12.728 12.728M5.636 5.636l12.728 12.728" /></svg>
+                  Tüm kişiler için geçerli bir fiyat girilmelidir!
+                </div>
+              )}
+              <div className="flex justify-end space-x-2 mt-6">
+                <button className="btn btn-secondary" onClick={() => setSaleModalOpen(false)}>İptal</button>
+                <button className="btn btn-success" onClick={confirmSaleTransfer}>Satışa Aktar</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Edit Modal */}
         {showEditModal && (
