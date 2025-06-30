@@ -16,11 +16,11 @@ export async function GET() {
     return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 });
   }
   const decoded = jwt.verify(token, JWT_SECRET) as MyJwtPayload;
-  if (!decoded.userId || typeof decoded.userId !== 'number' || isNaN(decoded.userId)) {
+  if (!decoded.id || typeof decoded.id !== 'number' || isNaN(decoded.id)) {
     return NextResponse.json({ error: 'Geçersiz oturum.' }, { status: 401 });
   }
   const user = await prisma.user.findUnique({
-    where: { id: decoded.userId },
+    where: { id: decoded.id },
     select: {
       id: true,
       email: true,
