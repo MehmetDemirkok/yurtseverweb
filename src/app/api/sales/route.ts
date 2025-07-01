@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { cookies } from 'next/headers';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 // Tüm satışları listele
 export async function GET() {
@@ -14,6 +18,28 @@ export async function GET() {
 
 // Satışa aktarma (bir veya birden fazla konaklama kaydı)
 export async function POST(request: Request) {
+  // --- İZİN KONTROLÜ ---
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    if (!token) {
+      return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 });
+    }
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string; permissions?: string[] };
+    if (!decoded || !decoded.id) {
+      return NextResponse.json({ error: 'Geçersiz oturum.' }, { status: 401 });
+    }
+    // Kullanıcıyı DB'den çekip permissions kontrolü yap
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { permissions: true }
+    });
+    if (!user || !user.permissions || !user.permissions.includes('sales')) {
+      return NextResponse.json({ error: 'Satışa aktarma yetkiniz yok.' }, { status: 403 });
+    }
+  } catch (e) {
+    return NextResponse.json({ error: 'Yetki kontrolü başarısız.' }, { status: 401 });
+  }
   const data = await request.json();
   // data: { sales: [{ accommodationId, fiyat }], organizasyonAdi: string }
   const { sales, organizasyonAdi } = data;
