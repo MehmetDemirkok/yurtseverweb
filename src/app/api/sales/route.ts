@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     if (!user || !user.permissions || !user.permissions.includes('sales')) {
       return NextResponse.json({ error: 'Satışa aktarma yetkiniz yok.' }, { status: 403 });
     }
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Yetki kontrolü başarısız.' }, { status: 401 });
   }
   const data = await request.json();
