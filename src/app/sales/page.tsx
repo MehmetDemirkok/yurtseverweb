@@ -247,8 +247,8 @@ function SalesPageContent() {
           // Burada sadece frontend state'e ekliyoruz
           setSales(prev => [...prev, ...newSales]);
           alert(`Başarıyla ${newSales.length} satış kaydı içe aktarıldı (demo). Gerçek uygulamada backend ile entegre edilmelidir!`);
-        } catch (error) {
-          console.error('Excel okuma hatası:', error);
+        } catch (e) {
+          console.error('Excel okuma hatası:', e);
           alert('Excel dosyasını okurken bir hata oluştu.');
         }
       };
@@ -352,7 +352,7 @@ function SalesPageContent() {
       setSales(sales => sales.filter(s => !selectedIds.includes(s.id)));
       setSelectedIds([]);
       setShowBulkDeleteModal(false);
-    } catch (error) {
+    } catch (e) {
       alert('Toplu silme başarısız oldu!');
     }
   };
