@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import Statistics from './components/Statistics';
 import AccommodationFormModal from './components/AccommodationFormModal';
+import AuthGuard from "./components/AuthGuard";
 
 export interface AccommodationRecord {
   id: number;
@@ -29,12 +30,14 @@ interface User {
   email: string;
   name?: string;
   role: 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER';
+  permissions?: string[];
 }
 
 export default function Home() {
   const [records, setRecords] = useState<AccommodationRecord[]>([]);
   const [isTableCollapsed, setIsTableCollapsed] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
 
   const [formData, setFormData] = useState<Omit<AccommodationRecord, 'id' | 'toplamUcret' | 'numberOfNights'>>({
     adiSoyadi: '',
@@ -116,7 +119,10 @@ export default function Home() {
     // Kullanıcı bilgisini al
     fetch('/api/user', { credentials: 'include' })
       .then(res => res.json())
-      .then(data => setCurrentUser(data.user))
+      .then(data => {
+        setCurrentUser(data.user);
+        setUserPermissions(data.user.permissions || []);
+      })
       .catch(err => console.error('Kullanıcı bilgisi alınamadı:', err));
 
     const fetchRecords = () => {
@@ -1038,7 +1044,7 @@ export default function Home() {
   };
 
   return (
-    <>
+    <AuthGuard requiredPermissions={["dashboard"]}>
       {/* Modern Header with Logo */}
       <header className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 shadow-2xl">
         <div className="absolute inset-0 bg-black opacity-10"></div>
@@ -1066,9 +1072,11 @@ export default function Home() {
       {/* ... existing code ... */}
       <main className="container mx-auto px-6 py-8">
         {/* Statistics Section */}
-        <div className="mb-8 animate-slide-in">
-          <Statistics records={records} />
-        </div>
+        {userPermissions.includes("statistics") && (
+          <div className="mb-8 animate-slide-in">
+            <Statistics records={records} />
+          </div>
+        )}
 
         {/* Action Buttons - Hepsi aynı hizada */}
         <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mb-8">
@@ -1977,6 +1985,6 @@ export default function Home() {
           </div>
         )}
       </main>
-    </>
+    </AuthGuard>
   );
 }

@@ -28,7 +28,8 @@ export async function GET() {
         email: true,
         name: true,
         role: true,
-        createdAt: true
+        createdAt: true,
+        permissions: true
       },
       orderBy: {
         createdAt: 'desc'
@@ -78,14 +79,16 @@ export async function POST(request: Request) {
         email: data.email,
         name: data.name || '',
         password: hashedPassword,
-        role: data.role || 'USER'
+        role: data.role || 'USER',
+        permissions: data.permissions || []
       },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
-        createdAt: true
+        createdAt: true,
+        permissions: true
       }
     });
     

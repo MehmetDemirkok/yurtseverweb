@@ -9,6 +9,7 @@ interface User {
   name: string | null;
   role: 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER';
   createdAt: string;
+  permissions?: string[];
 }
 
 type CurrentUser = {
@@ -23,6 +24,7 @@ type NewUser = {
   name: string;
   password: string;
   role: 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER';
+  permissions: string[];
 };
 
 export default function AdminPage() {
@@ -45,13 +47,15 @@ export default function AdminPage() {
     email: '',
     name: '',
     password: '',
-    role: 'USER'
+    role: 'USER',
+    permissions: []
   });
 
   const [editUser, setEditUser] = useState({
     id: 0,
     name: '',
-    role: 'USER' as 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER'
+    role: 'USER' as 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER',
+    permissions: [] as string[]
   });
 
   // Arama ve filtreleme
@@ -68,6 +72,14 @@ export default function AdminPage() {
     user: 0,
     viewer: 0
   });
+
+  // İzinler listesi
+  const PERMISSIONS = [
+    { key: 'dashboard', label: 'Dashboard' },
+    { key: 'sales', label: 'Satışlar' },
+    { key: 'statistics', label: 'İstatistikler' },
+    // buraya yeni izinler eklenebilir
+  ];
 
   useEffect(() => {
     checkCurrentUser();
@@ -166,13 +178,13 @@ export default function AdminPage() {
 
   // Modal handlers
   const openAddModal = () => {
-    setNewUser({ email: '', name: '', password: '', role: 'USER' });
+    setNewUser({ email: '', name: '', password: '', role: 'USER', permissions: [] });
     setShowAddModal(true);
   };
 
   const openEditModal = (user: User) => {
     setSelectedUser(user);
-    setEditUser({ id: user.id, name: user.name || '', role: user.role });
+    setEditUser({ id: user.id, name: user.name || '', role: user.role, permissions: user.permissions || [] });
     setShowEditModal(true);
   };
 
@@ -183,13 +195,13 @@ export default function AdminPage() {
 
   const closeAddModal = () => {
     setShowAddModal(false);
-    setNewUser({ email: '', name: '', password: '', role: 'USER' });
+    setNewUser({ email: '', name: '', password: '', role: 'USER', permissions: [] });
   };
 
   const closeEditModal = () => {
     setShowEditModal(false);
     setSelectedUser(null);
-    setEditUser({ id: 0, name: '', role: 'USER' });
+    setEditUser({ id: 0, name: '', role: 'USER', permissions: [] });
   };
 
   const closeDeleteModal = () => {
@@ -226,7 +238,7 @@ export default function AdminPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name: editUser.name, role: editUser.role })
+        body: JSON.stringify({ name: editUser.name, role: editUser.role, permissions: editUser.permissions })
       });
 
       if (res.ok) {
@@ -725,6 +737,28 @@ export default function AdminPage() {
                   </select>
                 </div>
                 
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">Erişim İzinleri</label>
+                  <div className="flex flex-wrap gap-3">
+                    {PERMISSIONS.map((perm) => (
+                      <label key={perm.key} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={newUser.permissions.includes(perm.key)}
+                          onChange={(e) => {
+                            setNewUser((prev) =>
+                              e.target.checked
+                                ? { ...prev, permissions: [...prev.permissions, perm.key] }
+                                : { ...prev, permissions: prev.permissions.filter((p) => p !== perm.key) }
+                            );
+                          }}
+                        />
+                        {perm.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                
                 <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
@@ -794,6 +828,27 @@ export default function AdminPage() {
                     <option value="MANAGER">Müdür</option>
                     <option value="ADMIN">Yönetici</option>
                   </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">Erişim İzinleri</label>
+                  <div className="flex flex-wrap gap-3">
+                    {PERMISSIONS.map((perm) => (
+                      <label key={perm.key} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={editUser.permissions.includes(perm.key)}
+                          onChange={(e) => {
+                            setEditUser((prev) =>
+                              e.target.checked
+                                ? { ...prev, permissions: [...prev.permissions, perm.key] }
+                                : { ...prev, permissions: prev.permissions.filter((p) => p !== perm.key) }
+                            );
+                          }}
+                        />
+                        {perm.label}
+                      </label>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex gap-3 pt-4">
                   <button

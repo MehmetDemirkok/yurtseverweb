@@ -26,7 +26,8 @@ export async function GET() {
       email: true,
       name: true,
       role: true,
-      createdAt: true
+      createdAt: true,
+      permissions: true
     }
   });
   if (!user) {

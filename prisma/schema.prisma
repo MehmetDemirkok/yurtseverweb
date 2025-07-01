@@ -15,6 +15,7 @@ model User {
   createdAt DateTime @default(now())
   password  String
   role      Role     @default(USER)
+  permissions String[] @default([])
 }
 
 model Accommodation {

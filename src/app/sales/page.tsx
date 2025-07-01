@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import AuthGuard from "../components/AuthGuard";
 
 interface Sale {
   id: number;
@@ -21,6 +22,14 @@ interface Sale {
 }
 
 export default function SalesPage() {
+  return (
+    <AuthGuard requiredPermissions={["sales"]}>
+      <SalesPageContent />
+    </AuthGuard>
+  );
+}
+
+function SalesPageContent() {
   const router = useRouter();
   const [sales, setSales] = useState<Sale[]>([]);
   const [filterOrg, setFilterOrg] = useState("");
@@ -75,7 +84,14 @@ export default function SalesPage() {
   };
 
   // Tarih formatı
-  const formatDate = (date: string) => new Date(date).toLocaleDateString("tr-TR");
+  const formatDate = (date?: string) => {
+    if (!date) return '-';
+    const d = new Date(date);
+    const gun = String(d.getDate()).padStart(2, '0');
+    const ay = String(d.getMonth() + 1).padStart(2, '0');
+    const yil = d.getFullYear();
+    return `${gun}.${ay}.${yil}`;
+  };
 
   const handleEditModalOpen = (sale: Sale) => {
     setSelectedSale(sale);
@@ -215,8 +231,8 @@ export default function SalesPage() {
                   <td className="p-2 text-gray-800 font-medium">{sale.accommodation?.adiSoyadi || '-'}</td>
                   <td className="p-2 text-gray-700">{sale.accommodation?.unvani || '-'}</td>
                   <td className="p-2 text-blue-700 font-semibold">{sale.accommodation?.organizasyonAdi || sale.organizasyonAdi}</td>
-                  <td className="p-2 text-gray-600">{sale.accommodation?.girisTarihi || '-'}</td>
-                  <td className="p-2 text-gray-600">{sale.accommodation?.cikisTarihi || '-'}</td>
+                  <td className="p-2 text-gray-600">{formatDate(sale.accommodation?.girisTarihi)}</td>
+                  <td className="p-2 text-gray-600">{formatDate(sale.accommodation?.cikisTarihi)}</td>
                   <td className="p-2 text-purple-700 font-bold">{sale.accommodation?.numberOfNights ?? '-'}</td>
                   <td className="p-2 text-green-700 font-bold">{sale.fiyat.toLocaleString('tr-TR')}</td>
                   <td className="p-2">
@@ -247,8 +263,8 @@ export default function SalesPage() {
               <div><span className="font-semibold">Adı Soyadı:</span> {detailSale.accommodation?.adiSoyadi || '-'}</div>
               <div><span className="font-semibold">Unvanı:</span> {detailSale.accommodation?.unvani || '-'}</div>
               <div><span className="font-semibold">Organizasyon:</span> {detailSale.accommodation?.organizasyonAdi || detailSale.organizasyonAdi}</div>
-              <div><span className="font-semibold">Giriş Tarihi:</span> {detailSale.accommodation?.girisTarihi || '-'}</div>
-              <div><span className="font-semibold">Çıkış Tarihi:</span> {detailSale.accommodation?.cikisTarihi || '-'}</div>
+              <div><span className="font-semibold">Giriş Tarihi:</span> {formatDate(detailSale.accommodation?.girisTarihi)}</div>
+              <div><span className="font-semibold">Çıkış Tarihi:</span> {formatDate(detailSale.accommodation?.cikisTarihi)}</div>
               <div><span className="font-semibold">Gece:</span> {detailSale.accommodation?.numberOfNights ?? '-'}</div>
               <div><span className="font-semibold">Fiyat:</span> {detailSale.fiyat.toLocaleString('tr-TR')} ₺</div>
               <div><span className="font-semibold">Tarih:</span> {formatDate(detailSale.createdAt)}</div>

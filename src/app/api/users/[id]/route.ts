@@ -45,6 +45,10 @@ export async function PUT(request: Request, context: any) {
       updateData.password = await bcrypt.hash(data.password, 10);
     }
     
+    if (data.permissions !== undefined) {
+      updateData.permissions = data.permissions;
+    }
+    
     const user = await prisma.user.update({
       where: { id: userId },
       data: updateData,
@@ -53,7 +57,8 @@ export async function PUT(request: Request, context: any) {
         email: true,
         name: true,
         role: true,
-        createdAt: true
+        createdAt: true,
+        permissions: true
       }
     });
     

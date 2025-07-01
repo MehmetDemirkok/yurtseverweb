@@ -10,7 +10,8 @@ async function createAdminUser() {
       email: 'admin@yurtsever.com',
       name: 'Admin User',
       password: 'admin123', // Bu şifreyi değiştirin!
-      role: 'ADMIN'
+      role: 'ADMIN',
+      permissions: ['dashboard', 'sales', 'statistics'] // Tüm izinler
     };
 
     // Email kontrolü
@@ -32,7 +33,8 @@ async function createAdminUser() {
         email: adminData.email,
         name: adminData.name,
         password: hashedPassword,
-        role: adminData.role
+        role: adminData.role,
+        permissions: adminData.permissions
       }
     });
 
