@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthGuard from "../components/AuthGuard";
+import * as XLSX from 'xlsx';
 
 interface Sale {
   id: number;
@@ -18,6 +19,9 @@ interface Sale {
     cikisTarihi: string;
     numberOfNights?: number;
     organizasyonAdi?: string;
+    odaTipi?: string;
+    toplamUcret?: number;
+    gecelikUcret?: number;
   };
 }
 
@@ -42,6 +46,11 @@ function SalesPageContent() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [editStatus, setEditStatus] = useState<string>("");
+  const [showExportFilterModal, setShowExportFilterModal] = useState(false);
+  const [availableColumns, setAvailableColumns] = useState<{ key: string; label: string }[]>([]);
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [showPuantajFilterModal, setShowPuantajFilterModal] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -126,6 +135,176 @@ function SalesPageContent() {
     setSelectedSale(null);
   };
 
+  // --- EXCEL & RAPOR FONKSİYONLARI ---
+  const handlePuantajRaporu = () => {
+    // Satışlar için puantaj raporu: kişi, gece, oda tipi, fiyat, toplam vs.
+    if (filteredSales.length === 0) {
+      alert('Rapor için kayıt yok!');
+      return;
+    }
+    const headers = [
+      'ID', 'Adı Soyadı', 'Unvanı', 'Oda Tipi', 'Gece', 'Satış Fiyatı (₺/Gece)', 'Toplam Satış (₺)', 'Alış Fiyatı (₺/Gece)', 'Toplam Alış (₺)', 'Durum', 'Organizasyon', 'Giriş Tarihi', 'Çıkış Tarihi'
+    ];
+    const data = filteredSales.map(sale => {
+      const nights = sale.accommodation?.numberOfNights ?? 0;
+      const alisGecelik = sale.accommodation?.gecelikUcret ?? 0;
+      const toplamAlis = alisGecelik * nights;
+      const satisGecelik = sale.fiyat;
+      const toplamSatis = satisGecelik * nights;
+      return [
+        sale.id,
+        sale.accommodation?.adiSoyadi || '-',
+        sale.accommodation?.unvani || '-',
+        sale.accommodation?.odaTipi || '-',
+        nights,
+        satisGecelik,
+        toplamSatis,
+        alisGecelik,
+        toplamAlis,
+        sale.status,
+        sale.accommodation?.organizasyonAdi || sale.organizasyonAdi,
+        sale.accommodation?.girisTarihi || '-',
+        sale.accommodation?.cikisTarihi || '-',
+      ];
+    });
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Satış Puantaj Raporu');
+    XLSX.writeFile(wb, 'satis_puantaj_raporu.xlsx');
+  };
+
+  const handleExportExcel = () => {
+    // Sütunlar ve seçili sütunlar
+    const allColumns = [
+      { key: 'id', label: 'ID' },
+      { key: 'adiSoyadi', label: 'Adı Soyadı' },
+      { key: 'unvani', label: 'Unvanı' },
+      { key: 'odaTipi', label: 'Oda Tipi' },
+      { key: 'numberOfNights', label: 'Gece' },
+      { key: 'fiyat', label: 'Satış Fiyatı (₺/Gece)' },
+      { key: 'toplamSatis', label: 'Toplam Satış (₺)' },
+      { key: 'gecelikUcret', label: 'Alış Fiyatı (₺/Gece)' },
+      { key: 'toplamAlis', label: 'Toplam Alış (₺)' },
+      { key: 'status', label: 'Durum' },
+      { key: 'organizasyonAdi', label: 'Organizasyon' },
+      { key: 'girisTarihi', label: 'Giriş Tarihi' },
+      { key: 'cikisTarihi', label: 'Çıkış Tarihi' },
+    ];
+    setAvailableColumns(allColumns);
+    setSelectedColumns(allColumns.map(col => col.key));
+    setShowExportFilterModal(true);
+  };
+
+  const handleExportFilteredExcel = () => {
+    const headers = availableColumns.filter(col => selectedColumns.includes(col.key)).map(col => col.label);
+    const data = filteredSales.map(sale => {
+      const nights = sale.accommodation?.numberOfNights ?? 0;
+      const alisGecelik = sale.accommodation?.gecelikUcret ?? 0;
+      const toplamAlis = alisGecelik * nights;
+      const satisGecelik = sale.fiyat;
+      const toplamSatis = satisGecelik * nights;
+      const row: (string | number)[] = [];
+      selectedColumns.forEach(key => {
+        switch (key) {
+          case 'id': row.push(sale.id); break;
+          case 'adiSoyadi': row.push(sale.accommodation?.adiSoyadi || '-'); break;
+          case 'unvani': row.push(sale.accommodation?.unvani || '-'); break;
+          case 'odaTipi': row.push(sale.accommodation?.odaTipi || '-'); break;
+          case 'numberOfNights': row.push(nights); break;
+          case 'fiyat': row.push(satisGecelik); break;
+          case 'toplamSatis': row.push(toplamSatis); break;
+          case 'gecelikUcret': row.push(alisGecelik); break;
+          case 'toplamAlis': row.push(toplamAlis); break;
+          case 'status': row.push(sale.status); break;
+          case 'organizasyonAdi': row.push(sale.accommodation?.organizasyonAdi || sale.organizasyonAdi); break;
+          case 'girisTarihi': row.push(sale.accommodation?.girisTarihi || '-'); break;
+          case 'cikisTarihi': row.push(sale.accommodation?.cikisTarihi || '-'); break;
+          default: row.push('-');
+        }
+      });
+      return row;
+    });
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Satışlar');
+    XLSX.writeFile(wb, 'satislar.xlsx');
+    setShowExportFilterModal(false);
+  };
+
+  const handleDownloadExcelTemplate = () => {
+    const headers = [
+      'ID', 'Adı Soyadı', 'Unvanı', 'Oda Tipi', 'Gece', 'Satış Fiyatı (₺/Gece)', 'Alış Fiyatı (₺/Gece)', 'Durum', 'Organizasyon', 'Giriş Tarihi', 'Çıkış Tarihi'
+    ];
+    const exampleData = [
+      [1, 'Ahmet Yılmaz', 'Müdür', 'Double Oda', 3, 2500, 2000, 'AKTARILDI', 'ABC Organizasyon', '2024-07-01', '2024-07-04'],
+      [2, 'Ayşe Kaya', 'Uzman', 'Single Oda', 2, 1800, 1500, 'FATURALANDI', 'XYZ Organizasyon', '2024-07-10', '2024-07-12']
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...exampleData]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Satış Şablonu');
+    XLSX.writeFile(wb, 'satis_sablonu.xlsx');
+  };
+
+  const handleImportExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'array', raw: true, cellNF: false });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json<(string | number | null)[]>(worksheet, { header: 1 });
+          if (!json || json.length < 2) {
+            alert('Excel dosyası boş veya beklenen formatta değil.');
+            return;
+          }
+          const headers = json[0];
+          // Satış için uygun alanlar: ID, Adı Soyadı, Unvanı, Oda Tipi, Gece, Satış Fiyatı (₺/Gece), Alış Fiyatı (₺/Gece), Durum, Organizasyon, Giriş Tarihi, Çıkış Tarihi
+          const newSales = json.slice(1).map((row: (string | number | null)[], idx: number) => {
+            const getColumnValue = (headerName: string): string => {
+              const headerIndex = (headers as string[]).indexOf(headerName);
+              return headerIndex > -1 ? String(row[headerIndex] || '') : '';
+            };
+            const nights = Number(getColumnValue('Gece')) || 0;
+            const fiyat = Number(getColumnValue('Satış Fiyatı (₺/Gece)')) || 0;
+            return {
+              id: Date.now() + idx,
+              createdAt: new Date().toISOString(),
+              fiyat,
+              status: getColumnValue('Durum') || 'AKTARILDI',
+              organizasyonAdi: getColumnValue('Organizasyon'),
+              accommodation: {
+                adiSoyadi: getColumnValue('Adı Soyadı'),
+                unvani: getColumnValue('Unvanı'),
+                odaTipi: getColumnValue('Oda Tipi'),
+                numberOfNights: nights,
+                gecelikUcret: Number(getColumnValue('Alış Fiyatı (₺/Gece)')) || 0,
+                girisTarihi: getColumnValue('Giriş Tarihi'),
+                cikisTarihi: getColumnValue('Çıkış Tarihi'),
+                organizasyonAdi: getColumnValue('Organizasyon'),
+              }
+            };
+          });
+          // API'ye gönder (örnek: /api/sales, gerçek uygulamada accommodationId eşlemesi gerekir)
+          // Burada sadece frontend state'e ekliyoruz
+          setSales(prev => [...prev, ...newSales]);
+          alert(`Başarıyla ${newSales.length} satış kaydı içe aktarıldı (demo). Gerçek uygulamada backend ile entegre edilmelidir!`);
+        } catch (error) {
+          console.error('Excel okuma hatası:', error);
+          alert('Excel dosyasını okurken bir hata oluştu.');
+        }
+      };
+      reader.onerror = () => {
+        alert('Dosya okuma başarısız oldu.');
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      alert('Lütfen bir Excel dosyası seçin.');
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -202,6 +381,102 @@ function SalesPageContent() {
           ))}
         </div>
       </div>
+      {/* Butonlar - Tablo üstü */}
+      <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mb-8">
+        {selectedIds.length > 0 && (
+          <>
+            <button className="btn btn-danger" onClick={async () => {
+              if (!window.confirm(`${selectedIds.length} kaydı silmek istediğine emin misin?`)) return;
+              // API'ye toplu silme isteği atılabilir, burada sadece frontendde siliyoruz
+              setSales(sales => sales.filter(s => !selectedIds.includes(s.id)));
+              setSelectedIds([]);
+            }}>Toplu Sil</button>
+            <button className="btn btn-success" onClick={() => {
+              // Sadece seçili satışları Excel'e aktar
+              const selectedSales = sales.filter(s => selectedIds.includes(s.id));
+              if (selectedSales.length === 0) return;
+              const headers = [
+                'ID', 'Adı Soyadı', 'Unvanı', 'Oda Tipi', 'Gece', 'Satış Fiyatı (₺/Gece)', 'Toplam Satış (₺)', 'Alış Fiyatı (₺/Gece)', 'Toplam Alış (₺)', 'Durum', 'Organizasyon', 'Giriş Tarihi', 'Çıkış Tarihi'
+              ];
+              const data = selectedSales.map(sale => {
+                const nights = sale.accommodation?.numberOfNights ?? 0;
+                const alisGecelik = sale.accommodation?.gecelikUcret ?? 0;
+                const toplamAlis = alisGecelik * nights;
+                const satisGecelik = sale.fiyat;
+                const toplamSatis = satisGecelik * nights;
+                return [
+                  sale.id,
+                  sale.accommodation?.adiSoyadi || '-',
+                  sale.accommodation?.unvani || '-',
+                  sale.accommodation?.odaTipi || '-',
+                  nights,
+                  satisGecelik,
+                  toplamSatis,
+                  alisGecelik,
+                  toplamAlis,
+                  sale.status,
+                  sale.accommodation?.organizasyonAdi || sale.organizasyonAdi,
+                  sale.accommodation?.girisTarihi || '-',
+                  sale.accommodation?.cikisTarihi || '-',
+                ];
+              });
+              const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, 'Seçili Satışlar');
+              XLSX.writeFile(wb, 'secili_satislar.xlsx');
+            }}>Toplu Excel'e Aktar</button>
+          </>
+        )}
+        <button onClick={handlePuantajRaporu} className="btn btn-secondary">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          Puantaj Raporu
+        </button>
+        <input type="file" id="excelImportInputSales" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleImportExcel} className="hidden" />
+        <button onClick={() => document.getElementById('excelImportInputSales')?.click()} className="btn btn-secondary">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+          Excel'den İçe Aktar
+        </button>
+        <button onClick={handleExportExcel} className="btn btn-success">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" transform="rotate(180 12 12)" /></svg>
+          Excel'e Aktar
+        </button>
+        <button onClick={handleDownloadExcelTemplate} className="btn btn-warning">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+          Excel Şablonu İndir
+        </button>
+      </div>
+      {/* Export Modalı */}
+      {showExportFilterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setShowExportFilterModal(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 relative animate-fade-in border border-blue-100">
+            <button
+              onClick={() => setShowExportFilterModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+              aria-label="Kapat"
+            >×</button>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Excel'e Aktarılacak Sütunlar</h2>
+            <div className="mb-4 grid grid-cols-2 gap-2">
+              {availableColumns.map(col => (
+                <label key={col.key} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedColumns.includes(col.key)}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedColumns(cols => [...cols, col.key]);
+                      else setSelectedColumns(cols => cols.filter(k => k !== col.key));
+                    }}
+                  />
+                  {col.label}
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button className="btn btn-secondary" onClick={() => setShowExportFilterModal(false)}>İptal</button>
+              <button className="btn btn-success" onClick={handleExportFilteredExcel}>Excel'e Aktar</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Tablo ve Yükleniyor/Boş Mesajı */}
       <div className="overflow-x-auto rounded-lg shadow bg-white">
         {loading ? (
@@ -214,36 +489,73 @@ function SalesPageContent() {
           <table className="min-w-full text-sm">
             <thead className="bg-gradient-to-r from-blue-50 to-blue-100">
               <tr>
+                <th className="p-2">
+                  <input
+                    type="checkbox"
+                    checked={filteredSales.length > 0 && selectedIds.length === filteredSales.length}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedIds(filteredSales.map(s => s.id));
+                      else setSelectedIds([]);
+                    }}
+                  />
+                </th>
+                <th className="p-2 font-semibold text-gray-700">ID</th>
                 <th className="p-2 font-semibold text-gray-700">Adı Soyadı</th>
                 <th className="p-2 font-semibold text-gray-700">Unvanı</th>
                 <th className="p-2 font-semibold text-gray-700">Organizasyon</th>
                 <th className="p-2 font-semibold text-gray-700">Giriş Tarihi</th>
                 <th className="p-2 font-semibold text-gray-700">Çıkış Tarihi</th>
                 <th className="p-2 font-semibold text-gray-700">Gece</th>
-                <th className="p-2 font-semibold text-gray-700">Fiyat (₺)</th>
+                <th className="p-2 font-semibold text-gray-700">Oda Tipi</th>
+                <th className="p-2 font-semibold text-gray-700">Alış Fiyatı (₺/Gece)</th>
+                <th className="p-2 font-semibold text-gray-700">Toplam Alış (₺)</th>
+                <th className="p-2 font-semibold text-gray-700">Satış Fiyatı (₺/Gece)</th>
+                <th className="p-2 font-semibold text-gray-700">Toplam Satış (₺)</th>
                 <th className="p-2 font-semibold text-gray-700">Durum</th>
                 <th className="p-2 font-semibold text-gray-700">İşlem</th>
               </tr>
             </thead>
             <tbody>
-              {filteredSales.map(sale => (
-                <tr key={sale.id} className="border-b hover:bg-blue-50 transition cursor-pointer">
-                  <td className="p-2 text-gray-800 font-medium">{sale.accommodation?.adiSoyadi || '-'}</td>
-                  <td className="p-2 text-gray-700">{sale.accommodation?.unvani || '-'}</td>
-                  <td className="p-2 text-blue-700 font-semibold">{sale.accommodation?.organizasyonAdi || sale.organizasyonAdi}</td>
-                  <td className="p-2 text-gray-600">{formatDate(sale.accommodation?.girisTarihi)}</td>
-                  <td className="p-2 text-gray-600">{formatDate(sale.accommodation?.cikisTarihi)}</td>
-                  <td className="p-2 text-purple-700 font-bold">{sale.accommodation?.numberOfNights ?? '-'}</td>
-                  <td className="p-2 text-green-700 font-bold">{sale.fiyat.toLocaleString('tr-TR')}</td>
-                  <td className="p-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${statusColor(sale.status)}`}>{sale.status}</span>
-                  </td>
-                  <td className="p-2">
-                    <button className="btn btn-primary btn-sm mr-2" onClick={e => { e.stopPropagation(); handleEditModalOpen(sale); }}>Düzenle</button>
-                    <button className="btn btn-danger btn-sm" onClick={e => { e.stopPropagation(); handleDeleteModalOpen(sale); }}>Sil</button>
-                  </td>
-                </tr>
-              ))}
+              {filteredSales.map(sale => {
+                const nights = sale.accommodation?.numberOfNights ?? 0;
+                const alisGecelik = sale.accommodation?.gecelikUcret ?? 0;
+                const toplamAlis = alisGecelik * nights;
+                const satisGecelik = sale.fiyat;
+                const toplamSatis = satisGecelik * nights;
+                return (
+                  <tr key={sale.id} className="border-b hover:bg-blue-50 transition cursor-pointer">
+                    <td className="p-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(sale.id)}
+                        onChange={e => {
+                          if (e.target.checked) setSelectedIds(ids => [...ids, sale.id]);
+                          else setSelectedIds(ids => ids.filter(id => id !== sale.id));
+                        }}
+                      />
+                    </td>
+                    <td className="p-2 text-gray-500">{sale.id}</td>
+                    <td className="p-2 text-gray-800 font-medium">{sale.accommodation?.adiSoyadi || '-'}</td>
+                    <td className="p-2 text-gray-700">{sale.accommodation?.unvani || '-'}</td>
+                    <td className="p-2 text-blue-700 font-semibold">{sale.accommodation?.organizasyonAdi || sale.organizasyonAdi}</td>
+                    <td className="p-2 text-gray-600">{formatDate(sale.accommodation?.girisTarihi)}</td>
+                    <td className="p-2 text-gray-600">{formatDate(sale.accommodation?.cikisTarihi)}</td>
+                    <td className="p-2 text-purple-700 font-bold">{nights || '-'}</td>
+                    <td className="p-2 text-gray-700">{sale.accommodation?.odaTipi || '-'}</td>
+                    <td className="p-2 text-blue-700">{alisGecelik ? alisGecelik.toLocaleString('tr-TR') : '-'}</td>
+                    <td className="p-2 text-blue-800 font-bold">{toplamAlis ? toplamAlis.toLocaleString('tr-TR') : '-'}</td>
+                    <td className="p-2 text-green-700">{satisGecelik ? satisGecelik.toLocaleString('tr-TR') : '-'}</td>
+                    <td className="p-2 text-green-800 font-bold">{toplamSatis ? toplamSatis.toLocaleString('tr-TR') : '-'}</td>
+                    <td className="p-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${statusColor(sale.status)}`}>{sale.status}</span>
+                    </td>
+                    <td className="p-2">
+                      <button className="btn btn-primary btn-sm mr-2" onClick={e => { e.stopPropagation(); handleEditModalOpen(sale); }}>Düzenle</button>
+                      <button className="btn btn-danger btn-sm" onClick={e => { e.stopPropagation(); handleDeleteModalOpen(sale); }}>Sil</button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -285,8 +597,12 @@ function SalesPageContent() {
             >×</button>
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Satış Kaydını Düzenle</h2>
             <div className="mb-4">
-              <label className="block text-gray-700 font-semibold mb-1">Fiyat (₺)</label>
+              <label className="block text-gray-700 font-semibold mb-1">Satış Fiyatı (₺/Gece)</label>
               <input type="number" className="input w-full" value={editPrice} min={0} onChange={e => setEditPrice(Number(e.target.value))} />
+            </div>
+            <div className="mb-4">
+              <label className="block text-gray-700 font-semibold mb-1">Toplam Satış Fiyatı</label>
+              <input type="text" className="input w-full bg-gray-100" value={((editPrice || 0) * (selectedSale.accommodation?.numberOfNights || 0)).toLocaleString('tr-TR')} disabled />
             </div>
             <div className="mb-4">
               <label className="block text-gray-700 font-semibold mb-1">Durum</label>
