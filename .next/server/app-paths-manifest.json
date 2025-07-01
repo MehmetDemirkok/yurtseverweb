@@ -12,6 +12,6 @@
   "/admin/page": "app/admin/page.js",
   "/login/page": "app/login/page.js",
   "/no-access/page": "app/no-access/page.js",
-  "/page": "app/page.js",
-  "/sales/page": "app/sales/page.js"
+  "/sales/page": "app/sales/page.js",
+  "/page": "app/page.js"
 }

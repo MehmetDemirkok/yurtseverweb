@@ -78,6 +78,7 @@ export default function AdminPage() {
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'sales', label: 'Satışlar' },
     { key: 'statistics', label: 'İstatistikler' },
+    { key: 'user-management', label: 'Kullanıcı Yönetimi' },
     // buraya yeni izinler eklenebilir
   ];
 
