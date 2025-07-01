@@ -73,7 +73,8 @@ function SalesPageContent() {
         setSales(data);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((e) => {
+        console.error(e);
         setError("Satışlar yüklenemedi.");
         setLoading(false);
       });
@@ -248,7 +249,7 @@ function SalesPageContent() {
           setSales(prev => [...prev, ...newSales]);
           alert(`Başarıyla ${newSales.length} satış kaydı içe aktarıldı (demo). Gerçek uygulamada backend ile entegre edilmelidir!`);
         } catch (e) {
-          console.error('Excel okuma hatası:', e);
+          console.error(e);
           alert('Excel dosyasını okurken bir hata oluştu.');
         }
       };
@@ -353,6 +354,7 @@ function SalesPageContent() {
       setSelectedIds([]);
       setShowBulkDeleteModal(false);
     } catch (e) {
+      console.error(e);
       alert('Toplu silme başarısız oldu!');
     }
   };
