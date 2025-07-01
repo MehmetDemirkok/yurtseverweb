@@ -25,7 +25,6 @@ export default function SalesPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [filterOrg, setFilterOrg] = useState("");
   const [filterUser, setFilterUser] = useState("");
-  const [editId, setEditId] = useState<number | null>(null);
   const [editPrice, setEditPrice] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -64,21 +63,6 @@ export default function SalesPage() {
     total: filteredSales.filter(s => s.organizasyonAdi === org).reduce((sum, s) => sum + s.fiyat, 0),
     count: filteredSales.filter(s => s.organizasyonAdi === org).length
   }));
-
-  // Satış fiyatı güncelle
-  const handleEditClick = (sale: Sale) => {
-    setEditId(sale.id);
-    setEditPrice(sale.fiyat);
-  };
-  const handleEditSave = async () => {
-    await fetch(`/api/sales`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: editId, fiyat: editPrice }),
-    });
-    setSales(sales => sales.map(s => s.id === editId ? { ...s, fiyat: editPrice } : s));
-    setEditId(null);
-  };
 
   // Durum renkleri
   const statusColor = (status: string) => {

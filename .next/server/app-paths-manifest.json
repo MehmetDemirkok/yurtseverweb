@@ -1,8 +1,16 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/api/user/route": "app/api/user/route.js",
   "/api/accommodation/route": "app/api/accommodation/route.js",
   "/api/organizations/route": "app/api/organizations/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/user/login/route": "app/api/user/login/route.js",
+  "/api/sales/route": "app/api/sales/route.js",
+  "/api/user/logout/route": "app/api/user/logout/route.js",
+  "/api/user/route": "app/api/user/route.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/api/users/route": "app/api/users/route.js",
+  "/api/users/[id]/route": "app/api/users/[id]/route.js",
+  "/login/page": "app/login/page.js",
   "/sales/page": "app/sales/page.js",
-  "/page": "app/page.js"
+  "/page": "app/page.js",
+  "/admin/page": "app/admin/page.js"
 }
