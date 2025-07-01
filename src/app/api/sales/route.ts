@@ -110,23 +110,38 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const data = await request.json();
-    const { id } = data;
-    if (!id) {
-      return NextResponse.json({ error: 'Eksik veri: id gerekli.' }, { status: 400 });
+    const { id, ids } = data;
+    if (ids && Array.isArray(ids)) {
+      // Çoklu silme
+      // Önce silinecek satışları bul
+      const sales = await prisma.sale.findMany({ where: { id: { in: ids.map(Number) } } });
+      if (!sales.length) {
+        return NextResponse.json({ error: 'Silinecek satış kaydı bulunamadı.' }, { status: 404 });
+      }
+      // İlgili accommodationId'leri topla
+      const accommodationIds = sales.map(sale => sale.accommodationId);
+      // Satışları sil
+      await prisma.sale.deleteMany({ where: { id: { in: ids.map(Number) } } });
+      // İlgili konaklama kayıtlarını güncelle (faturaEdildi: false)
+      await prisma.accommodation.updateMany({
+        where: { id: { in: accommodationIds } },
+        data: { faturaEdildi: false },
+      });
+      return NextResponse.json({ success: true, deletedCount: sales.length });
+    } else if (id) {
+      // Tekli silme
+      const sale = await prisma.sale.findUnique({ where: { id: Number(id) } });
+      if (!sale) {
+        return NextResponse.json({ error: 'Satış kaydı bulunamadı.' }, { status: 404 });
+      }
+      await prisma.sale.delete({ where: { id: Number(id) } });
+      await prisma.accommodation.update({
+        where: { id: sale.accommodationId },
+        data: { faturaEdildi: false },
+      });
+      return NextResponse.json({ success: true });
     }
-    // Önce silinecek satışı bul
-    const sale = await prisma.sale.findUnique({ where: { id: Number(id) } });
-    if (!sale) {
-      return NextResponse.json({ error: 'Satış kaydı bulunamadı.' }, { status: 404 });
-    }
-    // Satışı sil
-    await prisma.sale.delete({ where: { id: Number(id) } });
-    // İlgili konaklama kaydını güncelle
-    await prisma.accommodation.update({
-      where: { id: sale.accommodationId },
-      data: { faturaEdildi: false },
-    });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ error: 'Eksik veri: id veya ids gerekli.' }, { status: 400 });
   } catch (error: unknown) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

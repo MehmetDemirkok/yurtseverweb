@@ -342,6 +342,21 @@ function SalesPageContent() {
     XLSX.writeFile(wb, 'satis_puantaj_raporu.xlsx');
   };
 
+  const handleBulkDelete = async () => {
+    try {
+      await fetch('/api/sales', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      setSales(sales => sales.filter(s => !selectedIds.includes(s.id)));
+      setSelectedIds([]);
+      setShowBulkDeleteModal(false);
+    } catch (error) {
+      alert('Toplu silme başarısız oldu!');
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -622,11 +637,7 @@ function SalesPageContent() {
             <p className="mb-6 text-gray-700">Seçili <span className="font-bold">{selectedIds.length}</span> kaydı silmek istediğinize emin misiniz?</p>
             <div className="flex justify-end gap-2 mt-6">
               <button className="btn btn-secondary" onClick={() => setShowBulkDeleteModal(false)}>Vazgeç</button>
-              <button className="btn btn-danger" onClick={() => {
-                setSales(sales => sales.filter(s => !selectedIds.includes(s.id)));
-                setSelectedIds([]);
-                setShowBulkDeleteModal(false);
-              }}>Evet, Hepsini Sil</button>
+              <button className="btn btn-danger" onClick={handleBulkDelete}>Evet, Hepsini Sil</button>
             </div>
           </div>
         </div>
