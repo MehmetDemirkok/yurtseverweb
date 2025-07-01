@@ -47,10 +47,25 @@ function SalesPageContent() {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [editStatus, setEditStatus] = useState<string>("");
   const [showExportFilterModal, setShowExportFilterModal] = useState(false);
-  const [availableColumns, setAvailableColumns] = useState<{ key: string; label: string }[]>([]);
-  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [availableColumns, setAvailableColumns] = useState([
+    { key: 'id', label: 'ID' },
+    { key: 'adiSoyadi', label: 'Adı Soyadı' },
+    { key: 'unvani', label: 'Unvanı' },
+    { key: 'odaTipi', label: 'Oda Tipi' },
+    { key: 'numberOfNights', label: 'Gece' },
+    { key: 'fiyat', label: 'Satış Fiyatı (₺/Gece)' },
+    { key: 'toplamSatis', label: 'Toplam Satış (₺)' },
+    { key: 'gecelikUcret', label: 'Alış Fiyatı (₺/Gece)' },
+    { key: 'toplamAlis', label: 'Toplam Alış (₺)' },
+    { key: 'status', label: 'Durum' },
+    { key: 'organizasyonAdi', label: 'Organizasyon' },
+    { key: 'girisTarihi', label: 'Giriş Tarihi' },
+    { key: 'cikisTarihi', label: 'Çıkış Tarihi' },
+  ]);
+  const [selectedColumns, setSelectedColumns] = useState(availableColumns.map(col => col.key));
   const [showPuantajFilterModal, setShowPuantajFilterModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -137,35 +152,81 @@ function SalesPageContent() {
 
   // --- EXCEL & RAPOR FONKSİYONLARI ---
   const handlePuantajRaporu = () => {
-    // Satışlar için puantaj raporu: kişi, gece, oda tipi, fiyat, toplam vs.
+    // Satışlar için puantaj raporu: kişi, gece, oda tipi, fiyat, toplam vs. GÜN GÜN işaretli olacak şekilde güncellendi.
     if (filteredSales.length === 0) {
       alert('Rapor için kayıt yok!');
       return;
     }
+    // Tüm satışlar için en erken giriş ve en geç çıkış tarihlerini bul
+    const allDates = filteredSales.flatMap(sale => {
+      const giris = sale.accommodation?.girisTarihi;
+      const cikis = sale.accommodation?.cikisTarihi;
+      if (!giris || !cikis) return [];
+      return [new Date(giris), new Date(cikis)];
+    });
+    if (allDates.length === 0) {
+      alert('Tarih bilgisi eksik!');
+      return;
+    }
+    const minDate = new Date(Math.min(...allDates.map(date => date.getTime())));
+    const maxDate = new Date(Math.max(...allDates.map(date => date.getTime())));
+    // Tüm günleri diziye ekle (giriş ve çıkış arası)
+    const allDaysSet = new Set<string>();
+    filteredSales.forEach(sale => {
+      const giris = sale.accommodation?.girisTarihi;
+      const cikis = sale.accommodation?.cikisTarihi;
+      if (!giris || !cikis) return;
+      const start = new Date(giris);
+      const end = new Date(cikis);
+      let current = new Date(start);
+      while (current < end) { // çıkış günü hariç!
+        allDaysSet.add(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+      }
+    });
+    const allDays = Array.from(allDaysSet).sort();
+    // Başlıklar
     const headers = [
-      'ID', 'Adı Soyadı', 'Unvanı', 'Oda Tipi', 'Gece', 'Satış Fiyatı (₺/Gece)', 'Toplam Satış (₺)', 'Alış Fiyatı (₺/Gece)', 'Toplam Alış (₺)', 'Durum', 'Organizasyon', 'Giriş Tarihi', 'Çıkış Tarihi'
+      'ID', 'Adı Soyadı', 'Unvanı', 'Oda Tipi', 'Organizasyon', 'Giriş Tarihi', 'Çıkış Tarihi', 'Gece', 'Satış Fiyatı (₺/Gece)', 'Toplam Satış (₺)', ...allDays.map(date => {
+        const [y, m, d] = date.split('-');
+        return `${d}.${m}.${y}`;
+      })
     ];
+    // Satışlar için satırları oluştur
     const data = filteredSales.map(sale => {
       const nights = sale.accommodation?.numberOfNights ?? 0;
-      const alisGecelik = sale.accommodation?.gecelikUcret ?? 0;
-      const toplamAlis = alisGecelik * nights;
       const satisGecelik = sale.fiyat;
       const toplamSatis = satisGecelik * nights;
-      return [
+      const giris = sale.accommodation?.girisTarihi;
+      const cikis = sale.accommodation?.cikisTarihi;
+      const start = giris ? new Date(giris) : null;
+      const end = cikis ? new Date(cikis) : null;
+      const row: (string | number)[] = [
         sale.id,
         sale.accommodation?.adiSoyadi || '-',
         sale.accommodation?.unvani || '-',
         sale.accommodation?.odaTipi || '-',
+        sale.accommodation?.organizasyonAdi || sale.organizasyonAdi,
+        giris ? formatDate(giris) : '-',
+        cikis ? formatDate(cikis) : '-',
         nights,
         satisGecelik,
-        toplamSatis,
-        alisGecelik,
-        toplamAlis,
-        sale.status,
-        sale.accommodation?.organizasyonAdi || sale.organizasyonAdi,
-        sale.accommodation?.girisTarihi || '-',
-        sale.accommodation?.cikisTarihi || '-',
+        toplamSatis
       ];
+      // Gün gün işaretleme
+      allDays.forEach(dateStr => {
+        if (start && end) {
+          const check = new Date(dateStr);
+          if (check >= start && check < end) {
+            row.push('X');
+          } else {
+            row.push('');
+          }
+        } else {
+          row.push('');
+        }
+      });
+      return row;
     });
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
     const wb = XLSX.utils.book_new();
@@ -174,24 +235,6 @@ function SalesPageContent() {
   };
 
   const handleExportExcel = () => {
-    // Sütunlar ve seçili sütunlar
-    const allColumns = [
-      { key: 'id', label: 'ID' },
-      { key: 'adiSoyadi', label: 'Adı Soyadı' },
-      { key: 'unvani', label: 'Unvanı' },
-      { key: 'odaTipi', label: 'Oda Tipi' },
-      { key: 'numberOfNights', label: 'Gece' },
-      { key: 'fiyat', label: 'Satış Fiyatı (₺/Gece)' },
-      { key: 'toplamSatis', label: 'Toplam Satış (₺)' },
-      { key: 'gecelikUcret', label: 'Alış Fiyatı (₺/Gece)' },
-      { key: 'toplamAlis', label: 'Toplam Alış (₺)' },
-      { key: 'status', label: 'Durum' },
-      { key: 'organizasyonAdi', label: 'Organizasyon' },
-      { key: 'girisTarihi', label: 'Giriş Tarihi' },
-      { key: 'cikisTarihi', label: 'Çıkış Tarihi' },
-    ];
-    setAvailableColumns(allColumns);
-    setSelectedColumns(allColumns.map(col => col.key));
     setShowExportFilterModal(true);
   };
 
@@ -385,46 +428,7 @@ function SalesPageContent() {
       <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mb-8">
         {selectedIds.length > 0 && (
           <>
-            <button className="btn btn-danger" onClick={async () => {
-              if (!window.confirm(`${selectedIds.length} kaydı silmek istediğine emin misin?`)) return;
-              // API'ye toplu silme isteği atılabilir, burada sadece frontendde siliyoruz
-              setSales(sales => sales.filter(s => !selectedIds.includes(s.id)));
-              setSelectedIds([]);
-            }}>Toplu Sil</button>
-            <button className="btn btn-success" onClick={() => {
-              // Sadece seçili satışları Excel'e aktar
-              const selectedSales = sales.filter(s => selectedIds.includes(s.id));
-              if (selectedSales.length === 0) return;
-              const headers = [
-                'ID', 'Adı Soyadı', 'Unvanı', 'Oda Tipi', 'Gece', 'Satış Fiyatı (₺/Gece)', 'Toplam Satış (₺)', 'Alış Fiyatı (₺/Gece)', 'Toplam Alış (₺)', 'Durum', 'Organizasyon', 'Giriş Tarihi', 'Çıkış Tarihi'
-              ];
-              const data = selectedSales.map(sale => {
-                const nights = sale.accommodation?.numberOfNights ?? 0;
-                const alisGecelik = sale.accommodation?.gecelikUcret ?? 0;
-                const toplamAlis = alisGecelik * nights;
-                const satisGecelik = sale.fiyat;
-                const toplamSatis = satisGecelik * nights;
-                return [
-                  sale.id,
-                  sale.accommodation?.adiSoyadi || '-',
-                  sale.accommodation?.unvani || '-',
-                  sale.accommodation?.odaTipi || '-',
-                  nights,
-                  satisGecelik,
-                  toplamSatis,
-                  alisGecelik,
-                  toplamAlis,
-                  sale.status,
-                  sale.accommodation?.organizasyonAdi || sale.organizasyonAdi,
-                  sale.accommodation?.girisTarihi || '-',
-                  sale.accommodation?.cikisTarihi || '-',
-                ];
-              });
-              const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-              const wb = XLSX.utils.book_new();
-              XLSX.utils.book_append_sheet(wb, ws, 'Seçili Satışlar');
-              XLSX.writeFile(wb, 'secili_satislar.xlsx');
-            }}>Toplu Excel'e Aktar</button>
+            <button className="btn btn-danger bg-red-600 hover:bg-red-700 text-white" onClick={() => setShowBulkDeleteModal(true)}>Toplu Sil</button>
           </>
         )}
         <button onClick={handlePuantajRaporu} className="btn btn-secondary">
@@ -436,7 +440,7 @@ function SalesPageContent() {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
           Excel'den İçe Aktar
         </button>
-        <button onClick={handleExportExcel} className="btn btn-success">
+        <button onClick={() => setShowExportFilterModal(true)} className="btn btn-success">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" transform="rotate(180 12 12)" /></svg>
           Excel'e Aktar
         </button>
@@ -445,40 +449,8 @@ function SalesPageContent() {
           Excel Şablonu İndir
         </button>
       </div>
-      {/* Export Modalı */}
-      {showExportFilterModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setShowExportFilterModal(false); }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 relative animate-fade-in border border-blue-100">
-            <button
-              onClick={() => setShowExportFilterModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
-              aria-label="Kapat"
-            >×</button>
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Excel'e Aktarılacak Sütunlar</h2>
-            <div className="mb-4 grid grid-cols-2 gap-2">
-              {availableColumns.map(col => (
-                <label key={col.key} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedColumns.includes(col.key)}
-                    onChange={e => {
-                      if (e.target.checked) setSelectedColumns(cols => [...cols, col.key]);
-                      else setSelectedColumns(cols => cols.filter(k => k !== col.key));
-                    }}
-                  />
-                  {col.label}
-                </label>
-              ))}
-            </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button className="btn btn-secondary" onClick={() => setShowExportFilterModal(false)}>İptal</button>
-              <button className="btn btn-success" onClick={handleExportFilteredExcel}>Excel'e Aktar</button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Tablo ve Yükleniyor/Boş Mesajı */}
-      <div className="overflow-x-auto rounded-lg shadow bg-white">
+      <div className="w-full overflow-x-auto rounded-lg shadow bg-white">
         {loading ? (
           <div className="p-8 text-center text-blue-600 animate-pulse">Yükleniyor...</div>
         ) : error ? (
@@ -486,10 +458,10 @@ function SalesPageContent() {
         ) : filteredSales.length === 0 ? (
           <div className="p-8 text-center text-gray-400">Kayıt bulunamadı.</div>
         ) : (
-          <table className="min-w-full text-sm">
-            <thead className="bg-gradient-to-r from-blue-50 to-blue-100">
+          <table className="table w-full table-auto text-xs">
+            <thead className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-900">
               <tr>
-                <th className="p-2">
+                <th className="p-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">
                   <input
                     type="checkbox"
                     checked={filteredSales.length > 0 && selectedIds.length === filteredSales.length}
@@ -499,32 +471,32 @@ function SalesPageContent() {
                     }}
                   />
                 </th>
-                <th className="p-2 font-semibold text-gray-700">ID</th>
-                <th className="p-2 font-semibold text-gray-700">Adı Soyadı</th>
-                <th className="p-2 font-semibold text-gray-700">Unvanı</th>
-                <th className="p-2 font-semibold text-gray-700">Organizasyon</th>
-                <th className="p-2 font-semibold text-gray-700">Giriş Tarihi</th>
-                <th className="p-2 font-semibold text-gray-700">Çıkış Tarihi</th>
-                <th className="p-2 font-semibold text-gray-700">Gece</th>
-                <th className="p-2 font-semibold text-gray-700">Oda Tipi</th>
-                <th className="p-2 font-semibold text-gray-700">Alış Fiyatı (₺/Gece)</th>
-                <th className="p-2 font-semibold text-gray-700">Toplam Alış (₺)</th>
-                <th className="p-2 font-semibold text-gray-700">Satış Fiyatı (₺/Gece)</th>
-                <th className="p-2 font-semibold text-gray-700">Toplam Satış (₺)</th>
-                <th className="p-2 font-semibold text-gray-700">Durum</th>
-                <th className="p-2 font-semibold text-gray-700">İşlem</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">ID</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">Adı Soyadı</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden md:table-cell">Unvanı</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">Organizasyon</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden sm:table-cell">Giriş Tarihi</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden sm:table-cell">Çıkış Tarihi</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">Gece</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden md:table-cell">Oda Tipi</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden lg:table-cell">Alış Fiyatı</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden lg:table-cell">Toplam Alış</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">Satış Fiyatı</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">Toplam Satış</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">Durum</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">İşlem</th>
               </tr>
             </thead>
             <tbody>
-              {filteredSales.map(sale => {
+              {filteredSales.map((sale, idx) => {
                 const nights = sale.accommodation?.numberOfNights ?? 0;
                 const alisGecelik = sale.accommodation?.gecelikUcret ?? 0;
                 const toplamAlis = alisGecelik * nights;
                 const satisGecelik = sale.fiyat;
                 const toplamSatis = satisGecelik * nights;
                 return (
-                  <tr key={sale.id} className="border-b hover:bg-blue-50 transition cursor-pointer">
-                    <td className="p-2">
+                  <tr key={sale.id} className={`border-b ${idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'} hover:bg-blue-50 dark:hover:bg-gray-700 transition cursor-pointer`} style={{height: '44px'}}>
+                    <td className="p-2 text-center">
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(sale.id)}
@@ -534,22 +506,22 @@ function SalesPageContent() {
                         }}
                       />
                     </td>
-                    <td className="p-2 text-gray-500">{sale.id}</td>
-                    <td className="p-2 text-gray-800 font-medium">{sale.accommodation?.adiSoyadi || '-'}</td>
-                    <td className="p-2 text-gray-700">{sale.accommodation?.unvani || '-'}</td>
-                    <td className="p-2 text-blue-700 font-semibold">{sale.accommodation?.organizasyonAdi || sale.organizasyonAdi}</td>
-                    <td className="p-2 text-gray-600">{formatDate(sale.accommodation?.girisTarihi)}</td>
-                    <td className="p-2 text-gray-600">{formatDate(sale.accommodation?.cikisTarihi)}</td>
-                    <td className="p-2 text-purple-700 font-bold">{nights || '-'}</td>
-                    <td className="p-2 text-gray-700">{sale.accommodation?.odaTipi || '-'}</td>
-                    <td className="p-2 text-blue-700">{alisGecelik ? alisGecelik.toLocaleString('tr-TR') : '-'}</td>
-                    <td className="p-2 text-blue-800 font-bold">{toplamAlis ? toplamAlis.toLocaleString('tr-TR') : '-'}</td>
-                    <td className="p-2 text-green-700">{satisGecelik ? satisGecelik.toLocaleString('tr-TR') : '-'}</td>
-                    <td className="p-2 text-green-800 font-bold">{toplamSatis ? toplamSatis.toLocaleString('tr-TR') : '-'}</td>
-                    <td className="p-2">
+                    <td className="p-2 text-gray-700 dark:text-gray-200 font-semibold text-left">{sale.id}</td>
+                    <td className="p-2 text-gray-900 dark:text-gray-100 font-bold text-left truncate">{sale.accommodation?.adiSoyadi || '-'}</td>
+                    <td className="p-2 text-gray-700 dark:text-gray-300 hidden md:table-cell text-left truncate">{sale.accommodation?.unvani || '-'}</td>
+                    <td className="p-2 text-blue-700 dark:text-blue-300 font-semibold text-left truncate">{sale.accommodation?.organizasyonAdi || sale.organizasyonAdi}</td>
+                    <td className="p-2 text-gray-600 dark:text-gray-400 hidden sm:table-cell text-center">{formatDate(sale.accommodation?.girisTarihi)}</td>
+                    <td className="p-2 text-gray-600 dark:text-gray-400 hidden sm:table-cell text-center">{formatDate(sale.accommodation?.cikisTarihi)}</td>
+                    <td className="p-2 text-purple-700 dark:text-purple-300 font-bold text-center">{nights || '-'}</td>
+                    <td className="p-2 text-gray-700 dark:text-gray-300 hidden md:table-cell text-left truncate">{sale.accommodation?.odaTipi || '-'}</td>
+                    <td className="p-2 text-blue-700 dark:text-blue-300 hidden lg:table-cell text-right">{alisGecelik ? alisGecelik.toLocaleString('tr-TR') : '-'}</td>
+                    <td className="p-2 text-blue-800 dark:text-blue-200 font-bold hidden lg:table-cell text-right">{toplamAlis ? toplamAlis.toLocaleString('tr-TR') : '-'}</td>
+                    <td className="p-2 text-green-700 dark:text-green-300 text-right">{satisGecelik ? satisGecelik.toLocaleString('tr-TR') : '-'}</td>
+                    <td className="p-2 text-green-800 dark:text-green-200 font-bold text-right">{toplamSatis ? toplamSatis.toLocaleString('tr-TR') : '-'}</td>
+                    <td className="p-2 text-center">
                       <span className={`px-2 py-1 rounded-full text-xs font-bold ${statusColor(sale.status)}`}>{sale.status}</span>
                     </td>
-                    <td className="p-2">
+                    <td className="p-2 text-center">
                       <button className="btn btn-primary btn-sm mr-2" onClick={e => { e.stopPropagation(); handleEditModalOpen(sale); }}>Düzenle</button>
                       <button className="btn btn-danger btn-sm" onClick={e => { e.stopPropagation(); handleDeleteModalOpen(sale); }}>Sil</button>
                     </td>
@@ -597,15 +569,15 @@ function SalesPageContent() {
             >×</button>
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Satış Kaydını Düzenle</h2>
             <div className="mb-4">
-              <label className="block text-gray-700 font-semibold mb-1">Satış Fiyatı (₺/Gece)</label>
+              <label className="block text-gray-700 dark:text-gray-100 font-semibold mb-1">Satış Fiyatı (₺/Gece)</label>
               <input type="number" className="input w-full" value={editPrice} min={0} onChange={e => setEditPrice(Number(e.target.value))} />
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 font-semibold mb-1">Toplam Satış Fiyatı</label>
+              <label className="block text-gray-700 dark:text-gray-100 font-semibold mb-1">Toplam Satış Fiyatı</label>
               <input type="text" className="input w-full bg-gray-100" value={((editPrice || 0) * (selectedSale.accommodation?.numberOfNights || 0)).toLocaleString('tr-TR')} disabled />
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700 font-semibold mb-1">Durum</label>
+              <label className="block text-gray-700 dark:text-gray-100 font-semibold mb-1">Durum</label>
               <select className="input w-full" value={editStatus} onChange={e => setEditStatus(e.target.value)}>
                 <option value="AKTARILDI">Aktarıldı</option>
                 <option value="FATURALANDI">Faturalandı</option>
@@ -633,6 +605,108 @@ function SalesPageContent() {
             <div className="flex justify-end gap-2 mt-6">
               <button className="btn btn-secondary" onClick={() => setDeleteModalOpen(false)}>Vazgeç</button>
               <button className="btn btn-danger" onClick={handleDeleteSale}>Evet, Sil</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Toplu Silme Modalı */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setShowBulkDeleteModal(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 relative animate-fade-in border border-red-100">
+            <button
+              onClick={() => setShowBulkDeleteModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+              aria-label="Kapat"
+            >×</button>
+            <h2 className="text-2xl font-bold text-red-700 mb-6">Toplu Silme Onayı</h2>
+            <p className="mb-6 text-gray-700">Seçili <span className="font-bold">{selectedIds.length}</span> kaydı silmek istediğinize emin misiniz?</p>
+            <div className="flex justify-end gap-2 mt-6">
+              <button className="btn btn-secondary" onClick={() => setShowBulkDeleteModal(false)}>Vazgeç</button>
+              <button className="btn btn-danger" onClick={() => {
+                setSales(sales => sales.filter(s => !selectedIds.includes(s.id)));
+                setSelectedIds([]);
+                setShowBulkDeleteModal(false);
+              }}>Evet, Hepsini Sil</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Excel'e Aktar Sütun Seçim Modalı */}
+      {showExportFilterModal && (
+        <div className="modal-overlay z-50">
+          <div className="modal-content max-w-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" transform="rotate(180 12 12)" />
+                </svg>
+                Excel'e Aktar - Sütun Seçimi
+              </h2>
+              <button
+                onClick={() => setShowExportFilterModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
+              {availableColumns.map(col => (
+                <div key={col.key} className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    id={`col-${col.key}`}
+                    checked={selectedColumns.includes(col.key)}
+                    onChange={() => {
+                      if (selectedColumns.includes(col.key)) setSelectedColumns(cols => cols.filter(k => k !== col.key));
+                      else setSelectedColumns(cols => [...cols, col.key]);
+                    }}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor={`col-${col.key}`} className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
+                    {col.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button className="btn btn-secondary" onClick={() => setShowExportFilterModal(false)}>İptal</button>
+              <button className="btn btn-success" onClick={() => {
+                const headers = availableColumns.filter(col => selectedColumns.includes(col.key)).map(col => col.label);
+                const data = filteredSales.map(sale => {
+                  const nights = sale.accommodation?.numberOfNights ?? 0;
+                  const alisGecelik = sale.accommodation?.gecelikUcret ?? 0;
+                  const toplamAlis = alisGecelik * nights;
+                  const satisGecelik = sale.fiyat;
+                  const toplamSatis = satisGecelik * nights;
+                  const row: (string | number)[] = [];
+                  selectedColumns.forEach(key => {
+                    switch (key) {
+                      case 'id': row.push(sale.id); break;
+                      case 'adiSoyadi': row.push(sale.accommodation?.adiSoyadi || '-'); break;
+                      case 'unvani': row.push(sale.accommodation?.unvani || '-'); break;
+                      case 'odaTipi': row.push(sale.accommodation?.odaTipi || '-'); break;
+                      case 'numberOfNights': row.push(nights); break;
+                      case 'fiyat': row.push(satisGecelik); break;
+                      case 'toplamSatis': row.push(toplamSatis); break;
+                      case 'gecelikUcret': row.push(alisGecelik); break;
+                      case 'toplamAlis': row.push(toplamAlis); break;
+                      case 'status': row.push(sale.status); break;
+                      case 'organizasyonAdi': row.push(sale.accommodation?.organizasyonAdi || sale.organizasyonAdi); break;
+                      case 'girisTarihi': row.push(sale.accommodation?.girisTarihi || '-'); break;
+                      case 'cikisTarihi': row.push(sale.accommodation?.cikisTarihi || '-'); break;
+                      default: row.push('-');
+                    }
+                  });
+                  return row;
+                });
+                const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Satışlar');
+                XLSX.writeFile(wb, 'satislar.xlsx');
+                setShowExportFilterModal(false);
+              }}>Aktar</button>
             </div>
           </div>
         </div>
