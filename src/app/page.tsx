@@ -119,13 +119,29 @@ export default function Home() {
       .then(data => setCurrentUser(data.user))
       .catch(err => console.error('Kullanıcı bilgisi alınamadı:', err));
 
-    fetch('/api/accommodation')
-      .then(res => res.json())
-      .then(data => setRecords(data));
+    const fetchRecords = () => {
+      fetch('/api/accommodation')
+        .then(res => res.json())
+        .then(data => setRecords(data));
+    };
+
+    fetchRecords();
 
     fetch('/api/organizations')
       .then(res => res.json())
       .then(data => setOrganizasyonOptions(data));
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchRecords();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   // Doğru gün sayısı hesaplama fonksiyonu (çıkış günü hariç)
@@ -861,8 +877,10 @@ export default function Home() {
 
   // Sıralanmış kayıtları hesapla
   const sortedRecords = [...records].sort((a, b) => {
-    if (!sortColumn || !sortDirection) return 0;
-
+    if (!sortColumn || !sortDirection) {
+      // Varsayılan sıralama: id'ye göre artan (eski kayıtlar en üstte)
+      return a.id - b.id;
+    }
     const aValue = a[sortColumn];
     const bValue = b[sortColumn];
 
@@ -947,9 +965,10 @@ export default function Home() {
 
   // Checkbox değişimi
   const handleSelectRecord = (id: number) => {
+    const record = records.find(r => r.id === id);
+    if (record?.faturaEdildi) return; // Satışa aktarıldıysa seçilmesin
     setSelectedRecordIds(prev => {
       const newSelected = prev.includes(id) ? prev.filter(rid => rid !== id) : [...prev, id];
-      // Fiyat state'ini de güncelle
       setSalePrices(prices => {
         const updated = { ...prices };
         if (!newSelected.includes(id)) delete updated[id];
@@ -959,12 +978,14 @@ export default function Home() {
     });
   };
   const handleSelectAll = () => {
-    if (selectedRecordIds.length === sortedRecords.length) {
+    // Sadece satışa aktarılmamış kayıtları seç
+    const selectable = sortedRecords.filter(r => !r.faturaEdildi).map(r => r.id);
+    if (selectedRecordIds.length === selectable.length) {
       setSelectedRecordIds([]);
       setSalePrices({});
     } else {
-      setSelectedRecordIds(sortedRecords.map(r => r.id));
-      setSalePrices(Object.fromEntries(sortedRecords.map(r => [r.id, 0])));
+      setSelectedRecordIds(selectable);
+      setSalePrices(Object.fromEntries(selectable.map(rid => [rid, 0])));
     }
   };
 
@@ -1335,12 +1356,9 @@ export default function Home() {
                         <SortIcon column="konaklamaTipi" />
                       </div>
                     </th>
-                    <th 
-                      className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                      onClick={() => handleSort('faturaEdildi')}
-                    >
+                    <th className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('faturaEdildi')}>
                       <div className="flex items-center justify-between">
-                        <span>Fatura</span>
+                        <span>Satış Durumu</span>
                         <SortIcon column="faturaEdildi" />
                       </div>
                     </th>
@@ -1378,7 +1396,7 @@ export default function Home() {
                   {sortedRecords.map((record) => (
                     <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                       <td>
-                        <input type="checkbox" checked={selectedRecordIds.includes(record.id)} onChange={() => handleSelectRecord(record.id)} />
+                        <input type="checkbox" checked={selectedRecordIds.includes(record.id)} onChange={() => handleSelectRecord(record.id)} disabled={record.faturaEdildi} />
                       </td>
                       <td className="font-medium text-blue-600">{record.id}</td>
                       <td className="truncate max-w-[80px] hidden md:table-cell">{record.kurumCari || '-'}</td>
@@ -1400,14 +1418,12 @@ export default function Home() {
                       </td>
                       <td className="hidden md:table-cell">
                         {record.faturaEdildi ? (
-                          <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                            Evet
+                          <span className="inline-block px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-[11px] font-semibold border border-green-200">
+                            Satışa Aktarıldı
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            Hayır
+                          <span className="inline-block px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[11px] font-semibold border border-gray-200">
+                            Henüz Satışa Aktarılmadı
                           </span>
                         )}
                       </td>

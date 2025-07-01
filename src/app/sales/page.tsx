@@ -1,17 +1,27 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface Sale {
   id: number;
-  user: { id: number; name?: string; email: string };
-  userId: number;
+  user?: { id: number; name?: string; email: string };
+  userId?: number;
   organizasyonAdi: string;
   fiyat: number;
   createdAt: string;
   status: string;
+  accommodation?: {
+    adiSoyadi: string;
+    unvani: string;
+    girisTarihi: string;
+    cikisTarihi: string;
+    numberOfNights?: number;
+    organizasyonAdi?: string;
+  };
 }
 
 export default function SalesPage() {
+  const router = useRouter();
   const [sales, setSales] = useState<Sale[]>([]);
   const [filterOrg, setFilterOrg] = useState("");
   const [filterUser, setFilterUser] = useState("");
@@ -20,6 +30,10 @@ export default function SalesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [detailSale, setDetailSale] = useState<Sale | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [editStatus, setEditStatus] = useState<string>("");
 
   useEffect(() => {
     setLoading(true);
@@ -79,6 +93,39 @@ export default function SalesPage() {
   // Tarih formatı
   const formatDate = (date: string) => new Date(date).toLocaleDateString("tr-TR");
 
+  const handleEditModalOpen = (sale: Sale) => {
+    setSelectedSale(sale);
+    setEditPrice(sale.fiyat);
+    setEditStatus(sale.status);
+    setEditModalOpen(true);
+  };
+  const handleEditModalSave = async () => {
+    if (!selectedSale) return;
+    await fetch(`/api/sales`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: selectedSale.id, fiyat: editPrice, status: editStatus }),
+    });
+    setSales(sales => sales.map(s => s.id === selectedSale.id ? { ...s, fiyat: editPrice, status: editStatus } : s));
+    setEditModalOpen(false);
+    setSelectedSale(null);
+  };
+  const handleDeleteModalOpen = (sale: Sale) => {
+    setSelectedSale(sale);
+    setDeleteModalOpen(true);
+  };
+  const handleDeleteSale = async () => {
+    if (!selectedSale) return;
+    await fetch(`/api/sales`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: selectedSale.id }),
+    });
+    setSales(sales => sales.filter(s => s.id !== selectedSale.id));
+    setDeleteModalOpen(false);
+    setSelectedSale(null);
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -86,6 +133,12 @@ export default function SalesPage() {
           <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 17v-2a4 4 0 014-4h10a4 4 0 014 4v2M16 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /></svg>
           Satışlar
         </h1>
+        <button
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow transition"
+          onClick={() => router.push("/")}
+        >
+          Ana Sayfaya Dön
+        </button>
         <div className="flex flex-wrap gap-2 sticky top-2 z-10 bg-white/80 p-2 rounded-lg shadow-sm">
           <input
             type="text"
@@ -161,11 +214,13 @@ export default function SalesPage() {
           <table className="min-w-full text-sm">
             <thead className="bg-gradient-to-r from-blue-50 to-blue-100">
               <tr>
-                <th className="p-2 font-semibold text-gray-700">Kişi</th>
-                <th className="p-2 font-semibold text-gray-700">Email</th>
+                <th className="p-2 font-semibold text-gray-700">Adı Soyadı</th>
+                <th className="p-2 font-semibold text-gray-700">Unvanı</th>
                 <th className="p-2 font-semibold text-gray-700">Organizasyon</th>
+                <th className="p-2 font-semibold text-gray-700">Giriş Tarihi</th>
+                <th className="p-2 font-semibold text-gray-700">Çıkış Tarihi</th>
+                <th className="p-2 font-semibold text-gray-700">Gece</th>
                 <th className="p-2 font-semibold text-gray-700">Fiyat (₺)</th>
-                <th className="p-2 font-semibold text-gray-700">Tarih</th>
                 <th className="p-2 font-semibold text-gray-700">Durum</th>
                 <th className="p-2 font-semibold text-gray-700">İşlem</th>
               </tr>
@@ -173,23 +228,19 @@ export default function SalesPage() {
             <tbody>
               {filteredSales.map(sale => (
                 <tr key={sale.id} className="border-b hover:bg-blue-50 transition cursor-pointer">
-                  <td className="p-2 text-gray-800 font-medium">{sale.user?.name || '-'}</td>
-                  <td className="p-2 text-gray-700">{sale.user?.email}</td>
-                  <td className="p-2 text-blue-700 font-semibold">{sale.organizasyonAdi}</td>
+                  <td className="p-2 text-gray-800 font-medium">{sale.accommodation?.adiSoyadi || '-'}</td>
+                  <td className="p-2 text-gray-700">{sale.accommodation?.unvani || '-'}</td>
+                  <td className="p-2 text-blue-700 font-semibold">{sale.accommodation?.organizasyonAdi || sale.organizasyonAdi}</td>
+                  <td className="p-2 text-gray-600">{sale.accommodation?.girisTarihi || '-'}</td>
+                  <td className="p-2 text-gray-600">{sale.accommodation?.cikisTarihi || '-'}</td>
+                  <td className="p-2 text-purple-700 font-bold">{sale.accommodation?.numberOfNights ?? '-'}</td>
                   <td className="p-2 text-green-700 font-bold">{sale.fiyat.toLocaleString('tr-TR')}</td>
-                  <td className="p-2 text-gray-600">{formatDate(sale.createdAt)}</td>
                   <td className="p-2">
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${statusColor(sale.status)}`}>{sale.status}</span>
                   </td>
                   <td className="p-2">
-                    {editId === sale.id ? (
-                      <>
-                        <button className="btn btn-success btn-sm mr-2" onClick={e => { e.stopPropagation(); handleEditSave(); }}>Kaydet</button>
-                        <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); setEditId(null); }}>İptal</button>
-                      </>
-                    ) : (
-                      <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); handleEditClick(sale); }}>Fiyatı Düzenle</button>
-                    )}
+                    <button className="btn btn-primary btn-sm mr-2" onClick={e => { e.stopPropagation(); handleEditModalOpen(sale); }}>Düzenle</button>
+                    <button className="btn btn-danger btn-sm" onClick={e => { e.stopPropagation(); handleDeleteModalOpen(sale); }}>Sil</button>
                   </td>
                 </tr>
               ))}
@@ -209,13 +260,63 @@ export default function SalesPage() {
               Satış Detayı
             </h2>
             <div className="space-y-2">
-              <div><span className="font-semibold">Kişi:</span> {detailSale.user?.name || '-'} ({detailSale.user?.email})</div>
-              <div><span className="font-semibold">Organizasyon:</span> {detailSale.organizasyonAdi}</div>
+              <div><span className="font-semibold">Adı Soyadı:</span> {detailSale.accommodation?.adiSoyadi || '-'}</div>
+              <div><span className="font-semibold">Unvanı:</span> {detailSale.accommodation?.unvani || '-'}</div>
+              <div><span className="font-semibold">Organizasyon:</span> {detailSale.accommodation?.organizasyonAdi || detailSale.organizasyonAdi}</div>
+              <div><span className="font-semibold">Giriş Tarihi:</span> {detailSale.accommodation?.girisTarihi || '-'}</div>
+              <div><span className="font-semibold">Çıkış Tarihi:</span> {detailSale.accommodation?.cikisTarihi || '-'}</div>
+              <div><span className="font-semibold">Gece:</span> {detailSale.accommodation?.numberOfNights ?? '-'}</div>
               <div><span className="font-semibold">Fiyat:</span> {detailSale.fiyat.toLocaleString('tr-TR')} ₺</div>
               <div><span className="font-semibold">Tarih:</span> {formatDate(detailSale.createdAt)}</div>
               <div><span className="font-semibold">Durum:</span> <span className={`px-2 py-1 rounded-full text-xs font-bold ${statusColor(detailSale.status)}`}>{detailSale.status}</span></div>
               <div><span className="font-semibold">Satış ID:</span> {detailSale.id}</div>
-              <div><span className="font-semibold">Kullanıcı ID:</span> {detailSale.userId}</div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Düzenleme Modalı */}
+      {editModalOpen && selectedSale && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setEditModalOpen(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 relative animate-fade-in border border-blue-100">
+            <button
+              onClick={() => setEditModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+              aria-label="Kapat"
+            >×</button>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Satış Kaydını Düzenle</h2>
+            <div className="mb-4">
+              <label className="block text-gray-700 font-semibold mb-1">Fiyat (₺)</label>
+              <input type="number" className="input w-full" value={editPrice} min={0} onChange={e => setEditPrice(Number(e.target.value))} />
+            </div>
+            <div className="mb-4">
+              <label className="block text-gray-700 font-semibold mb-1">Durum</label>
+              <select className="input w-full" value={editStatus} onChange={e => setEditStatus(e.target.value)}>
+                <option value="AKTARILDI">Aktarıldı</option>
+                <option value="FATURALANDI">Faturalandı</option>
+                <option value="IPTAL">İptal</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button className="btn btn-secondary" onClick={() => setEditModalOpen(false)}>İptal</button>
+              <button className="btn btn-success" onClick={handleEditModalSave}>Kaydet</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Silme Modalı */}
+      {deleteModalOpen && selectedSale && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setDeleteModalOpen(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 relative animate-fade-in border border-red-100">
+            <button
+              onClick={() => setDeleteModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+              aria-label="Kapat"
+            >×</button>
+            <h2 className="text-2xl font-bold text-red-700 mb-6">Satış Kaydını Sil</h2>
+            <p className="mb-6 text-gray-700">Bu satış kaydını silmek istediğinize emin misiniz?<br/><span className="font-semibold">{selectedSale.accommodation?.adiSoyadi}</span> ({selectedSale.fiyat.toLocaleString('tr-TR')} ₺)</p>
+            <div className="flex justify-end gap-2 mt-6">
+              <button className="btn btn-secondary" onClick={() => setDeleteModalOpen(false)}>Vazgeç</button>
+              <button className="btn btn-danger" onClick={handleDeleteSale}>Evet, Sil</button>
             </div>
           </div>
         </div>

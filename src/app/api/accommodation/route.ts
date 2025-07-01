@@ -3,8 +3,14 @@ import { prisma } from '@/lib/prisma';
 
 // Tüm konaklama kayıtlarını listele
 export async function GET() {
+  // Tüm konaklama kayıtlarını çek
   const records = await prisma.accommodation.findMany();
-  return NextResponse.json(records);
+  // Her konaklama için ilgili Sale kaydı var mı kontrol et
+  const recordsWithStatus = await Promise.all(records.map(async (record) => {
+    const sale = await prisma.sale.findFirst({ where: { accommodationId: record.id } });
+    return { ...record, faturaEdildi: !!sale };
+  }));
+  return NextResponse.json(recordsWithStatus);
 }
 
 // Yeni konaklama kaydı ekle

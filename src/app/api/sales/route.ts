@@ -78,4 +78,33 @@ export async function PATCH(request: Request) {
     }
     return NextResponse.json({ error: 'Bilinmeyen bir hata oluştu.' }, { status: 500 });
   }
+}
+
+// Satış sil (DELETE)
+export async function DELETE(request: Request) {
+  try {
+    const data = await request.json();
+    const { id } = data;
+    if (!id) {
+      return NextResponse.json({ error: 'Eksik veri: id gerekli.' }, { status: 400 });
+    }
+    // Önce silinecek satışı bul
+    const sale = await prisma.sale.findUnique({ where: { id: Number(id) } });
+    if (!sale) {
+      return NextResponse.json({ error: 'Satış kaydı bulunamadı.' }, { status: 404 });
+    }
+    // Satışı sil
+    await prisma.sale.delete({ where: { id: Number(id) } });
+    // İlgili konaklama kaydını güncelle
+    await prisma.accommodation.update({
+      where: { id: sale.accommodationId },
+      data: { faturaEdildi: false },
+    });
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ error: 'Bilinmeyen bir hata oluştu.' }, { status: 500 });
+  }
 } 
