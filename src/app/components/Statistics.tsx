@@ -27,6 +27,28 @@ interface ChartDataPoint {
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#8B5A2B'];
 
+// XAxis için özel tick component
+const CustomTick = (props: any) => {
+  const { x, y, payload } = props;
+  const lines = String(payload.value).split(' ');
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {lines.map((line: string, i: number) => (
+        <text
+          key={i}
+          x={0}
+          y={i * 14}
+          textAnchor="end"
+          fontSize={12}
+          fill="#6b7280"
+        >
+          {line}
+        </text>
+      ))}
+    </g>
+  );
+};
+
 export default function Statistics({ records }: StatisticsProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -263,12 +285,12 @@ export default function Statistics({ records }: StatisticsProps) {
               <XAxis
                 dataKey="name"
                 stroke="#6b7280"
-                fontSize={14}
-                angle={-20}
+                fontSize={12}
+                angle={0}
                 textAnchor="end"
-                height={100}
+                height={120}
                 interval={0}
-                tick={{ fontSize: 14 }}
+                tick={<CustomTick />}
               />
               <YAxis 
                 stroke="#6b7280"
