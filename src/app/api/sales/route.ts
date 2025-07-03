@@ -117,7 +117,7 @@ export async function DELETE(request: Request) {
       const sales = await prisma.sale.findMany({ where: { id: { in: ids.map(Number) } } });
       if (!sales.length) {
         return NextResponse.json({ error: 'Silinecek satış kaydı bulunamadı.' }, { status: 404 });
-      }
+    }
       // İlgili accommodationId'leri topla
       const accommodationIds = sales.map(sale => sale.accommodationId);
       // Satışları sil
@@ -130,16 +130,16 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: true, deletedCount: sales.length });
     } else if (id) {
       // Tekli silme
-      const sale = await prisma.sale.findUnique({ where: { id: Number(id) } });
-      if (!sale) {
-        return NextResponse.json({ error: 'Satış kaydı bulunamadı.' }, { status: 404 });
-      }
-      await prisma.sale.delete({ where: { id: Number(id) } });
-      await prisma.accommodation.update({
-        where: { id: sale.accommodationId },
-        data: { faturaEdildi: false },
-      });
-      return NextResponse.json({ success: true });
+    const sale = await prisma.sale.findUnique({ where: { id: Number(id) } });
+    if (!sale) {
+      return NextResponse.json({ error: 'Satış kaydı bulunamadı.' }, { status: 404 });
+    }
+    await prisma.sale.delete({ where: { id: Number(id) } });
+    await prisma.accommodation.update({
+      where: { id: sale.accommodationId },
+      data: { faturaEdildi: false },
+    });
+    return NextResponse.json({ success: true });
     }
     return NextResponse.json({ error: 'Eksik veri: id veya ids gerekli.' }, { status: 400 });
   } catch (error: unknown) {
