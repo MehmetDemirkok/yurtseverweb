@@ -88,11 +88,13 @@ function SalesPageContent() {
   });
 
   // İstatistikler
-  const totalSales = filteredSales.reduce((sum, s) => sum + s.fiyat, 0);
+  const totalSales = filteredSales.reduce((sum, s) => sum + (s.fiyat * (s.accommodation?.numberOfNights ?? 1)), 0);
   const avgPerPerson = filteredSales.length > 0 ? totalSales / filteredSales.length : 0;
   const orgStats = Array.from(new Set(filteredSales.map(s => s.organizasyonAdi))).map(org => ({
     org,
-    total: filteredSales.filter(s => s.organizasyonAdi === org).reduce((sum, s) => sum + s.fiyat, 0),
+    total: filteredSales
+      .filter(s => s.organizasyonAdi === org)
+      .reduce((sum, s) => sum + (s.fiyat * (s.accommodation?.numberOfNights ?? 1)), 0),
     count: filteredSales.filter(s => s.organizasyonAdi === org).length
   }));
 
