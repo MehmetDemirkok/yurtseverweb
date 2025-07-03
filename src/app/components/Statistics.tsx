@@ -260,13 +260,15 @@ export default function Statistics({ records }: StatisticsProps) {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={organizationChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis 
-                dataKey="name" 
+              <XAxis
+                dataKey="name"
                 stroke="#6b7280"
-                fontSize={11}
-                angle={-45}
+                fontSize={14}
+                angle={-20}
                 textAnchor="end"
-                height={80}
+                height={100}
+                interval={0}
+                tick={{ fontSize: 14 }}
               />
               <YAxis 
                 stroke="#6b7280"
