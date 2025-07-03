@@ -13,6 +13,7 @@ import {
   TooltipProps,
 } from 'recharts';
 import type { AccommodationRecord } from '../page';
+import { useState } from 'react';
 
 interface StatisticsProps {
   records: AccommodationRecord[];
@@ -26,9 +27,42 @@ interface ChartDataPoint {
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#8B5A2B'];
 
+// XAxis için özel tick tipi
+interface TickProps {
+  x?: number;
+  y?: number;
+  payload?: { value: string };
+}
+
+const CustomTick = ({ x = 0, y = 0, payload = { value: '' } }: TickProps) => {
+  // 2 kelimede bir satır atlat
+  const words = String(payload.value).split(' ');
+  const lines = [];
+  for (let i = 0; i < words.length; i += 2) {
+    lines.push(words.slice(i, i + 2).join(' '));
+  }
+  return (
+    <g transform={`translate(${x},${y + 5}) rotate(-35, 0, 0)`}>
+      {lines.map((line, i) => (
+        <text
+          key={i}
+          x={0}
+          y={i * 13}
+          textAnchor="end"
+          fontSize={11}
+          fill="#6b7280"
+        >
+          {line}
+        </text>
+      ))}
+    </g>
+  );
+};
+
 export default function Statistics({ records }: StatisticsProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [showRevenue, setShowRevenue] = useState(false);
 
   // Toplam istatistikler
   const totalRecords = records.length;
@@ -126,8 +160,24 @@ export default function Statistics({ records }: StatisticsProps) {
               </svg>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Toplam Gelir</p>
-              <p className="text-3xl font-bold text-green-600">{totalRevenue.toLocaleString('tr-TR')} ₺</p>
+              <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                Toplam Gelir
+                <button
+                  type="button"
+                  aria-label={showRevenue ? 'Gizle' : 'Göster'}
+                  className="ml-1 focus:outline-none"
+                  onClick={() => setShowRevenue(v => !v)}
+                >
+                  {showRevenue ? (
+                    // Eye-off SVG
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10 0-1.657.402-3.22 1.125-4.575m2.122-2.122A9.956 9.956 0 0112 3c5.523 0 10 4.477 10 10 0 2.21-.715 4.25-1.925 5.925M15 12a3 3 0 11-6 0 3 3 0 016 0zM3 3l18 18" /></svg>
+                  ) : (
+                    // Eye SVG
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  )}
+                </button>
+              </p>
+              <p className="text-3xl font-bold text-green-600">{showRevenue ? `${totalRevenue.toLocaleString('tr-TR')} ₺` : '****** ₺'}</p>
             </div>
           </div>
         </div>
@@ -242,13 +292,13 @@ export default function Statistics({ records }: StatisticsProps) {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={organizationChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis 
-                dataKey="name" 
+              <XAxis
+                dataKey="name"
                 stroke="#6b7280"
                 fontSize={11}
-                angle={-45}
-                textAnchor="end"
-                height={80}
+                height={70}
+                interval={0}
+                tick={<CustomTick />}
               />
               <YAxis 
                 stroke="#6b7280"
