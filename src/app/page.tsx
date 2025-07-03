@@ -74,6 +74,11 @@ export default function Home() {
     bitisTarihi: ''
   });
   
+  // Arama ve filtreleme için state'ler
+  const [filterOrg, setFilterOrg] = useState("");
+  const [filterName, setFilterName] = useState("");
+  const [filterTitle, setFilterTitle] = useState("");
+  
   // Filtreleme için öneriler
   const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
   const [showOrganizasyonOptions, setShowOrganizasyonOptions] = useState(false);
@@ -83,6 +88,14 @@ export default function Home() {
   // Sıralama state'leri
   const [sortColumn, setSortColumn] = useState<keyof AccommodationRecord | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
+  
+  // Filtrelenmiş kayıtlar
+  const filteredRecords = records.filter((record) => {
+    const orgMatch = filterOrg ? record.organizasyonAdi?.toLowerCase().includes(filterOrg.toLowerCase()) : true;
+    const nameMatch = filterName ? record.adiSoyadi?.toLowerCase().includes(filterName.toLowerCase()) : true;
+    const titleMatch = filterTitle ? record.unvani?.toLowerCase().includes(filterTitle.toLowerCase()) : true;
+    return orgMatch && nameMatch && titleMatch;
+  });
 
   type ColumnKey = keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret';
   type ColumnDef = { key: ColumnKey; label: string };
@@ -882,7 +895,7 @@ export default function Home() {
   };
 
   // Sıralanmış kayıtları hesapla
-  const sortedRecords = [...records].sort((a, b) => {
+  const sortedRecords = [...filteredRecords].sort((a, b) => {
     if (!sortColumn || !sortDirection) {
       // Varsayılan sıralama: id'ye göre artan (eski kayıtlar en üstte)
       return a.id - b.id;
@@ -968,6 +981,26 @@ export default function Home() {
   const [selectedRecordIds, setSelectedRecordIds] = useState<number[]>([]);
   const [saleModalOpen, setSaleModalOpen] = useState(false);
   const [salePrices, setSalePrices] = useState<{ [userId: number]: number }>({});
+  
+  // Toplu silme için state'ler
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+
+  // Toplu silme işlemi
+  const handleBulkDelete = async () => {
+    try {
+      await fetch('/api/accommodation', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedRecordIds }),
+      });
+      setRecords(records => records.filter(r => !selectedRecordIds.includes(r.id)));
+      setSelectedRecordIds([]);
+      setShowBulkDeleteModal(false);
+    } catch (e) {
+      console.error(e);
+      alert('Toplu silme başarısız oldu!');
+    }
+  };
 
   // Checkbox değişimi
   const handleSelectRecord = (id: number) => {
@@ -984,9 +1017,9 @@ export default function Home() {
     });
   };
   const handleSelectAll = () => {
-    // Sadece satışa aktarılmamış kayıtları seç
+    // Sadece satışa aktarılmamış ve filtrelenmiş kayıtları seç
     const selectable = sortedRecords.filter(r => !r.faturaEdildi).map(r => r.id);
-    if (selectedRecordIds.length === selectable.length) {
+    if (selectedRecordIds.length === selectable.length && selectable.length > 0) {
       setSelectedRecordIds([]);
       setSalePrices({});
     } else {
@@ -1043,6 +1076,8 @@ export default function Home() {
     }
   };
 
+  // Filtreleme işlemi üstte tanımlandı
+
   return (
     <AuthGuard requiredPermissions={["dashboard"]}>
       {/* Modern Header with Logo */}
@@ -1070,7 +1105,7 @@ export default function Home() {
         </div>
       </header>
       {/* ... existing code ... */}
-      <main className="container mx-auto px-6 py-8">
+      <main className="w-full px-4 py-8">
         {/* Statistics Section */}
         {userPermissions.includes("statistics") && (
           <div className="mb-8 animate-slide-in">
@@ -1249,15 +1284,61 @@ export default function Home() {
             </button>
           </div>
           {!isTableCollapsed && (
-            <div className="overflow-x-auto">
-              <table className="table w-full text-xs">
+            <div className="overflow-hidden">
+              {/* Arama Inputları - Tablo üstü */}
+              <div className="flex flex-wrap justify-start items-center gap-3 mb-4 bg-gray-800/90 p-3 rounded-lg shadow-sm">
+                <div className="flex items-center gap-2 mr-2">
+                  <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <span className="font-medium text-white">Filtrele:</span>
+                </div>
+                <input
+                  type="text"
+                  className="w-full sm:w-auto sm:min-w-[180px] pl-10 pr-4 py-2 border-2 border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  placeholder="Organizasyon ara..."
+                  value={filterOrg}
+                  onChange={(e) => setFilterOrg(e.target.value)}
+                />
+                <input
+                  type="text"
+                  className="w-full sm:w-auto sm:min-w-[180px] pl-10 pr-4 py-2 border-2 border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  placeholder="İsim ara..."
+                  value={filterName}
+                  onChange={(e) => setFilterName(e.target.value)}
+                />
+                <input
+                  type="text"
+                  className="w-full sm:w-auto sm:min-w-[180px] pl-10 pr-4 py-2 border-2 border-gray-600 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  placeholder="Unvan ara..."
+                  value={filterTitle}
+                  onChange={(e) => setFilterTitle(e.target.value)}
+                />
+                
+                {(filterOrg || filterName || filterTitle) && (
+                  <button 
+                    onClick={() => {
+                      setFilterOrg('');
+                      setFilterName('');
+                      setFilterTitle('');
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all shadow-md flex items-center gap-2 font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Filtreleri Temizle
+                  </button>
+                )}
+              </div>
+              <table className="table w-full table-fixed text-xs">
                 <thead>
                   <tr>
-                    <th>
+                    <th className="w-10">
                       <input type="checkbox" checked={selectedRecordIds.length === sortedRecords.length && sortedRecords.length > 0} onChange={handleSelectAll} />
                     </th>
                     <th 
-                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-12 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('id')}
                     >
                       <div className="flex items-center justify-between">
@@ -1266,7 +1347,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-28 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('kurumCari')}
                     >
                       <div className="flex items-center justify-between">
@@ -1275,7 +1356,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-28 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('organizasyonAdi')}
                     >
                       <div className="flex items-center justify-between">
@@ -1284,7 +1365,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-28 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('otelAdi')}
                     >
                       <div className="flex items-center justify-between">
@@ -1293,7 +1374,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-28 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('adiSoyadi')}
                     >
                       <div className="flex items-center justify-between">
@@ -1302,7 +1383,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-24 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('unvani')}
                     >
                       <div className="flex items-center justify-between">
@@ -1311,7 +1392,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-20 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('ulke')}
                     >
                       <div className="flex items-center justify-between">
@@ -1320,7 +1401,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-20 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('sehir')}
                     >
                       <div className="flex items-center justify-between">
@@ -1329,7 +1410,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-20 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('girisTarihi')}
                     >
                       <div className="flex items-center justify-between">
@@ -1338,7 +1419,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-20 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('cikisTarihi')}
                     >
                       <div className="flex items-center justify-between">
@@ -1347,7 +1428,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-16 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('odaTipi')}
                     >
                       <div className="flex items-center justify-between">
@@ -1356,7 +1437,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-24 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('konaklamaTipi')}
                     >
                       <div className="flex items-center justify-between">
@@ -1364,14 +1445,14 @@ export default function Home() {
                         <SortIcon column="konaklamaTipi" />
                       </div>
                     </th>
-                    <th className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('faturaEdildi')}>
+                    <th className="w-28 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('faturaEdildi')}>
                       <div className="flex items-center justify-between">
                         <span>Satış Durumu</span>
                         <SortIcon column="faturaEdildi" />
                       </div>
                     </th>
                     <th 
-                      className="cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-14 cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('numberOfNights')}
                     >
                       <div className="flex items-center justify-between">
@@ -1380,7 +1461,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-24 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('gecelikUcret')}
                     >
                       <div className="flex items-center justify-between">
@@ -1389,7 +1470,7 @@ export default function Home() {
                       </div>
                     </th>
                     <th 
-                      className="hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                      className="w-24 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none"
                       onClick={() => handleSort('toplamUcret')}
                     >
                       <div className="flex items-center justify-between">
@@ -1397,7 +1478,7 @@ export default function Home() {
                         <SortIcon column="toplamUcret" />
                       </div>
                     </th>
-                    <th>İşlemler</th>
+                    <th className="w-16">İşlemler</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1406,25 +1487,25 @@ export default function Home() {
                       <td>
                         <input type="checkbox" checked={selectedRecordIds.includes(record.id)} onChange={() => handleSelectRecord(record.id)} disabled={record.faturaEdildi} />
                       </td>
-                      <td className="font-medium text-blue-600">{record.id}</td>
-                      <td className="truncate max-w-[80px] hidden md:table-cell">{record.kurumCari || '-'}</td>
-                      <td className="truncate max-w-[80px] hidden lg:table-cell">{record.organizasyonAdi || '-'}</td>
-                      <td className="truncate max-w-[80px] hidden lg:table-cell">{record.otelAdi || '-'}</td>
-                      <td className="truncate max-w-[90px]">{record.adiSoyadi}</td>
-                      <td className="truncate max-w-[80px] hidden md:table-cell">{record.unvani}</td>
-                      <td className="truncate max-w-[60px] hidden md:table-cell">{record.ulke}</td>
-                      <td className="truncate max-w-[60px]">{record.sehir}</td>
-                      <td>{formatDate(record.girisTarihi)}</td>
-                      <td>{formatDate(record.cikisTarihi)}</td>
-                      <td>
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium mr-1">
+                      <td className="font-medium text-blue-600 whitespace-nowrap">{record.id}</td>
+                      <td className="truncate hidden md:table-cell">{record.kurumCari || '-'}</td>
+                      <td className="truncate hidden lg:table-cell">{record.organizasyonAdi || '-'}</td>
+                      <td className="truncate hidden lg:table-cell">{record.otelAdi || '-'}</td>
+                      <td className="truncate">{record.adiSoyadi}</td>
+                      <td className="truncate hidden md:table-cell">{record.unvani}</td>
+                      <td className="truncate hidden md:table-cell">{record.ulke}</td>
+                      <td className="truncate">{record.sehir}</td>
+                      <td className="whitespace-nowrap">{formatDate(record.girisTarihi)}</td>
+                      <td className="whitespace-nowrap">{formatDate(record.cikisTarihi)}</td>
+                      <td className="text-center">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium inline-block">
                           {record.odaTipi}
                         </span>
                       </td>
-                      <td>
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${record.konaklamaTipi === 'BB' ? 'bg-yellow-100 text-yellow-800' : record.konaklamaTipi === 'HB' ? 'bg-green-100 text-green-800' : record.konaklamaTipi === 'FB' ? 'bg-purple-100 text-purple-800' : 'bg-pink-100 text-pink-800'}`}>{record.konaklamaTipi}</span>
+                      <td className="text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold inline-block ${record.konaklamaTipi === 'BB' ? 'bg-yellow-100 text-yellow-800' : record.konaklamaTipi === 'HB' ? 'bg-green-100 text-green-800' : record.konaklamaTipi === 'FB' ? 'bg-purple-100 text-purple-800' : 'bg-pink-100 text-pink-800'}`}>{record.konaklamaTipi}</span>
                       </td>
-                      <td className="hidden md:table-cell">
+                      <td className="hidden md:table-cell text-center">
                         {record.faturaEdildi ? (
                           <span className="inline-block px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-[11px] font-semibold border border-green-200">
                             Satışa Aktarıldı
@@ -1435,18 +1516,18 @@ export default function Home() {
                           </span>
                         )}
                       </td>
-                      <td className="text-center">{record.numberOfNights || 0}</td>
-                      <td className="font-medium hidden md:table-cell">{record.gecelikUcret.toLocaleString('tr-TR')} ₺</td>
-                      <td className="font-bold text-green-600 hidden md:table-cell">{record.toplamUcret.toLocaleString('tr-TR')} ₺</td>
+                      <td className="text-center whitespace-nowrap">{record.numberOfNights || 0}</td>
+                      <td className="font-medium hidden md:table-cell whitespace-nowrap text-right">{record.gecelikUcret.toLocaleString('tr-TR')} ₺</td>
+                      <td className="font-bold text-green-600 hidden md:table-cell whitespace-nowrap text-right">{record.toplamUcret.toLocaleString('tr-TR')} ₺</td>
                       <td>
-                        <div className="flex space-x-2">
+                        <div className="flex flex-wrap justify-center gap-1">
                           {canEdit() && (
                             <button
                               onClick={() => handleEditClick(record.id)}
-                              className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                              className="btn btn-sm btn-primary p-1"
                               title="Düzenle"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                               </svg>
                             </button>
@@ -1454,10 +1535,10 @@ export default function Home() {
                           {canDelete() && (
                             <button
                               onClick={() => handleDeleteClick(record.id)}
-                              className="p-1 text-red-600 hover:text-red-800 transition-colors"
+                              className="btn btn-sm btn-error p-1"
                               title="Sil"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                               </svg>
                             </button>
@@ -1472,12 +1553,53 @@ export default function Home() {
           )}
         </div>
 
-        {/* Satışa Aktar butonu */}
+        {/* Satışa Aktar ve Toplu Silme butonları */}
         {selectedRecordIds.length > 0 && (
-          <div className="fixed bottom-8 right-8 z-50">
-            <button className="btn btn-primary px-6 py-3 text-lg shadow-lg" onClick={handleSaleTransfer}>
+          <div className="fixed bottom-8 right-8 z-50 flex gap-2">
+            <button 
+              className="btn btn-error px-6 py-3 text-lg shadow-lg" 
+              onClick={() => setShowBulkDeleteModal(true)}
+            >
+              Seçili Kayıtları Sil
+            </button>
+            <button 
+              className="btn btn-primary px-6 py-3 text-lg shadow-lg" 
+              onClick={handleSaleTransfer}
+            >
               Seçili Kişileri Satışa Aktar
             </button>
+          </div>
+        )}
+        
+        {/* Toplu Silme Onay Modalı */}
+        {showBulkDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setShowBulkDeleteModal(false); }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8 relative animate-fade-in border border-red-100">
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                aria-label="Kapat"
+              >
+                ×
+              </button>
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-xl flex items-center justify-center mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800">Seçili Kayıtları Sil</h2>
+              </div>
+              <div className="mb-6">
+                <p className="text-gray-600">
+                  <span className="font-bold text-red-600">{selectedRecordIds.length}</span> adet kaydı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                </p>
+              </div>
+              <div className="flex justify-end space-x-2 mt-6">
+                <button className="btn btn-secondary" onClick={() => setShowBulkDeleteModal(false)}>İptal</button>
+                <button className="btn btn-error" onClick={handleBulkDelete}>Kayıtları Sil</button>
+              </div>
+            </div>
           </div>
         )}
         {/* Satış fiyatı modalı */}

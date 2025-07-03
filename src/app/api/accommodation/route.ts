@@ -60,19 +60,28 @@ export async function PATCH(request: Request) {
 // Kayıt sil (DELETE)
 export async function DELETE(request: Request) {
   const data = await request.json();
-  const { id } = data;
-  if (!id) {
-    return NextResponse.json({ error: 'ID zorunlu' }, { status: 400 });
-  }
+  const { id, ids } = data;
+  
   try {
-    await prisma.accommodation.delete({
-      where: { id: Number(id) },
-    });
-    return NextResponse.json({ success: true });
+    if (ids && Array.isArray(ids)) {
+      // Toplu silme işlemi
+      await prisma.accommodation.deleteMany({
+        where: { id: { in: ids.map(Number) } },
+      });
+      return NextResponse.json({ success: true });
+    } else if (id) {
+      // Tek kayıt silme işlemi
+      await prisma.accommodation.delete({
+        where: { id: Number(id) },
+      });
+      return NextResponse.json({ success: true });
+    } else {
+      return NextResponse.json({ error: 'ID veya IDs zorunlu' }, { status: 400 });
+    }
   } catch (error: unknown) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
     return NextResponse.json({ error: 'Bilinmeyen bir hata oluştu.' }, { status: 500 });
   }
-} 
+}

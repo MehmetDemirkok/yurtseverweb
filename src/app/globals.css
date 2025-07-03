@@ -200,6 +200,12 @@ html {
   gap: 0.5rem;
 }
 
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;

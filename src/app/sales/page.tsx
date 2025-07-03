@@ -139,16 +139,19 @@ function SalesPageContent() {
     setSelectedSale(sale);
     setDeleteModalOpen(true);
   };
+  const [returnToAccommodation, setReturnToAccommodation] = useState(true);
+
   const handleDeleteSale = async () => {
     if (!selectedSale) return;
     await fetch(`/api/sales`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: selectedSale.id }),
+      body: JSON.stringify({ id: selectedSale.id, returnToAccommodation }),
     });
     setSales(sales => sales.filter(s => s.id !== selectedSale.id));
     setDeleteModalOpen(false);
     setSelectedSale(null);
+    setReturnToAccommodation(true); // Reset to default for next time
   };
 
   // Excel'e Aktar butonu
@@ -350,11 +353,12 @@ function SalesPageContent() {
       await fetch('/api/sales', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedIds }),
+        body: JSON.stringify({ ids: selectedIds, returnToAccommodation }),
       });
       setSales(sales => sales.filter(s => !selectedIds.includes(s.id)));
       setSelectedIds([]);
       setShowBulkDeleteModal(false);
+      setReturnToAccommodation(true); // Reset to default for next time
     } catch (e) {
       console.error(e);
       alert('Toplu silme başarısız oldu!');
@@ -362,33 +366,19 @@ function SalesPageContent() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8 animate-fade-in">
+    <div className="w-full mx-auto px-4 py-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 flex items-center gap-2 drop-shadow">
-          <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 17v-2a4 4 0 014-4h10a4 4 0 014 4v2M16 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /></svg>
-          Satışlar
-        </h1>
-        <button
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow transition"
-          onClick={() => router.push("/")}
-        >
-          Ana Sayfaya Dön
-        </button>
-        <div className="flex flex-wrap gap-2 sticky top-2 z-10 bg-white/80 p-2 rounded-lg shadow-sm">
-          <input
-            type="text"
-            className="input min-w-[180px]"
-            placeholder="Organizasyon ara..."
-            value={filterOrg}
-            onChange={e => setFilterOrg(e.target.value)}
-          />
-          <input
-            type="text"
-            className="input min-w-[180px]"
-            placeholder="Kişi veya email ara..."
-            value={filterUser}
-            onChange={e => setFilterUser(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 flex items-center gap-2 drop-shadow">
+            <svg className="w-7 h-7 sm:w-8 sm:h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 17v-2a4 4 0 014-4h10a4 4 0 014 4v2M16 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /></svg>
+            Satışlar
+          </h1>
+          <button
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow transition w-full sm:w-auto"
+            onClick={() => router.push("/")}
+          >
+            Ana Sayfaya Dön
+          </button>
         </div>
       </div>
       {/* İstatistik Kartları */}
@@ -437,6 +427,30 @@ function SalesPageContent() {
           ))}
         </div>
       </div>
+      {/* Arama Inputları - Tablo üstü */}
+      <div className="flex flex-wrap justify-start items-center gap-3 mb-4 bg-white/80 p-3 rounded-lg shadow-sm">
+        <div className="flex items-center gap-2 mr-2">
+          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <span className="font-medium text-gray-700">Filtrele:</span>
+        </div>
+        <input
+          type="text"
+          className="input w-full sm:w-auto sm:min-w-[180px]"
+          placeholder="Organizasyon ara..."
+          value={filterOrg}
+          onChange={e => setFilterOrg(e.target.value)}
+        />
+        <input
+          type="text"
+          className="input w-full sm:w-auto sm:min-w-[180px]"
+          placeholder="Kişi veya email ara..."
+          value={filterUser}
+          onChange={e => setFilterUser(e.target.value)}
+        />
+      </div>
+      
       {/* Butonlar - Tablo üstü */}
       <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mb-8">
         {selectedIds.length > 0 && (
@@ -469,7 +483,7 @@ function SalesPageContent() {
         </button>
       </div>
       {/* Tablo ve Yükleniyor/Boş Mesajı */}
-      <div className="w-full overflow-x-auto rounded-lg shadow bg-white">
+      <div className="w-full rounded-lg shadow bg-white overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-blue-600 animate-pulse">Yükleniyor...</div>
         ) : error ? (
@@ -477,10 +491,10 @@ function SalesPageContent() {
         ) : filteredSales.length === 0 ? (
           <div className="p-8 text-center text-gray-400">Kayıt bulunamadı.</div>
         ) : (
-          <table className="table w-full table-auto text-xs">
+          <table className="table w-full table-fixed text-xs">
             <thead className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-gray-800 dark:to-gray-900">
               <tr>
-                <th className="p-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">
+                <th className="p-2 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 w-10">
                   <input
                     type="checkbox"
                     checked={filteredSales.length > 0 && selectedIds.length === filteredSales.length}
@@ -490,20 +504,20 @@ function SalesPageContent() {
                     }}
                   />
                 </th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">ID</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">Adı Soyadı</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden md:table-cell">Unvanı</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">Organizasyon</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden sm:table-cell">Giriş Tarihi</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden sm:table-cell">Çıkış Tarihi</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">Gece</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden md:table-cell">Oda Tipi</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden lg:table-cell">Alış Fiyatı</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden lg:table-cell">Toplam Alış</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">Satış Fiyatı</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">Toplam Satış</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">Durum</th>
-                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300">İşlem</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 w-12">ID</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 w-28">Adı Soyadı</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden md:table-cell w-24">Unvanı</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 w-28">Organizasyon</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden sm:table-cell w-24">Giriş Tarihi</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden sm:table-cell w-24">Çıkış Tarihi</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 w-14">Gece</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden md:table-cell w-24">Oda Tipi</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden lg:table-cell w-20">Alış Fiyatı</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 hidden lg:table-cell w-20">Toplam Alış</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 w-20">Satış Fiyatı</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 w-20">Toplam Satış</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 w-20">Durum</th>
+                <th className="p-2 font-bold text-gray-800 dark:text-gray-100 bg-gray-100 dark:bg-gray-800 border-b border-gray-300 w-28">İşlem</th>
               </tr>
             </thead>
             <tbody>
@@ -525,24 +539,26 @@ function SalesPageContent() {
                         }}
                       />
                     </td>
-                    <td className="p-2 text-gray-700 dark:text-gray-200 font-semibold text-left">{sale.id}</td>
+                    <td className="p-2 text-gray-700 dark:text-gray-200 font-semibold text-left whitespace-nowrap">{sale.id}</td>
                     <td className="p-2 text-gray-900 dark:text-gray-100 font-bold text-left truncate">{sale.accommodation?.adiSoyadi || '-'}</td>
                     <td className="p-2 text-gray-700 dark:text-gray-300 hidden md:table-cell text-left truncate">{sale.accommodation?.unvani || '-'}</td>
                     <td className="p-2 text-blue-700 dark:text-blue-300 font-semibold text-left truncate">{sale.accommodation?.organizasyonAdi || sale.organizasyonAdi}</td>
-                    <td className="p-2 text-gray-600 dark:text-gray-400 hidden sm:table-cell text-center">{formatDate(sale.accommodation?.girisTarihi)}</td>
-                    <td className="p-2 text-gray-600 dark:text-gray-400 hidden sm:table-cell text-center">{formatDate(sale.accommodation?.cikisTarihi)}</td>
-                    <td className="p-2 text-purple-700 dark:text-purple-300 font-bold text-center">{nights || '-'}</td>
+                    <td className="p-2 text-gray-600 dark:text-gray-400 hidden sm:table-cell text-center whitespace-nowrap">{formatDate(sale.accommodation?.girisTarihi)}</td>
+                    <td className="p-2 text-gray-600 dark:text-gray-400 hidden sm:table-cell text-center whitespace-nowrap">{formatDate(sale.accommodation?.cikisTarihi)}</td>
+                    <td className="p-2 text-purple-700 dark:text-purple-300 font-bold text-center whitespace-nowrap">{nights || '-'}</td>
                     <td className="p-2 text-gray-700 dark:text-gray-300 hidden md:table-cell text-left truncate">{sale.accommodation?.odaTipi || '-'}</td>
-                    <td className="p-2 text-blue-700 dark:text-blue-300 hidden lg:table-cell text-right">{alisGecelik ? alisGecelik.toLocaleString('tr-TR') : '-'}</td>
-                    <td className="p-2 text-blue-800 dark:text-blue-200 font-bold hidden lg:table-cell text-right">{toplamAlis ? toplamAlis.toLocaleString('tr-TR') : '-'}</td>
-                    <td className="p-2 text-green-700 dark:text-green-300 text-right">{satisGecelik ? satisGecelik.toLocaleString('tr-TR') : '-'}</td>
-                    <td className="p-2 text-green-800 dark:text-green-200 font-bold text-right">{toplamSatis ? toplamSatis.toLocaleString('tr-TR') : '-'}</td>
+                    <td className="p-2 text-blue-700 dark:text-blue-300 hidden lg:table-cell text-right whitespace-nowrap">{alisGecelik ? alisGecelik.toLocaleString('tr-TR') : '-'}</td>
+                    <td className="p-2 text-blue-800 dark:text-blue-200 font-bold hidden lg:table-cell text-right whitespace-nowrap">{toplamAlis ? toplamAlis.toLocaleString('tr-TR') : '-'}</td>
+                    <td className="p-2 text-green-700 dark:text-green-300 text-right whitespace-nowrap">{satisGecelik ? satisGecelik.toLocaleString('tr-TR') : '-'}</td>
+                    <td className="p-2 text-green-800 dark:text-green-200 font-bold text-right whitespace-nowrap">{toplamSatis ? toplamSatis.toLocaleString('tr-TR') : '-'}</td>
                     <td className="p-2 text-center">
                       <span className={`px-2 py-1 rounded-full text-xs font-bold ${statusColor(sale.status)}`}>{sale.status}</span>
                     </td>
                     <td className="p-2 text-center">
-                      <button className="btn btn-primary btn-sm mr-2" onClick={e => { e.stopPropagation(); handleEditModalOpen(sale); }}>Düzenle</button>
-                      <button className="btn btn-danger btn-sm" onClick={e => { e.stopPropagation(); handleDeleteModalOpen(sale); }}>Sil</button>
+                      <div className="flex flex-wrap justify-center gap-1">
+                        <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); handleEditModalOpen(sale); }}>Düzenle</button>
+                        <button className="btn btn-danger btn-sm" onClick={e => { e.stopPropagation(); handleDeleteModalOpen(sale); }}>Sil</button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -620,10 +636,37 @@ function SalesPageContent() {
               aria-label="Kapat"
             >×</button>
             <h2 className="text-2xl font-bold text-red-700 mb-6">Satış Kaydını Sil</h2>
-            <p className="mb-6 text-gray-700">Bu satış kaydını silmek istediğinize emin misiniz?<br/><span className="font-semibold">{selectedSale.accommodation?.adiSoyadi}</span> ({selectedSale.fiyat.toLocaleString('tr-TR')} ₺)</p>
+            <p className="mb-4 text-gray-700">Bu satış kaydını silmek istediğinize emin misiniz?<br/><span className="font-semibold">{selectedSale.accommodation?.adiSoyadi}</span> ({selectedSale.fiyat.toLocaleString('tr-TR')} ₺)</p>
+            
+            <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <div className="flex items-center mb-2">
+                <input
+                  type="checkbox"
+                  id="returnToAccommodation"
+                  checked={returnToAccommodation}
+                  onChange={(e) => setReturnToAccommodation(e.target.checked)}
+                  className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="returnToAccommodation" className="ml-2 text-blue-800 font-medium">
+                  Konaklama kayıtlarına geri döndür
+                </label>
+              </div>
+              <p className="text-sm text-blue-700 ml-7">
+                Bu seçenek işaretlendiğinde, silinen satış kaydı otomatik olarak konaklama kayıtları tablosuna geri eklenecektir.
+              </p>
+            </div>
+            
             <div className="flex justify-end gap-2 mt-6">
               <button className="btn btn-secondary" onClick={() => setDeleteModalOpen(false)}>Vazgeç</button>
               <button className="btn btn-danger" onClick={handleDeleteSale}>Evet, Sil</button>
+              {returnToAccommodation && (
+                <button className="btn btn-primary" onClick={handleDeleteSale}>
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                  </svg>
+                  Konaklama Kaydına Aktar
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -638,10 +681,37 @@ function SalesPageContent() {
               aria-label="Kapat"
             >×</button>
             <h2 className="text-2xl font-bold text-red-700 mb-6">Toplu Silme Onayı</h2>
-            <p className="mb-6 text-gray-700">Seçili <span className="font-bold">{selectedIds.length}</span> kaydı silmek istediğinize emin misiniz?</p>
+            <p className="mb-4 text-gray-700">Seçili <span className="font-bold">{selectedIds.length}</span> kaydı silmek istediğinize emin misiniz?</p>
+            
+            <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <div className="flex items-center mb-2">
+                <input
+                  type="checkbox"
+                  id="returnToAccommodationBulk"
+                  checked={returnToAccommodation}
+                  onChange={(e) => setReturnToAccommodation(e.target.checked)}
+                  className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="returnToAccommodationBulk" className="ml-2 text-blue-800 font-medium">
+                  Konaklama kayıtlarına geri döndür
+                </label>
+              </div>
+              <p className="text-sm text-blue-700 ml-7">
+                Bu seçenek işaretlendiğinde, silinen satış kayıtları otomatik olarak konaklama kayıtları tablosuna geri eklenecektir.
+              </p>
+            </div>
+            
             <div className="flex justify-end gap-2 mt-6">
               <button className="btn btn-secondary" onClick={() => setShowBulkDeleteModal(false)}>Vazgeç</button>
-              <button className="btn btn-danger" onClick={handleBulkDelete}>Evet, Hepsini Sil</button>
+              <button className="btn btn-danger bg-red-600 hover:bg-red-700 text-white font-bold" onClick={handleBulkDelete}>Evet, Sil</button>
+              {returnToAccommodation && (
+                <button className="btn btn-primary" onClick={handleBulkDelete}>
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                  </svg>
+                  Konaklama Kaydına Aktar
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -692,4 +762,4 @@ function SalesPageContent() {
       )}
     </div>
   );
-} 
+}

@@ -40,12 +40,13 @@ model Accommodation {
 
 model Sale {
   id              Int        @id @default(autoincrement())
-  accommodation   Accommodation @relation(fields: [accommodationId], references: [id])
-  accommodationId Int
+  accommodation   Accommodation? @relation(fields: [accommodationId], references: [id], onDelete: SetNull)
+  accommodationId Int?
   organizasyonAdi String
   fiyat           Float
   createdAt       DateTime   @default(now())
   status          SaleStatus @default(AKTARILDI)
+  accommodationData String?  // Konaklama kaydının JSON verisi
 }
 
 enum Role {

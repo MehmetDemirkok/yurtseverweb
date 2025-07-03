@@ -13,7 +13,28 @@ export async function GET() {
     },
     orderBy: { createdAt: 'desc' },
   });
-  return NextResponse.json(sales);
+  
+  // Accommodation verisi olmayan satışlar için accommodationData'dan bilgileri çıkar
+  const enhancedSales = sales.map(sale => {
+    // Eğer accommodation ilişkisi yoksa ve accommodationData varsa
+    if (!sale.accommodation && sale.accommodationData) {
+      try {
+        // accommodationData'yı parse et
+        const accommodationData = JSON.parse(sale.accommodationData);
+        // Sale nesnesine accommodation verilerini ekle
+        return {
+          ...sale,
+          accommodation: accommodationData
+        };
+      } catch (e) {
+        console.error('JSON parse hatası:', e);
+        return sale;
+      }
+    }
+    return sale;
+  });
+  
+  return NextResponse.json(enhancedSales);
 }
 
 // Satışa aktarma (bir veya birden fazla konaklama kaydı)
@@ -59,30 +80,53 @@ export async function POST(request: Request) {
   if (newSales.length === 0) {
     return NextResponse.json({ error: 'Seçili kayıtlar zaten bu organizasyonda satışa aktarılmış.' }, { status: 400 });
   }
-  // Satış kayıtlarını oluştur
-  const createdSales = await prisma.$transaction(
-    newSales.map(({ accommodationId, fiyat }) =>
-      prisma.sale.create({
-        data: {
-          accommodationId,
+  
+  // Satış kayıtlarını oluştur ve konaklama kayıtlarını sakla
+  try {
+    // Önce aktarılacak konaklama kayıtlarını al
+    const accommodationsToTransfer = await prisma.accommodation.findMany({
+      where: {
+        id: { in: newSales.map(s => s.accommodationId) },
+        organizasyonAdi,
+      },
+    });
+    
+    // Satış kayıtlarını oluştur
+    const createdSales = await prisma.$transaction(async (tx) => {
+      // Önce satış kayıtlarını oluştur
+      const sales = await Promise.all(
+        newSales.map(async ({ accommodationId, fiyat }) => {
+          return tx.sale.create({
+            data: {
+              accommodationId,
+              organizasyonAdi,
+              fiyat,
+              status: 'AKTARILDI',
+              // Konaklama kaydının tüm verilerini JSON olarak sakla
+              accommodationData: JSON.stringify(
+                accommodationsToTransfer.find(a => a.id === accommodationId)
+              ),
+            },
+          });
+        })
+      );
+      
+      // Sonra konaklama kayıtlarını sil
+      await tx.accommodation.deleteMany({
+        where: {
+          id: { in: newSales.map(s => s.accommodationId) },
           organizasyonAdi,
-          fiyat,
-          status: 'AKTARILDI',
         },
-      })
-    )
-  );
-  // İlgili konaklamaların durumunu güncelle
-  await prisma.accommodation.updateMany({
-    where: {
-      id: { in: newSales.map(s => s.accommodationId) },
-      organizasyonAdi,
-    },
-    data: {
-      faturaEdildi: true,
-    },
-  });
-  return NextResponse.json({ success: true, createdSales });
+      });
+      
+      return sales;
+    });
+    
+    return NextResponse.json({ success: true, createdSales });
+  } catch (error) {
+    console.error('Satışa aktarma hatası:', error);
+    return NextResponse.json({ error: 'Satışa aktarma işlemi sırasında bir hata oluştu.' }, { status: 500 });
+  }
 }
 
 // Satış fiyatı güncelle (PATCH)
@@ -106,41 +150,97 @@ export async function PATCH(request: Request) {
   }
 }
 
-// Satış sil (DELETE)
+// Satış sil (DELETE) ve konaklama kaydını geri yükle
 export async function DELETE(request: Request) {
   try {
     const data = await request.json();
-    const { id, ids } = data;
+    const { id, ids, returnToAccommodation = true } = data;
+    
     if (ids && Array.isArray(ids)) {
       // Çoklu silme
       // Önce silinecek satışları bul
       const sales = await prisma.sale.findMany({ where: { id: { in: ids.map(Number) } } });
       if (!sales.length) {
         return NextResponse.json({ error: 'Silinecek satış kaydı bulunamadı.' }, { status: 404 });
-    }
-      // İlgili accommodationId'leri topla
-      const accommodationIds = sales.map(sale => sale.accommodationId);
+      }
+      
+      // Konaklama kayıtlarını geri yükle (eğer returnToAccommodation true ise)
+      if (returnToAccommodation) {
+        // Konaklama verilerini içeren satışları filtrele
+        const salesWithAccommodationData = sales.filter(sale => sale.accommodationData);
+        
+        // Konaklama kayıtlarını geri yükle
+        if (salesWithAccommodationData.length > 0) {
+          await prisma.$transaction(
+            // Promise.all kullanarak ve null değerleri önceden filtreleyerek düzeltme
+            async () => {
+              const promises = salesWithAccommodationData
+                .map(sale => {
+                  try {
+                    const accommodationData = JSON.parse(sale.accommodationData || '{}');
+                    // Eğer geçerli veri varsa konaklama kaydını oluştur
+                    if (accommodationData && accommodationData.id) {
+                      return prisma.accommodation.create({
+                        data: {
+                          ...accommodationData,
+                          // id'yi yeniden oluşturmasını önlemek için
+                          id: undefined,
+                          // Satış durumunu güncelle
+                          faturaEdildi: false
+                        }
+                      });
+                    }
+                    return null;
+                  } catch (e) {
+                    console.error('JSON parse hatası:', e);
+                    return null;
+                  }
+                })
+                .filter(Boolean); // null değerleri filtrele
+              
+              return Promise.all(promises);
+            }
+          );
+        }
+      }
+      
       // Satışları sil
       await prisma.sale.deleteMany({ where: { id: { in: ids.map(Number) } } });
-      // İlgili konaklama kayıtlarını güncelle (faturaEdildi: false)
-      await prisma.accommodation.updateMany({
-        where: { id: { in: accommodationIds } },
-        data: { faturaEdildi: false },
-      });
+      
       return NextResponse.json({ success: true, deletedCount: sales.length });
     } else if (id) {
       // Tekli silme
-    const sale = await prisma.sale.findUnique({ where: { id: Number(id) } });
-    if (!sale) {
-      return NextResponse.json({ error: 'Satış kaydı bulunamadı.' }, { status: 404 });
+      const sale = await prisma.sale.findUnique({ where: { id: Number(id) } });
+      if (!sale) {
+        return NextResponse.json({ error: 'Satış kaydı bulunamadı.' }, { status: 404 });
+      }
+      
+      // Konaklama kaydını geri yükle (eğer returnToAccommodation true ise)
+      if (returnToAccommodation && sale.accommodationData) {
+        try {
+          const accommodationData = JSON.parse(sale.accommodationData);
+          if (accommodationData && accommodationData.id) {
+            await prisma.accommodation.create({
+              data: {
+                ...accommodationData,
+                // id'yi yeniden oluşturmasını önlemek için
+                id: undefined,
+                // Satış durumunu güncelle
+                faturaEdildi: false
+              }
+            });
+          }
+        } catch (e) {
+          console.error('JSON parse hatası:', e);
+        }
+      }
+      
+      // Satışı sil
+      await prisma.sale.delete({ where: { id: Number(id) } });
+      
+      return NextResponse.json({ success: true });
     }
-    await prisma.sale.delete({ where: { id: Number(id) } });
-    await prisma.accommodation.update({
-      where: { id: sale.accommodationId },
-      data: { faturaEdildi: false },
-    });
-    return NextResponse.json({ success: true });
-    }
+    
     return NextResponse.json({ error: 'Eksik veri: id veya ids gerekli.' }, { status: 400 });
   } catch (error: unknown) {
     if (error instanceof Error) {
@@ -148,4 +248,4 @@ export async function DELETE(request: Request) {
     }
     return NextResponse.json({ error: 'Bilinmeyen bir hata oluştu.' }, { status: 500 });
   }
-} 
+}
