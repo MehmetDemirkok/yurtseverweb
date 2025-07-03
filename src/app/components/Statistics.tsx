@@ -27,13 +27,18 @@ interface ChartDataPoint {
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#8B5A2B'];
 
-// XAxis için özel tick component
-const CustomTick = (props: any) => {
-  const { x, y, payload } = props;
+// XAxis için özel tick tipi
+interface TickProps {
+  x?: number;
+  y?: number;
+  payload?: { value: string };
+}
+
+const CustomTick = ({ x = 0, y = 0, payload = { value: '' } }: TickProps) => {
   const lines = String(payload.value).split(' ');
   return (
     <g transform={`translate(${x},${y})`}>
-      {lines.map((line: string, i: number) => (
+      {lines.map((line, i) => (
         <text
           key={i}
           x={0}
