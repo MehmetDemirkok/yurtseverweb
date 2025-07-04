@@ -16,6 +16,7 @@ model User {
   password  String
   role      Role     @default(USER)
   permissions String[] @default([])
+  logs      Log[]    // Kullanıcının yaptığı işlemlerin logları
 }
 
 model Accommodation {
@@ -47,6 +48,20 @@ model Sale {
   createdAt       DateTime   @default(now())
   status          SaleStatus @default(AKTARILDI)
   accommodationData String?  // Konaklama kaydının JSON verisi
+}
+
+// Yeni Log modeli
+model Log {
+  id          Int       @id @default(autoincrement())
+  action      String    // Yapılan işlem: DELETE, UPDATE, CREATE
+  modelName   String    // İşlem yapılan model: Accommodation, Sale
+  recordId    Int       // İşlem yapılan kaydın ID'si
+  recordData  String    // Silinen/değiştirilen kaydın JSON verisi
+  userId      Int?      // İşlemi yapan kullanıcı ID'si (nullable)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  ipAddress   String?   // İşlemi yapan kullanıcının IP adresi
+  userAgent   String?   // İşlemi yapan kullanıcının tarayıcı bilgisi
 }
 
 enum Role {

@@ -156,6 +156,24 @@ export async function DELETE(request: Request) {
     const data = await request.json();
     const { id, ids, returnToAccommodation = true } = data;
     
+    // Kullanıcı bilgilerini al
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    let userId = null;
+    
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
+        userId = decoded.id;
+      } catch (e) {
+        console.error('Token çözme hatası:', e);
+      }
+    }
+    
+    // IP ve User-Agent bilgilerini al
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+    
     if (ids && Array.isArray(ids)) {
       // Çoklu silme
       // Önce silinecek satışları bul
@@ -163,6 +181,21 @@ export async function DELETE(request: Request) {
       if (!sales.length) {
         return NextResponse.json({ error: 'Silinecek satış kaydı bulunamadı.' }, { status: 404 });
       }
+      
+      // Log kayıtlarını oluştur
+      await Promise.all(sales.map(sale => {
+        return prisma.log.create({
+          data: {
+            action: 'DELETE',
+            modelName: 'Sale',
+            recordId: sale.id,
+            recordData: JSON.stringify(sale),
+            userId,
+            ipAddress,
+            userAgent
+          }
+        });
+      }));
       
       // Konaklama kayıtlarını geri yükle (eğer returnToAccommodation true ise)
       if (returnToAccommodation) {
@@ -214,6 +247,19 @@ export async function DELETE(request: Request) {
       if (!sale) {
         return NextResponse.json({ error: 'Satış kaydı bulunamadı.' }, { status: 404 });
       }
+      
+      // Log kaydı oluştur
+      await prisma.log.create({
+        data: {
+          action: 'DELETE',
+          modelName: 'Sale',
+          recordId: sale.id,
+          recordData: JSON.stringify(sale),
+          userId,
+          ipAddress,
+          userAgent
+        }
+      });
       
       // Konaklama kaydını geri yükle (eğer returnToAccommodation true ise)
       if (returnToAccommodation && sale.accommodationData) {

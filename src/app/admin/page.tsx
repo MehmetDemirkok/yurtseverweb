@@ -79,6 +79,7 @@ export default function AdminPage() {
     { key: 'sales', label: 'Satışlar' },
     { key: 'statistics', label: 'İstatistikler' },
     { key: 'user-management', label: 'Kullanıcı Yönetimi' },
+    { key: 'logs', label: 'Sistem Logları' },
     // buraya yeni izinler eklenebilir
   ];
 
@@ -379,15 +380,27 @@ export default function AdminPage() {
       <main className="container mx-auto px-6 py-8">
         {/* Navigation */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <button
-            onClick={() => router.push('/')}
-            className="btn btn-secondary flex items-center gap-2 px-6 py-3 text-lg"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Ana Sayfaya Dön
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={() => router.push('/')}
+              className="btn btn-secondary flex items-center gap-2 px-6 py-3 text-lg"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Ana Sayfaya Dön
+            </button>
+            
+            <button
+              onClick={() => router.push('/admin/logs')}
+              className="btn btn-secondary flex items-center gap-2 px-6 py-3 text-lg"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Sistem Logları
+            </button>
+          </div>
           
           <button
             onClick={openAddModal}
@@ -937,4 +950,4 @@ export default function AdminPage() {
       </main>
     </>
   );
-} 
+}
