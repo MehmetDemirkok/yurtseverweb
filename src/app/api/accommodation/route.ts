@@ -72,7 +72,7 @@ export async function DELETE(request: Request) {
     }
     
     // Kullanıcı bilgilerini al
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
     let userId = null;
     

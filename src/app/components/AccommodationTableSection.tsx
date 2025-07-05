@@ -44,7 +44,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   const [editingRecord, setEditingRecord] = useState<Partial<AccommodationRecord>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showExportFilterModal, setShowExportFilterModal] = useState<boolean>(false);
-  const [availableColumns, setAvailableColumns] = useState<{ key: keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret'; label: string }[]>([]);
+  const [availableColumnsda, setAvailableColumns] = useState<{ key: keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret'; label: string }[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [sortColumn, setSortColumn] = useState<keyof AccommodationRecord | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
@@ -407,7 +407,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
     if (selectedRecordIds.length === 0) return;
 
     try {
-      const res = await fetch('/api/accommodation/bulk-delete', {
+      const res = await fetch('/api/accommodation', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: selectedRecordIds }),
@@ -417,8 +417,10 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
         setRecords(prev => prev.filter(record => !selectedRecordIds.includes(record.id)));
         setSelectedRecordIds([]);
         setShowBulkDeleteModal(false);
+        alert('Kayıtlar başarıyla silindi!');
       } else {
-        alert('Kayıtlar silinemedi!');
+        const errorData = await res.json();
+        alert(`Kayıtlar silinemedi! ${errorData.error || ''}`);
       }
     } catch (error) {
       console.error('Bulk delete error:', error);
@@ -447,13 +449,10 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   const handleSaleTransfer = () => {
     if (selectedRecordIds.length === 0) return;
     
-    // Seçili kayıtlar için varsayılan fiyatları ayarla
+    // Seçili kayıtlar için varsayılan fiyatları 0 olarak ayarla
     const defaultPrices: { [key: number]: number } = {};
     selectedRecordIds.forEach(id => {
-      const record = records.find(r => r.id === id);
-      if (record) {
-        defaultPrices[id] = record.toplamUcret;
-      }
+      defaultPrices[id] = 0;
     });
     
     setSalePrices(defaultPrices);
@@ -481,29 +480,19 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
         const record = records.find(r => r.id === accommodationId);
         if (!record) return;
 
-        const saleData = {
-          accommodationId: accommodationId,
-          salePrice: salePrices[accommodationId],
-          saleDate: new Date().toISOString(),
-          customerName: record.adiSoyadi,
-          customerTitle: record.unvani,
-          organizationName: record.organizasyonAdi,
-          hotelName: record.otelAdi,
-          roomType: record.odaTipi,
-          accommodationType: record.konaklamaTipi,
-          numberOfNights: record.numberOfNights,
-          checkInDate: record.girisTarihi,
-          checkOutDate: record.cikisTarihi,
-          originalPrice: record.toplamUcret,
-          country: record.ulke,
-          city: record.sehir,
-          institutionAccount: record.kurumCari
-        };
-
+        // API'nin beklediği formatta veri hazırla
+        const organizasyonAdi = record.organizasyonAdi || '';
+        
         const res = await fetch('/api/sales', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(saleData),
+          body: JSON.stringify({
+            sales: [{
+              accommodationId: accommodationId,
+              fiyat: salePrices[accommodationId]
+            }],
+            organizasyonAdi: organizasyonAdi
+          }),
         });
 
         if (res.ok) {
