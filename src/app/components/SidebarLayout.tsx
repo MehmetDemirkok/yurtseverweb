@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
 
 export default function SidebarLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Ekran boyutu değiştiğinde sidebar durumunu ayarla
@@ -30,6 +32,21 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
+
+  // Login ve no-access sayfalarında sidebar'ı gösterme
+  if (pathname === '/login' || pathname === '/no-access') {
+    return (
+      <div className="sidebar-layout">
+        <div className="sidebar-content w-full">
+          <div className="relative h-full">
+            <main className="w-full h-full overflow-auto">
+              {children}
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="sidebar-layout">

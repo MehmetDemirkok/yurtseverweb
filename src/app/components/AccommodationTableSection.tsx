@@ -30,11 +30,19 @@ interface User {
   permissions?: string[];
 }
 
-export default function AccommodationTableSection() {
+interface AccommodationTableSectionProps {
+  handlePuantajRaporu?: () => void;
+}
+
+export default function AccommodationTableSection({ handlePuantajRaporu }: AccommodationTableSectionProps) {
   // --- State ve fonksiyonlar ---
   const [records, setRecords] = useState<AccommodationRecord[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newRecord, setNewRecord] = useState<Partial<AccommodationRecord>>({});
+  const [editingRecord, setEditingRecord] = useState<Partial<AccommodationRecord>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showExportFilterModal, setShowExportFilterModal] = useState<boolean>(false);
   const [availableColumns, setAvailableColumns] = useState<{ key: keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret'; label: string }[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
@@ -113,16 +121,200 @@ export default function AccommodationTableSection() {
   const handleEditClick = (id: number) => {
     const recordToEdit = records.find((record) => record.id === id);
     if (recordToEdit) {
+      setEditingRecord(recordToEdit);
       setShowEditModal(true);
     }
   };
 
   const handleDeleteClick = (id: number) => {
-    // ... existing code ...
+    if (!confirm('Bu kaydı silmek istediğinize emin misiniz?')) return;
+    
+    fetch(`/api/accommodation/${id}`, {
+      method: 'DELETE',
+    })
+      .then(res => {
+        if (res.ok) {
+          setRecords(prev => prev.filter(record => record.id !== id));
+        } else {
+          alert('Kayıt silinemedi!');
+        }
+      })
+      .catch(error => {
+        console.error('Delete error:', error);
+        alert('Kayıt silinemedi!');
+      });
   };
 
   const closeEditModal = () => {
     setShowEditModal(false);
+    setEditingRecord({});
+  };
+  
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    
+    if (type === 'number') {
+      setEditingRecord(prev => ({
+        ...prev,
+        [name]: parseFloat(value) || 0
+      }));
+    } else {
+      setEditingRecord(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    
+    // Toplam ücret hesaplama
+    if (name === 'girisTarihi' || name === 'cikisTarihi' || name === 'gecelikUcret') {
+      const girisTarihi = name === 'girisTarihi' ? value : editingRecord.girisTarihi;
+      const cikisTarihi = name === 'cikisTarihi' ? value : editingRecord.cikisTarihi;
+      const gecelikUcret = name === 'gecelikUcret' ? parseFloat(value) || 0 : editingRecord.gecelikUcret || 0;
+      
+      if (girisTarihi && cikisTarihi) {
+        const nights = calculateNumberOfNights(girisTarihi as string, cikisTarihi as string);
+        const toplamUcret = nights * gecelikUcret;
+        
+        setEditingRecord(prev => ({
+          ...prev,
+          numberOfNights: nights,
+          toplamUcret: toplamUcret
+        }));
+      }
+    }
+  };
+  
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editingRecord.adiSoyadi || !editingRecord.girisTarihi || !editingRecord.cikisTarihi || !editingRecord.odaTipi || !editingRecord.konaklamaTipi) {
+      alert('Lütfen zorunlu alanları doldurunuz.');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch(`/api/accommodation/${editingRecord.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editingRecord),
+      });
+      
+      if (response.ok) {
+        // Başarılı güncelleme sonrası listeyi güncelle
+        const updatedRecord = await response.json();
+        setRecords(prev => prev.map(record => 
+          record.id === updatedRecord.id ? updatedRecord : record
+        ));
+        closeEditModal();
+      } else {
+        const errorData = await response.json();
+        alert(`Hata: ${errorData.message || 'Bir hata oluştu'}`);
+      }
+    } catch (error) {
+      console.error('Kayıt güncellenirken hata oluştu:', error);
+      alert('Kayıt güncellenirken bir hata oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openAddModal = () => {
+    setNewRecord({
+      adiSoyadi: '',
+      unvani: '',
+      ulke: '',
+      sehir: '',
+      girisTarihi: '',
+      cikisTarihi: '',
+      odaTipi: '',
+      konaklamaTipi: 'BB',
+      faturaEdildi: false,
+      gecelikUcret: 0,
+      toplamUcret: 0,
+      organizasyonAdi: '',
+      otelAdi: '',
+      kurumCari: ''
+    });
+    setShowAddModal(true);
+  };
+
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setNewRecord({});
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    
+    if (type === 'number') {
+      setNewRecord(prev => ({
+        ...prev,
+        [name]: parseFloat(value) || 0
+      }));
+    } else {
+      setNewRecord(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    
+    // Toplam ücret hesaplama
+    if (name === 'girisTarihi' || name === 'cikisTarihi' || name === 'gecelikUcret') {
+      const girisTarihi = name === 'girisTarihi' ? value : newRecord.girisTarihi;
+      const cikisTarihi = name === 'cikisTarihi' ? value : newRecord.cikisTarihi;
+      const gecelikUcret = name === 'gecelikUcret' ? parseFloat(value) || 0 : newRecord.gecelikUcret || 0;
+      
+      if (girisTarihi && cikisTarihi) {
+        const nights = calculateNumberOfNights(girisTarihi, cikisTarihi);
+        const toplamUcret = nights * gecelikUcret;
+        
+        setNewRecord(prev => ({
+          ...prev,
+          numberOfNights: nights,
+          toplamUcret: toplamUcret
+        }));
+      }
+    }
+  };
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newRecord.adiSoyadi || !newRecord.girisTarihi || !newRecord.cikisTarihi || !newRecord.odaTipi || !newRecord.konaklamaTipi) {
+      alert('Lütfen zorunlu alanları doldurunuz.');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch('/api/accommodation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newRecord),
+      });
+      
+      if (response.ok) {
+        // Başarılı kayıt sonrası listeyi güncelle
+        const data = await response.json();
+        setRecords(prev => [...prev, data]);
+        closeAddModal();
+      } else {
+        const errorData = await response.json();
+        alert(`Hata: ${errorData.message || 'Bir hata oluştu'}`);
+      }
+    } catch (error) {
+      console.error('Kayıt eklenirken hata oluştu:', error);
+      alert('Kayıt eklenirken bir hata oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   function formatDate(dateStr: string) {
@@ -672,11 +864,11 @@ export default function AccommodationTableSection() {
             onBlur={() => setTimeout(() => setShowOrganizasyonOptions(false), 200)}
           />
           {showOrganizasyonOptions && organizasyonOptions.length > 0 && (
-            <div className="absolute z-10 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto w-full">
+            <div className="absolute z-10 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto w-auto min-w-full max-w-[250px]">
               {organizasyonOptions.filter(opt => opt.toLowerCase().includes(filterOrg.toLowerCase())).map(opt => (
                 <div
                   key={opt}
-                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer truncate"
                   onMouseDown={() => { setFilterOrg(opt); setShowOrganizasyonOptions(false); }}
                 >
                   {opt}
@@ -706,36 +898,40 @@ export default function AccommodationTableSection() {
           />
         </div>
         {canAdd() && (
-          <button className="btn btn-primary h-12 mt-6 md:mt-0">
+          <button 
+            className="btn btn-primary h-12 mt-6 md:mt-0"
+            onClick={openAddModal}
+          >
             + Yeni Kayıt
           </button>
         )}
       </div>
       {/* Üstteki işlemler: Puantaj, Excel içe/dışa aktar, şablon indir */}
-      <div className="flex flex-wrap gap-4 mb-6">
+      <div className="flex flex-wrap gap-3 mb-4">
         <button
-          className="flex items-center gap-2 px-8 py-4 rounded-xl border border-gray-200 bg-white text-lg font-semibold text-gray-800 hover:bg-gray-50 transition-all shadow-sm"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-800 hover:bg-gray-50 transition-all shadow-sm"
+          onClick={handlePuantajRaporu}
         >
-          <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h4m0 0V7a4 4 0 00-4-4H7a4 4 0 00-4 4v10a4 4 0 004 4" /></svg>
+          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h4m0 0V7a4 4 0 00-4-4H7a4 4 0 00-4 4v10a4 4 0 004 4" /></svg>
           Puantaj Raporu
         </button>
-        <label className="flex items-center gap-2 px-8 py-4 rounded-xl border border-gray-200 bg-white text-lg font-semibold text-gray-800 hover:bg-gray-50 transition-all shadow-sm cursor-pointer">
-          <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
+        <label className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-800 hover:bg-gray-50 transition-all shadow-sm cursor-pointer">
+          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
           Excel'den İçe Aktar
           <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
         </label>
         <button
-          className="flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-green-400 to-teal-500 text-lg font-semibold text-white shadow-md hover:from-green-500 hover:to-teal-600 transition-all"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-green-400 to-teal-500 text-sm font-medium text-white shadow-sm hover:from-green-500 hover:to-teal-600 transition-all"
           onClick={handleExportExcel}
         >
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16h16V4H4zm4 8h8m-4-4v8" /></svg>
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16h16V4H4zm4 8h8m-4-4v8" /></svg>
           Excel'e Aktar
         </button>
         <button
-          className="flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-orange-400 to-yellow-500 text-lg font-semibold text-white shadow-md hover:from-orange-500 hover:to-yellow-600 transition-all"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-orange-400 to-yellow-500 text-sm font-medium text-white shadow-sm hover:from-orange-500 hover:to-yellow-600 transition-all"
           onClick={handleDownloadExcelTemplate}
         >
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
           Excel Şablonu İndir
         </button>
       </div>
@@ -1029,25 +1225,392 @@ export default function AccommodationTableSection() {
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div className="modal-overlay">
-          <div className="modal-content max-w-4xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-                <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) closeEditModal(); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 p-8 relative animate-fade-in border border-blue-100">
+            <button
+              onClick={closeEditModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+              aria-label="Kapat"
+            >
+              ×
+            </button>
+            <div className="flex items-center mb-6">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mr-4">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                Kaydı Düzenle
-              </h2>
-              <button
-                onClick={closeEditModal}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800">Konaklama Kaydını Düzenle</h2>
+            </div>
+            <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleEditSubmit}>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad <span className="text-red-500">*</span></label>
+                <input 
+                  type="text" 
+                  name="adiSoyadi"
+                  value={editingRecord.adiSoyadi || ''}
+                  onChange={handleEditInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Ad Soyad" 
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ünvan</label>
+                <input 
+                  type="text" 
+                  name="unvani"
+                  value={editingRecord.unvani || ''}
+                  onChange={handleEditInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Ünvan" 
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ülke</label>
+                <input 
+                  type="text" 
+                  name="ulke"
+                  value={editingRecord.ulke || ''}
+                  onChange={handleEditInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Ülke" 
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Şehir</label>
+                <input 
+                  type="text" 
+                  name="sehir"
+                  value={editingRecord.sehir || ''}
+                  onChange={handleEditInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Şehir" 
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Giriş Tarihi <span className="text-red-500">*</span></label>
+                <input 
+                  type="date" 
+                  name="girisTarihi"
+                  value={editingRecord.girisTarihi || ''}
+                  onChange={handleEditInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Çıkış Tarihi <span className="text-red-500">*</span></label>
+                <input 
+                  type="date" 
+                  name="cikisTarihi"
+                  value={editingRecord.cikisTarihi || ''}
+                  onChange={handleEditInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Oda Tipi <span className="text-red-500">*</span></label>
+                <select 
+                  name="odaTipi"
+                  value={editingRecord.odaTipi || ''}
+                  onChange={handleEditInputChange}
+                  className="input w-full border border-gray-300 rounded-md"
+                  required
+                >
+                  <option value="">Seçiniz</option>
+                  <option value="Tek Kişilik">Tek Kişilik</option>
+                  <option value="Çift Kişilik">Çift Kişilik</option>
+                  <option value="Suit">Suit</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Konaklama Tipi <span className="text-red-500">*</span></label>
+                <select 
+                  name="konaklamaTipi"
+                  value={editingRecord.konaklamaTipi || 'BB'}
+                  onChange={handleEditInputChange}
+                  className="input w-full border border-gray-300 rounded-md"
+                  required
+                >
+                  <option value="BB">BB (Kahvaltı Dahil)</option>
+                  <option value="HB">HB (Yarım Pansiyon)</option>
+                  <option value="FB">FB (Tam Pansiyon)</option>
+                  <option value="UHD">UHD (Ultra Her Şey Dahil)</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Organizasyon</label>
+                <select 
+                  name="organizasyonAdi"
+                  value={editingRecord.organizasyonAdi || ''}
+                  onChange={handleEditInputChange}
+                  className="input w-full border border-gray-300 rounded-md"
+                >
+                  <option value="">Seçiniz</option>
+                  {organizasyonOptions.map(org => (
+                    <option key={org} value={org}>{org}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Otel Adı</label>
+                <input 
+                  type="text" 
+                  name="otelAdi"
+                  value={editingRecord.otelAdi || ''}
+                  onChange={handleEditInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Otel Adı" 
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Kurum/Cari</label>
+                <input 
+                  type="text" 
+                  name="kurumCari"
+                  value={editingRecord.kurumCari || ''}
+                  onChange={handleEditInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Kurum/Cari" 
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Gecelik Ücret</label>
+                <input 
+                  type="number" 
+                  name="gecelikUcret"
+                  value={editingRecord.gecelikUcret || 0}
+                  onChange={handleEditInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Gecelik Ücret" 
+                  min="0"
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Toplam Ücret</label>
+                <input 
+                  type="number" 
+                  name="toplamUcret"
+                  value={editingRecord.toplamUcret || 0}
+                  className="input w-full border border-gray-300 rounded-md bg-gray-50" 
+                  placeholder="Toplam Ücret" 
+                  disabled
+                />
+              </div>
+              <div className="col-span-2 flex justify-end space-x-2 mt-6">
+                <button type="button" className="btn btn-secondary" onClick={closeEditModal}>İptal</button>
+                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Kaydediliyor...
+                    </>
+                  ) : 'Kaydet'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) closeAddModal(); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 p-8 relative animate-fade-in border border-blue-100">
+            <button
+              onClick={closeAddModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+              aria-label="Kapat"
+            >
+              ×
+            </button>
+            <div className="flex items-center mb-6">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mr-4">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800">Yeni Konaklama Kaydı</h2>
+            </div>
+            <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad <span className="text-red-500">*</span></label>
+                <input 
+                  type="text" 
+                  name="adiSoyadi"
+                  value={newRecord.adiSoyadi || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Ad Soyad" 
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ünvan</label>
+                <input 
+                  type="text" 
+                  name="unvani"
+                  value={newRecord.unvani || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Ünvan" 
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ülke</label>
+                <input 
+                  type="text" 
+                  name="ulke"
+                  value={newRecord.ulke || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Ülke" 
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Şehir</label>
+                <input 
+                  type="text" 
+                  name="sehir"
+                  value={newRecord.sehir || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Şehir" 
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Giriş Tarihi <span className="text-red-500">*</span></label>
+                <input 
+                  type="date" 
+                  name="girisTarihi"
+                  value={newRecord.girisTarihi || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Çıkış Tarihi <span className="text-red-500">*</span></label>
+                <input 
+                  type="date" 
+                  name="cikisTarihi"
+                  value={newRecord.cikisTarihi || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Oda Tipi <span className="text-red-500">*</span></label>
+                <select 
+                  name="odaTipi"
+                  value={newRecord.odaTipi || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md"
+                  required
+                >
+                  <option value="">Seçiniz</option>
+                  <option value="Tek Kişilik">Tek Kişilik</option>
+                  <option value="Çift Kişilik">Çift Kişilik</option>
+                  <option value="Suit">Suit</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Konaklama Tipi <span className="text-red-500">*</span></label>
+                <select 
+                  name="konaklamaTipi"
+                  value={newRecord.konaklamaTipi || 'BB'}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md"
+                  required
+                >
+                  <option value="BB">BB (Kahvaltı Dahil)</option>
+                  <option value="HB">HB (Yarım Pansiyon)</option>
+                  <option value="FB">FB (Tam Pansiyon)</option>
+                  <option value="UHD">UHD (Ultra Her Şey Dahil)</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Organizasyon</label>
+                <select 
+                  name="organizasyonAdi"
+                  value={newRecord.organizasyonAdi || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md"
+                >
+                  <option value="">Seçiniz</option>
+                  {organizasyonOptions.map((org, index) => (
+                    <option key={index} value={org}>{org}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Otel Adı</label>
+                <input 
+                  type="text" 
+                  name="otelAdi"
+                  value={newRecord.otelAdi || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Otel Adı" 
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Kurum/Cari</label>
+                <input 
+                  type="text" 
+                  name="kurumCari"
+                  value={newRecord.kurumCari || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="Kurum/Cari" 
+                />
+              </div>
+              <div className="form-group">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Gecelik Ücret (₺)</label>
+                <input 
+                  type="number" 
+                  name="gecelikUcret"
+                  value={newRecord.gecelikUcret || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md" 
+                  placeholder="0" 
+                  min="0" 
+                />
+              </div>
+              {newRecord.girisTarihi && newRecord.cikisTarihi && newRecord.gecelikUcret ? (
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Toplam Ücret (₺)</label>
+                  <div className="input w-full border border-gray-300 rounded-md bg-gray-50 py-2 px-3 flex items-center">
+                    <span className="font-bold text-green-600">{newRecord.toplamUcret?.toLocaleString('tr-TR')} ₺</span>
+                    <span className="text-xs text-gray-500 ml-2">({newRecord.numberOfNights || 0} gece)</span>
+                  </div>
+                </div>
+              ) : null}
+            </form>
+            <div className="flex justify-end space-x-2 mt-6">
+              <button className="btn btn-secondary" onClick={closeAddModal} disabled={isSubmitting}>İptal</button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleSubmit} 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Kaydediliyor...
+                  </>
+                ) : 'Kaydet'}
               </button>
             </div>
-            {/* ... (düzenleme formu ve işlemleri buraya eklenmeli) ... */}
           </div>
         </div>
       )}

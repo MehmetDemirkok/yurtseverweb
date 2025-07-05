@@ -61,14 +61,18 @@ export async function PATCH(request: Request) {
   }
 }
 
-// Kayıt sil (DELETE)
+// Toplu silme işlemi için DELETE
 export async function DELETE(request: Request) {
-  const data = await request.json();
-  const { id, ids } = data;
-  
   try {
+    const data = await request.json();
+    const { ids } = data;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: 'Geçerli IDs dizisi zorunlu' }, { status: 400 });
+    }
+    
     // Kullanıcı bilgilerini al
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     const token = cookieStore.get('token')?.value;
     let userId = null;
     
@@ -85,67 +89,33 @@ export async function DELETE(request: Request) {
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
     
-    if (ids && Array.isArray(ids)) {
-      // Toplu silme işlemi
-      // Önce silinecek kayıtları bul ve logla
-      const recordsToDelete = await prisma.accommodation.findMany({
-        where: { id: { in: ids.map(Number) } },
-      });
-      
-      // Log kayıtlarını oluştur
-      await Promise.all(recordsToDelete.map(record => {
-        return prisma.log.create({
-          data: {
-            action: 'DELETE',
-            modelName: 'Accommodation',
-            recordId: record.id,
-            recordData: JSON.stringify(record),
-            userId,
-            ipAddress,
-            userAgent
-          }
-        });
-      }));
-      
-      // Kayıtları sil
-      await prisma.accommodation.deleteMany({
-        where: { id: { in: ids.map(Number) } },
-      });
-      
-      return NextResponse.json({ success: true });
-    } else if (id) {
-      // Tek kayıt silme işlemi
-      // Önce silinecek kaydı bul
-      const recordToDelete = await prisma.accommodation.findUnique({
-        where: { id: Number(id) },
-      });
-      
-      if (!recordToDelete) {
-        return NextResponse.json({ error: 'Kayıt bulunamadı' }, { status: 404 });
-      }
-      
-      // Log kaydı oluştur
-      await prisma.log.create({
+    // Toplu silme işlemi
+    // Önce silinecek kayıtları bul ve logla
+    const recordsToDelete = await prisma.accommodation.findMany({
+      where: { id: { in: ids.map(Number) } },
+    });
+    
+    // Log kayıtlarını oluştur
+    await Promise.all(recordsToDelete.map(record => {
+      return prisma.log.create({
         data: {
           action: 'DELETE',
           modelName: 'Accommodation',
-          recordId: recordToDelete.id,
-          recordData: JSON.stringify(recordToDelete),
+          recordId: record.id,
+          recordData: JSON.stringify(record),
           userId,
           ipAddress,
           userAgent
         }
       });
-      
-      // Kaydı sil
-      await prisma.accommodation.delete({
-        where: { id: Number(id) },
-      });
-      
-      return NextResponse.json({ success: true });
-    } else {
-      return NextResponse.json({ error: 'ID veya IDs zorunlu' }, { status: 400 });
-    }
+    }));
+    
+    // Kayıtları sil
+    await prisma.accommodation.deleteMany({
+      where: { id: { in: ids.map(Number) } },
+    });
+    
+    return NextResponse.json({ success: true });
   } catch (error: unknown) {
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
