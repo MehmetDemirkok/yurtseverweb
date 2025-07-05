@@ -18,7 +18,17 @@ export default function AuthGuard({ children, requiredPermissions }: { children:
           const data = await res.json();
           if (requiredPermissions && requiredPermissions.length > 0) {
             const userPerms = data.user.permissions || [];
-            const hasPermission = requiredPermissions.some((perm: string) => userPerms.includes(perm));
+            const userRole = data.user.role;
+            
+            // İzin kontrolü - önce kullanıcının rolü ADMIN veya MANAGER mi kontrol et
+            let hasPermission = userRole === 'ADMIN' || userRole === 'MANAGER';
+            
+            // Eğer ADMIN veya MANAGER değilse, gerekli izinlere sahip mi kontrol et
+            if (!hasPermission && requiredPermissions && requiredPermissions.length > 0) {
+              // Gerekli izinlerden en az birine sahip olmalı
+              hasPermission = requiredPermissions.some((perm: string) => userPerms.includes(perm));
+            }
+            
             if (!hasPermission) {
               router.replace("/no-access");
               return;
@@ -40,4 +50,4 @@ export default function AuthGuard({ children, requiredPermissions }: { children:
 
   if (loading) return null;
   return <>{children}</>;
-} 
+}

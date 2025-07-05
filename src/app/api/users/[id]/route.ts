@@ -24,7 +24,8 @@ export async function PUT(request: Request, context: any) {
     }
     
     const data = await request.json();
-    const userId = parseInt(context.params.id);
+    const params = await context.params;
+    const userId = parseInt(params.id);
     
     // Kendini değiştirmeye çalışıyorsa engelle
     if (decoded.userId === userId) {
@@ -82,7 +83,8 @@ export async function DELETE(request: Request, context: any) {
       return NextResponse.json({ error: 'Bu işlem için ADMIN yetkisi gereklidir.' }, { status: 403 });
     }
     
-    const userId = parseInt(context.params.id);
+    const params = await context.params;
+    const userId = parseInt(params.id);
     
     // Kendini silmeye çalışıyorsa engelle
     if (decoded.userId === userId) {
@@ -97,4 +99,4 @@ export async function DELETE(request: Request, context: any) {
   } catch {
     return NextResponse.json({ error: 'Bir hata oluştu.' }, { status: 500 });
   }
-} 
+}

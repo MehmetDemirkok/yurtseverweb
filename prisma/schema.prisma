@@ -17,6 +17,7 @@ model User {
   role      Role     @default(USER)
   permissions String[] @default([])
   logs      Log[]    // Kullanıcının yaptığı işlemlerin logları
+  transactions Transaction[] // Kullanıcının finans işlemleri
 }
 
 model Accommodation {
@@ -75,4 +76,21 @@ enum SaleStatus {
   AKTARILDI
   FATURALANDI
   IPTAL
+}
+
+model Transaction {
+  id          Int       @id @default(autoincrement())
+  type        TransactionType
+  description String
+  amount      Float
+  date        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      Int?      // İşlemi yapan kullanıcı ID'si (nullable)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+enum TransactionType {
+  ALIS
+  SATIS
 }

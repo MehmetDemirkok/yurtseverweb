@@ -143,6 +143,11 @@ export default function AccommodationTableSection() {
       setSortDirection('asc');
     }
   };
+  
+  const clearSort = () => {
+    setSortColumn(null);
+    setSortDirection(null);
+  };
 
   // Filtrelenmiş kayıtlar
   const filteredRecords = records.filter((record) => {
@@ -1079,4 +1084,4 @@ export default function AccommodationTableSection() {
       )}
     </div>
   );
-} 
+}

@@ -167,6 +167,10 @@ function SalesPageContent() {
       : [...prev, columnKey]);
   };
   const handleExportFilteredExcel = () => {
+    if (selectedColumns.length === 0) {
+      alert('En az bir sütun seçmelisiniz!');
+      return;
+    }
     const headers = availableColumns.filter(col => selectedColumns.includes(col.key)).map(col => col.label);
     const data = filteredSales.map(sale => {
       const row: (string | number)[] = [];
@@ -193,161 +197,7 @@ function SalesPageContent() {
     XLSX.writeFile(wb, 'satislar.xlsx');
     setShowExportFilterModal(false);
   };
-  // Excel Şablonu İndir
-  const handleDownloadExcelTemplate = () => {
-    const headers = [
-      'Organizasyon', 'Adı Soyadı', 'Unvanı', 'Giriş Tarihi', 'Çıkış Tarihi', 'Oda Tipi', 'Gece', 'Satış Fiyatı', 'Durum'
-    ];
-    const exampleData = [
-      ['Yıllık Toplantı', 'Ahmet Yılmaz', 'Genel Müdür', '2024-07-01', '2024-07-05', 'Double Oda', 4, 2500, 'AKTARILDI'],
-      ['Eğitim Semineri', 'Ayşe Kaya', 'Eğitim Uzmanı', '2024-07-10', '2024-07-15', 'Single Oda', 5, 1800, 'FATURALANDI']
-    ];
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...exampleData]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Satış Şablonu');
-    XLSX.writeFile(wb, 'satis_sablonu.xlsx');
-  };
 
-  const handleImportExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: 'array', raw: true, cellNF: false });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const json = XLSX.utils.sheet_to_json<(string | number | null)[]>(worksheet, { header: 1 });
-          if (!json || json.length < 2) {
-            alert('Excel dosyası boş veya beklenen formatta değil.');
-            return;
-          }
-          const headers = json[0];
-          // Satış için uygun alanlar: ID, Adı Soyadı, Unvanı, Oda Tipi, Gece, Satış Fiyatı (₺/Gece), Alış Fiyatı (₺/Gece), Durum, Organizasyon, Giriş Tarihi, Çıkış Tarihi
-          const newSales = json.slice(1).map((row: (string | number | null)[], idx: number) => {
-            const getColumnValue = (headerName: string): string => {
-              const headerIndex = (headers as string[]).indexOf(headerName);
-              return headerIndex > -1 ? String(row[headerIndex] || '') : '';
-            };
-            const nights = Number(getColumnValue('Gece')) || 0;
-            const fiyat = Number(getColumnValue('Satış Fiyatı (₺/Gece)')) || 0;
-            return {
-              id: Date.now() + idx,
-              createdAt: new Date().toISOString(),
-              fiyat,
-              status: getColumnValue('Durum') || 'AKTARILDI',
-              organizasyonAdi: getColumnValue('Organizasyon'),
-              accommodation: {
-                adiSoyadi: getColumnValue('Adı Soyadı'),
-                unvani: getColumnValue('Unvanı'),
-                odaTipi: getColumnValue('Oda Tipi'),
-                numberOfNights: nights,
-                gecelikUcret: Number(getColumnValue('Alış Fiyatı (₺/Gece)')) || 0,
-                girisTarihi: getColumnValue('Giriş Tarihi'),
-                cikisTarihi: getColumnValue('Çıkış Tarihi'),
-                organizasyonAdi: getColumnValue('Organizasyon'),
-              }
-            };
-          });
-          // API'ye gönder (örnek: /api/sales, gerçek uygulamada accommodationId eşlemesi gerekir)
-          // Burada sadece frontend state'e ekliyoruz
-          setSales(prev => [...prev, ...newSales]);
-          alert(`Başarıyla ${newSales.length} satış kaydı içe aktarıldı (demo). Gerçek uygulamada backend ile entegre edilmelidir!`);
-        } catch (e) {
-          console.error(e);
-          alert('Excel dosyasını okurken bir hata oluştu.');
-        }
-      };
-      reader.onerror = () => {
-        alert('Dosya okuma başarısız oldu.');
-      };
-      reader.readAsArrayBuffer(file);
-    } else {
-      alert('Lütfen bir Excel dosyası seçin.');
-    }
-  };
-
-  // Puantaj Raporu fonksiyonu (konaklama sayfasındaki gibi)
-  const handlePuantajRaporu = () => {
-    if (filteredSales.length === 0) {
-      alert('Rapor için kayıt yok!');
-      return;
-    }
-    // Tüm satışlar için en erken giriş ve en geç çıkış tarihlerini bul
-    const allDates = filteredSales.flatMap(sale => {
-      const giris = sale.accommodation?.girisTarihi;
-      const cikis = sale.accommodation?.cikisTarihi;
-      if (!giris || !cikis) return [];
-      return [new Date(giris), new Date(cikis)];
-    });
-    if (allDates.length === 0) {
-      alert('Tarih bilgisi eksik!');
-      return;
-    }
-    // Tüm günleri diziye ekle (giriş ve çıkış arası)
-    const allDaysSet = new Set<string>();
-    filteredSales.forEach(sale => {
-      const giris = sale.accommodation?.girisTarihi;
-      const cikis = sale.accommodation?.cikisTarihi;
-      if (!giris || !cikis) return;
-      const start = new Date(giris);
-      const end = new Date(cikis);
-      const current = new Date(start);
-      while (current < end) { // çıkış günü hariç!
-        allDaysSet.add(current.toISOString().split('T')[0]);
-        current.setDate(current.getDate() + 1);
-      }
-    });
-    const allDays = Array.from(allDaysSet).sort();
-    // Başlıklar
-    const headers = [
-      'ID', 'Adı Soyadı', 'Unvanı', 'Oda Tipi', 'Organizasyon', 'Giriş Tarihi', 'Çıkış Tarihi', 'Gece', 'Satış Fiyatı (₺/Gece)', 'Toplam Satış (₺)', ...allDays.map(date => {
-        const [y, m, d] = date.split('-');
-        return `${d}.${m}.${y}`;
-      })
-    ];
-    // Satışlar için satırları oluştur
-    const data = filteredSales.map(sale => {
-      const nights = sale.accommodation?.numberOfNights ?? 0;
-      const satisGecelik = sale.fiyat;
-      const toplamSatis = satisGecelik * nights;
-      const giris = sale.accommodation?.girisTarihi;
-      const cikis = sale.accommodation?.cikisTarihi;
-      const start = giris ? new Date(giris) : null;
-      const end = cikis ? new Date(cikis) : null;
-      const row: (string | number)[] = [
-        sale.id,
-        sale.accommodation?.adiSoyadi || '-',
-        sale.accommodation?.unvani || '-',
-        sale.accommodation?.odaTipi || '-',
-        sale.accommodation?.organizasyonAdi || sale.organizasyonAdi,
-        giris ? formatDate(giris) : '-',
-        cikis ? formatDate(cikis) : '-',
-        nights,
-        satisGecelik,
-        toplamSatis
-      ];
-      // Gün gün işaretleme
-      allDays.forEach(dateStr => {
-        if (start && end) {
-          const check = new Date(dateStr);
-          if (check >= start && check < end) {
-            row.push('X');
-          } else {
-            row.push('');
-          }
-        } else {
-          row.push('');
-        }
-      });
-      return row;
-    });
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Satış Puantaj Raporu');
-    XLSX.writeFile(wb, 'satis_puantaj_raporu.xlsx');
-  };
 
   const handleBulkDelete = async () => {
     try {
@@ -464,29 +314,15 @@ function SalesPageContent() {
             <button className="btn btn-danger bg-red-600 hover:bg-red-700 text-white" onClick={() => setShowBulkDeleteModal(true)}>Toplu Sil</button>
           </>
         )}
-        <input type="file" id="excelImportInputSales" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleImportExcel} className="hidden" />
-        <button onClick={() => document.getElementById('excelImportInputSales')?.click()} className="btn btn-secondary">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-          Excel&#39;den İçe Aktar
-        </button>
+
         <button onClick={handleExportExcel} className="btn btn-success">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" transform="rotate(180 12 12)" />
           </svg>
           Excel&#39;e Aktar
         </button>
-        <button onClick={handleDownloadExcelTemplate} className="btn btn-warning">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          Excel Şablonu İndir
-        </button>
-        <button onClick={handlePuantajRaporu} className="btn btn-secondary">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Puantaj Raporu
-        </button>
+
+
       </div>
       {/* Tablo ve Yükleniyor/Boş Mesajı */}
       <div className="w-full rounded-lg shadow bg-white overflow-hidden">

@@ -874,26 +874,7 @@ export default function Home() {
     setFormData(prev => ({ ...prev, faturaEdildi: e.target.checked }));
   };
 
-  // Sıralama fonksiyonu
-  const handleSort = (column: keyof AccommodationRecord) => {
-    if (sortColumn === column) {
-      // Aynı sütuna tıklandıysa sıralama yönünü değiştir
-      setSortDirection(sortDirection === 'asc' ? 'desc' : sortDirection === 'desc' ? null : 'asc');
-      if (sortDirection === 'desc') {
-        setSortColumn(null);
-      }
-    } else {
-      // Yeni sütuna tıklandıysa o sütunu artan sırada sırala
-      setSortColumn(column);
-      setSortDirection('asc');
-    }
-  };
-
-  // Sıralama sıfırlama fonksiyonu
-  const clearSort = () => {
-    setSortColumn(null);
-    setSortDirection(null);
-  };
+  // Not: handleSort ve clearSort fonksiyonları AccommodationTableSection.tsx'e taşındı
 
   // Sıralanmış kayıtları hesapla
   const sortedRecords = [...filteredRecords].sort((a, b) => {
@@ -953,30 +934,7 @@ export default function Home() {
     return 0;
   });
 
-  // Sıralama ikonu bileşeni
-  const SortIcon = ({ column }: { column: keyof AccommodationRecord }) => {
-    if (sortColumn !== column) {
-      return (
-        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
-    }
-    
-    if (sortDirection === 'asc') {
-      return (
-        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-        </svg>
-      );
-    }
-    
-    return (
-      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    );
-  };
+  // Not: SortIcon bileşeni AccommodationTableSection.tsx'e taşındı
 
   // Yeni state: seçili kayıtlar ve fiyatlar
   const [selectedRecordIds, setSelectedRecordIds] = useState<number[]>([]);

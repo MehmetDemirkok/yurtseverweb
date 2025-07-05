@@ -76,11 +76,12 @@ export default function AdminPage() {
 
   // İzinler listesi
   const PERMISSIONS = [
-    { key: 'dashboard', label: 'Dashboard' },
     { key: 'sales', label: 'Satışlar' },
-    { key: 'statistics', label: 'İstatistikler' },
     { key: 'user-management', label: 'Kullanıcı Yönetimi' },
     { key: 'logs', label: 'Sistem Logları' },
+    { key: 'finance', label: 'Finans' },
+    { key: 'accommodation', label: 'Konaklama Kayıtları' },
+    { key: 'home', label: 'Ana Sayfa' },
     // buraya yeni izinler eklenebilir
   ];
 
