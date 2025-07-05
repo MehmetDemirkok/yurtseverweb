@@ -34,27 +34,19 @@ interface TickProps {
   payload?: { value: string };
 }
 
-const CustomTick = ({ x = 0, y = 0, payload = { value: '' } }: TickProps) => {
-  // 2 kelimede bir satır atlat
-  const words = String(payload.value).split(' ');
-  const lines = [];
-  for (let i = 0; i < words.length; i += 2) {
-    lines.push(words.slice(i, i + 2).join(' '));
-  }
+  const CustomTick = ({ x = 0, y = 0, payload = { value: '' } }: TickProps) => {
   return (
-    <g transform={`translate(${x},${y + 5}) rotate(-35, 0, 0)`}>
-      {lines.map((line, i) => (
-        <text
-          key={i}
-          x={0}
-          y={i * 13}
-          textAnchor="end"
-          fontSize={11}
-          fill="#6b7280"
-        >
-          {line}
-        </text>
-      ))}
+    <g transform={`translate(${x},${y+10}) rotate(-20)`}>
+      <text
+        x={0}
+        y={0}
+        dy={-5}
+        textAnchor="end"
+        fontSize={9}
+        fill="#6b7280"
+      >
+        {payload.value}
+      </text>
     </g>
   );
 };
@@ -295,10 +287,11 @@ export default function Statistics({ records }: StatisticsProps) {
               <XAxis
                 dataKey="name"
                 stroke="#6b7280"
-                fontSize={11}
-                height={70}
+                fontSize={9}
+                height={120}
                 interval={0}
                 tick={<CustomTick />}
+                padding={{ left: 20, right: 20 }}
               />
               <YAxis 
                 stroke="#6b7280"
@@ -322,4 +315,4 @@ export default function Statistics({ records }: StatisticsProps) {
       </div>
     </div>
   );
-} 
+}
