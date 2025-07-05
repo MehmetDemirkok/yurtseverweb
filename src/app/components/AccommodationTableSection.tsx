@@ -839,242 +839,276 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
 
   return (
     <div className="w-full mx-auto mt-8">
-      {/* Filtreleme ve arama alanları */}
-      <div className="flex flex-col md:flex-row md:items-end gap-4 mb-6">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Organizasyon</label>
-          <input
-            type="text"
-            className="input w-full"
-            placeholder="Organizasyon ara..."
-            value={filterOrg}
-            onChange={e => setFilterOrg(e.target.value)}
-            onFocus={() => setShowOrganizasyonOptions(true)}
-            onBlur={() => setTimeout(() => setShowOrganizasyonOptions(false), 200)}
-          />
-          {showOrganizasyonOptions && organizasyonOptions.length > 0 && (
-            <div className="absolute z-10 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto w-auto min-w-full max-w-[250px]">
-              {organizasyonOptions.filter(opt => opt.toLowerCase().includes(filterOrg.toLowerCase())).map(opt => (
-                <div
-                  key={opt}
-                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer truncate"
-                  onMouseDown={() => { setFilterOrg(opt); setShowOrganizasyonOptions(false); }}
-                >
-                  {opt}
-                </div>
-              ))}
+      {/* Filtreleme, arama ve işlem butonları */}
+      <div className="flex flex-col gap-4 mb-4">
+        {/* Filtreleme ve arama alanları */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative w-full sm:w-auto">
+            <div className="flex items-center bg-white border rounded-lg overflow-hidden shadow-sm">
+              <div className="p-2 text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                className="py-2 pr-3 w-full sm:w-40 md:w-48 border-0 focus:ring-0 text-sm"
+                placeholder="Ad soyad ara..."
+                value={filterName}
+                onChange={e => setFilterName(e.target.value)}
+              />
             </div>
+          </div>
+          
+          <div className="relative w-full sm:w-auto">
+            <div className="flex items-center bg-white border rounded-lg overflow-hidden shadow-sm">
+              <div className="p-2 text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                className="py-2 pr-3 w-full sm:w-40 border-0 focus:ring-0 text-sm"
+                placeholder="Organizasyon ara..."
+                value={filterOrg}
+                onChange={e => setFilterOrg(e.target.value)}
+                onFocus={() => setShowOrganizasyonOptions(true)}
+                onBlur={() => setTimeout(() => setShowOrganizasyonOptions(false), 200)}
+              />
+            </div>
+            {showOrganizasyonOptions && organizasyonOptions.length > 0 && (
+              <div className="absolute z-10 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto w-full">
+                {organizasyonOptions.filter(opt => opt.toLowerCase().includes(filterOrg.toLowerCase())).map(opt => (
+                  <div
+                    key={opt}
+                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer truncate text-sm"
+                    onMouseDown={() => { setFilterOrg(opt); setShowOrganizasyonOptions(false); }}
+                  >
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div className="relative w-full sm:w-auto">
+            <div className="flex items-center bg-white border rounded-lg overflow-hidden shadow-sm">
+              <div className="p-2 text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                className="py-2 pr-3 w-full sm:w-32 border-0 focus:ring-0 text-sm"
+                placeholder="Unvan ara..."
+                value={filterTitle}
+                onChange={e => setFilterTitle(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          {canAdd() && (
+            <button 
+              className="ml-auto btn btn-primary py-2 px-3 text-sm h-10"
+              onClick={openAddModal}
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Yeni Kayıt
+            </button>
           )}
         </div>
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad</label>
-          <input
-            type="text"
-            className="input w-full"
-            placeholder="Ad soyad ara..."
-            value={filterName}
-            onChange={e => setFilterName(e.target.value)}
-          />
-        </div>
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Unvan</label>
-          <input
-            type="text"
-            className="input w-full"
-            placeholder="Unvan ara..."
-            value={filterTitle}
-            onChange={e => setFilterTitle(e.target.value)}
-          />
-        </div>
-        {canAdd() && (
-          <button 
-            className="btn btn-primary h-12 mt-6 md:mt-0"
-            onClick={openAddModal}
+        
+        {/* İşlem butonları */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all shadow-sm"
+            onClick={handlePuantajRaporu}
           >
-            + Yeni Kayıt
+            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h4m0 0V7a4 4 0 00-4-4H7a4 4 0 00-4 4v10a4 4 0 004 4" /></svg>
+            Puantaj Raporu
           </button>
-        )}
-      </div>
-      {/* Üstteki işlemler: Puantaj, Excel içe/dışa aktar, şablon indir */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        <button
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-800 hover:bg-gray-50 transition-all shadow-sm"
-          onClick={handlePuantajRaporu}
-        >
-          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h4m0 0V7a4 4 0 00-4-4H7a4 4 0 00-4 4v10a4 4 0 004 4" /></svg>
-          Puantaj Raporu
-        </button>
-        <label className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-800 hover:bg-gray-50 transition-all shadow-sm cursor-pointer">
-          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
-          Excel'den İçe Aktar
-          <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
-        </label>
-        <button
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-green-400 to-teal-500 text-sm font-medium text-white shadow-sm hover:from-green-500 hover:to-teal-600 transition-all"
-          onClick={handleExportExcel}
-        >
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16h16V4H4zm4 8h8m-4-4v8" /></svg>
-          Excel'e Aktar
-        </button>
-        <button
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gradient-to-r from-orange-400 to-yellow-500 text-sm font-medium text-white shadow-sm hover:from-orange-500 hover:to-yellow-600 transition-all"
-          onClick={handleDownloadExcelTemplate}
-        >
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
-          Excel Şablonu İndir
-        </button>
+          <label className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all shadow-sm cursor-pointer">
+            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
+            Excel'den İçe Aktar
+            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
+          </label>
+          <button
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-400 to-teal-500 text-xs font-medium text-white shadow-sm hover:from-green-500 hover:to-teal-600 transition-all"
+            onClick={handleExportExcel}
+          >
+            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16h16V4H4zm4 8h8m-4-4v8" /></svg>
+            Excel'e Aktar
+          </button>
+          <button
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-400 to-yellow-500 text-xs font-medium text-white shadow-sm hover:from-orange-500 hover:to-yellow-600 transition-all"
+            onClick={handleDownloadExcelTemplate}
+          >
+            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
+            Excel Şablonu
+          </button>
+        </div>
       </div>
       {/* Tablo */}
       <div className="table-container overflow-x-auto bg-white rounded-lg shadow-md">
-        <table className="table table-responsive text-xs">
+        <table className="table table-responsive text-xs w-full border-collapse">
           <thead>
-            <tr>
-              <th className="w-10">
-                <input type="checkbox" checked={selectedRecordIds.length === sortedRecords.length && sortedRecords.length > 0} onChange={handleSelectAll} />
+            <tr className="text-[10px] bg-gray-50">
+              <th className="w-8 py-2">
+                <input type="checkbox" className="checkbox checkbox-xs" checked={selectedRecordIds.length === sortedRecords.length && sortedRecords.length > 0} onChange={handleSelectAll} />
               </th>
-              <th className="w-12 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('id')}>
+              <th className="w-10 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('id')}>
                 <div className="flex items-center justify-between">
                   <span>ID</span>
                   <SortIcon column="id" />
                 </div>
               </th>
-              <th className="w-28 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('kurumCari')}>
+              <th className="w-20 py-2 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('kurumCari')}>
                 <div className="flex items-center justify-between">
-                  <span>Kurum / Cari</span>
+                  <span>Kurum Adı</span>
                   <SortIcon column="kurumCari" />
                 </div>
               </th>
-              <th className="w-28 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('organizasyonAdi')}>
+              <th className="w-20 py-2 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('organizasyonAdi')}>
                 <div className="flex items-center justify-between">
                   <span>Organizasyon</span>
                   <SortIcon column="organizasyonAdi" />
                 </div>
               </th>
-              <th className="w-28 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('otelAdi')}>
+              <th className="w-20 py-2 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('otelAdi')}>
                 <div className="flex items-center justify-between">
-                  <span>Otel</span>
+                  <span>Otel Adı</span>
                   <SortIcon column="otelAdi" />
                 </div>
               </th>
-              <th className="w-28 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('adiSoyadi')}>
+              <th className="w-24 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('adiSoyadi')}>
                 <div className="flex items-center justify-between">
                   <span>Adı Soyadı</span>
                   <SortIcon column="adiSoyadi" />
                 </div>
               </th>
-              <th className="w-24 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('unvani')}>
+              <th className="w-16 py-2 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('unvani')}>
                 <div className="flex items-center justify-between">
-                  <span>Unvanı</span>
+                  <span>Unvan</span>
                   <SortIcon column="unvani" />
                 </div>
               </th>
-              <th className="w-20 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('ulke')}>
+              <th className="w-16 py-2 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('ulke')}>
                 <div className="flex items-center justify-between">
                   <span>Ülke</span>
                   <SortIcon column="ulke" />
                 </div>
               </th>
-              <th className="w-20 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('sehir')}>
+              <th className="w-16 py-2 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('sehir')}>
                 <div className="flex items-center justify-between">
                   <span>Şehir</span>
                   <SortIcon column="sehir" />
                 </div>
               </th>
-              <th className="w-20 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('girisTarihi')}>
+              <th className="w-16 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('girisTarihi')}>
                 <div className="flex items-center justify-between">
-                  <span>Giriş</span>
+                  <span>Giriş Tarihi</span>
                   <SortIcon column="girisTarihi" />
                 </div>
               </th>
-              <th className="w-20 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('cikisTarihi')}>
+              <th className="w-16 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('cikisTarihi')}>
                 <div className="flex items-center justify-between">
-                  <span>Çıkış</span>
+                  <span>Çıkış Tarihi</span>
                   <SortIcon column="cikisTarihi" />
                 </div>
               </th>
-              <th className="w-16 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('odaTipi')}>
+              <th className="w-14 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('odaTipi')}>
                 <div className="flex items-center justify-between">
-                  <span>Oda</span>
+                  <span>Oda Tipi</span>
                   <SortIcon column="odaTipi" />
                 </div>
               </th>
-              <th className="w-24 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('konaklamaTipi')}>
+              <th className="w-20 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('konaklamaTipi')}>
                 <div className="flex items-center justify-between">
                   <span>Konaklama</span>
                   <SortIcon column="konaklamaTipi" />
                 </div>
               </th>
-              <th className="w-28 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('faturaEdildi')}>
+              <th className="w-12 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('numberOfNights')}>
                 <div className="flex items-center justify-between">
-                  <span>Satış Durumu</span>
-                  <SortIcon column="faturaEdildi" />
-                </div>
-              </th>
-              <th className="w-14 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('numberOfNights')}>
-                <div className="flex items-center justify-between">
-                  <span>Gece</span>
+                  <span>Gece Sayısı</span>
                   <SortIcon column="numberOfNights" />
                 </div>
               </th>
-              <th className="w-24 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('gecelikUcret')}>
+              <th className="w-16 py-2 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('gecelikUcret')}>
                 <div className="flex items-center justify-between">
                   <span>Gecelik Ücret</span>
                   <SortIcon column="gecelikUcret" />
                 </div>
               </th>
-              <th className="w-24 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('toplamUcret')}>
+              <th className="w-20 py-2 hidden sm:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('toplamUcret')}>
                 <div className="flex items-center justify-between">
                   <span>Toplam Ücret</span>
                   <SortIcon column="toplamUcret" />
                 </div>
               </th>
-              <th className="w-16">İşlemler</th>
+              <th className="w-20 py-2 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('faturaEdildi')}>
+                <div className="flex items-center justify-between">
+                  <span>Satış Durumu</span>
+                  <SortIcon column="faturaEdildi" />
+                </div>
+              </th>
+              <th className="w-14 py-2">İşlem</th>
             </tr>
           </thead>
           <tbody>
             {sortedRecords.map((record) => (
-              <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                <td>
-                  <input type="checkbox" checked={selectedRecordIds.includes(record.id)} onChange={() => handleSelectRecord(record.id)} disabled={record.faturaEdildi} />
+              <tr key={record.id} className="hover:bg-gray-50 transition-colors border-b border-gray-100 text-[11px]">
+                <td className="py-1.5">
+                  <input type="checkbox" className="checkbox checkbox-xs" checked={selectedRecordIds.includes(record.id)} onChange={() => handleSelectRecord(record.id)} disabled={record.faturaEdildi} />
                 </td>
-                <td className="font-medium text-blue-600 whitespace-nowrap">{record.id}</td>
-                <td className="truncate hidden md:table-cell">{record.kurumCari || '-'}</td>
-                <td className="truncate hidden lg:table-cell">{record.organizasyonAdi || '-'}</td>
-                <td className="truncate hidden lg:table-cell">{record.otelAdi || '-'}</td>
-                <td className="truncate">{record.adiSoyadi}</td>
-                <td className="truncate hidden md:table-cell">{record.unvani}</td>
-                <td className="truncate hidden md:table-cell">{record.ulke}</td>
-                <td className="truncate">{record.sehir}</td>
-                <td className="whitespace-nowrap">{formatDate(record.girisTarihi)}</td>
-                <td className="whitespace-nowrap">{formatDate(record.cikisTarihi)}</td>
-                <td className="text-center">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium inline-block">
+                <td className="font-medium text-blue-600 whitespace-nowrap py-1.5">{record.id}</td>
+                <td className="truncate hidden lg:table-cell py-1.5">{record.kurumCari || '-'}</td>
+                <td className="truncate hidden md:table-cell py-1.5">{record.organizasyonAdi || '-'}</td>
+                <td className="truncate hidden lg:table-cell py-1.5">{record.otelAdi || '-'}</td>
+                <td className="truncate py-1.5">
+                  <div className="flex flex-col">
+                    <span className="font-medium leading-tight">{record.adiSoyadi}</span>
+                  </div>
+                </td>
+                <td className="truncate hidden md:table-cell py-1.5">
+                  <span className="text-[9px] leading-tight">{record.unvani || '-'}</span>
+                </td>
+                <td className="truncate hidden lg:table-cell py-1.5">{record.ulke || '-'}</td>
+                <td className="truncate hidden lg:table-cell py-1.5">{record.sehir || '-'}</td>
+                <td className="whitespace-nowrap py-1.5 text-[10px]">{formatDate(record.girisTarihi)}</td>
+                <td className="whitespace-nowrap py-1.5 text-[10px]">{formatDate(record.cikisTarihi)}</td>
+                <td className="text-center py-1.5">
+                  <span className="px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-[9px] font-medium inline-block">
                     {record.odaTipi}
                   </span>
                 </td>
-                <td className="text-center">
-                  <span className={`px-2 py-1 rounded-full text-xs font-bold inline-block ${record.konaklamaTipi === 'BB' ? 'bg-yellow-100 text-yellow-800' : record.konaklamaTipi === 'HB' ? 'bg-green-100 text-green-800' : record.konaklamaTipi === 'FB' ? 'bg-purple-100 text-purple-800' : 'bg-pink-100 text-pink-800'}`}>{record.konaklamaTipi}</span>
+                <td className="text-center py-1.5">
+                  <span className={`px-1 py-0.5 rounded text-[9px] font-bold inline-block ${record.konaklamaTipi === 'BB' ? 'bg-yellow-100 text-yellow-800' : record.konaklamaTipi === 'HB' ? 'bg-green-100 text-green-800' : record.konaklamaTipi === 'FB' ? 'bg-purple-100 text-purple-800' : 'bg-pink-100 text-pink-800'}`}>{record.konaklamaTipi}</span>
                 </td>
-                <td className="hidden md:table-cell text-center">
+                <td className="text-center whitespace-nowrap py-1.5">{record.numberOfNights || 0}</td>
+                <td className="font-medium text-gray-600 hidden md:table-cell whitespace-nowrap text-right py-1.5">{record.gecelikUcret?.toLocaleString('tr-TR')} ₺</td>
+                <td className="font-bold text-green-600 hidden sm:table-cell whitespace-nowrap text-right py-1.5">{record.toplamUcret.toLocaleString('tr-TR')} ₺</td>
+                <td className="hidden md:table-cell text-center py-1.5">
                   {record.faturaEdildi ? (
-                    <span className="inline-block px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-[11px] font-semibold border border-green-200">
-                      Satışa Aktarıldı
+                    <span className="inline-block px-1 py-0.5 rounded bg-green-50 text-green-700 text-[9px] font-semibold border border-green-200">
+                      Satışta
                     </span>
                   ) : (
-                    <span className="inline-block px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[11px] font-semibold border border-gray-200">
-                      Henüz Satışa Aktarılmadı
+                    <span className="inline-block px-1 py-0.5 rounded bg-gray-100 text-gray-600 text-[9px] font-semibold border border-gray-200">
+                      Bekliyor
                     </span>
                   )}
                 </td>
-                <td className="text-center whitespace-nowrap">{record.numberOfNights || 0}</td>
-                <td className="font-medium hidden md:table-cell whitespace-nowrap text-right">{record.gecelikUcret.toLocaleString('tr-TR')} ₺</td>
-                <td className="font-bold text-green-600 hidden md:table-cell whitespace-nowrap text-right">{record.toplamUcret.toLocaleString('tr-TR')} ₺</td>
-                <td>
-                  <div className="flex flex-wrap justify-center gap-1">
+                <td className="py-1.5">
+                  <div className="flex justify-center gap-1">
                     {canEdit() && (
                       <button
                         onClick={() => handleEditClick(record.id)}
-                        className="btn btn-sm btn-primary p-1"
+                        className="p-0.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
                         title="Düzenle"
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1085,7 +1119,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                     {canDelete() && (
                       <button
                         onClick={() => handleDeleteClick(record.id)}
-                        className="btn btn-sm btn-error p-1"
+                        className="p-0.5 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
                         title="Sil"
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1103,18 +1137,24 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
 
       {/* Satışa Aktar ve Toplu Silme butonları */}
       {selectedRecordIds.length > 0 && (
-        <div className="fixed bottom-8 right-8 z-50 flex gap-2">
+        <div className="fixed bottom-4 right-4 z-50 flex gap-2">
           <button 
-            className="btn btn-error px-6 py-3 text-lg shadow-lg" 
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-lg transition-colors" 
             onClick={() => setShowBulkDeleteModal(true)}
           >
-            Seçili Kayıtları Sil
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            <span>{selectedRecordIds.length} Kaydı Sil</span>
           </button>
           <button 
-            className="btn btn-primary px-6 py-3 text-lg shadow-lg" 
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-lg transition-colors" 
             onClick={handleSaleTransfer}
           >
-            Seçili Kişileri Satışa Aktar
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span>Satışa Aktar</span>
           </button>
         </div>
       )}
@@ -1616,7 +1656,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
             </button>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Excel'e Aktarılacak Sütunlar</h2>
             <div className="grid grid-cols-2 gap-2 mb-6">
-              {availableColumns.map(col => (
+              {availableColumnsda.map(col => (
                 <label key={col.key} className="flex items-center gap-2">
                   <input
                     type="checkbox"

@@ -66,7 +66,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   try {
     // Kullanıcı bilgilerini al
     const cookieStore = cookies();
-    const token = cookieStore.get('token')?.value;
+    const token = (await cookieStore).get('token')?.value;
     let userId = null;
     
     if (token) {
