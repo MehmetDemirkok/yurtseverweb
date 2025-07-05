@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthGuard from "./components/AuthGuard";
 import UserStatus from "./components/UserStatus";
+import SidebarLayout from "./components/SidebarLayout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,8 +34,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#3B82F6" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <UserStatus />
-        <AuthGuard>{children}</AuthGuard>
+        <SidebarLayout>
+          <UserStatus />
+          <AuthGuard>{children}</AuthGuard>
+        </SidebarLayout>
       </body>
     </html>
   );
