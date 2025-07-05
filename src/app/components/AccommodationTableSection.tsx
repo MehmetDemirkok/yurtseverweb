@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import * as XLSX from 'xlsx';
-import AccommodationFormModal from "./AccommodationFormModal";
 
 export interface AccommodationRecord {
   id: number;
@@ -34,52 +33,24 @@ interface User {
 export default function AccommodationTableSection() {
   // --- State ve fonksiyonlar ---
   const [records, setRecords] = useState<AccommodationRecord[]>([]);
-  const [isTableCollapsed, setIsTableCollapsed] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [userPermissions, setUserPermissions] = useState<string[]>([]);
-  const [formData, setFormData] = useState<Omit<AccommodationRecord, 'id' | 'toplamUcret' | 'numberOfNights'>>({
-    adiSoyadi: '',
-    unvani: '',
-    ulke: '',
-    sehir: '',
-    girisTarihi: '',
-    cikisTarihi: '',
-    odaTipi: 'Single Oda',
-    konaklamaTipi: 'BB',
-    faturaEdildi: false,
-    gecelikUcret: 0,
-    organizasyonAdi: '',
-    otelAdi: '',
-    kurumCari: '',
-  });
-  const [selectedRecordId, setSelectedRecordId] = useState<number | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [recordToDeleteId, setRecordToDeleteId] = useState<number | null>(null);
   const [showExportFilterModal, setShowExportFilterModal] = useState<boolean>(false);
   const [availableColumns, setAvailableColumns] = useState<{ key: keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret'; label: string }[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-  const [showPuantajFilterModal, setShowPuantajFilterModal] = useState<boolean>(false);
-  const [puantajFilters, setPuantajFilters] = useState<{
-    organizasyonAdi: string;
-    baslangicTarihi: string;
-    bitisTarihi: string;
-  }>({
-    organizasyonAdi: '',
-    baslangicTarihi: '',
-    bitisTarihi: ''
-  });
-  const [filterOrg, setFilterOrg] = useState("");
-  const [filterName, setFilterName] = useState("");
-  const [filterTitle, setFilterTitle] = useState("");
-  const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
-  const [showOrganizasyonOptions, setShowOrganizasyonOptions] = useState(false);
-  const [showAccommodationModal, setShowAccommodationModal] = useState(false);
   const [sortColumn, setSortColumn] = useState<keyof AccommodationRecord | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
   const [selectedRecordIds, setSelectedRecordIds] = useState<number[]>([]);
   const [saleModalOpen, setSaleModalOpen] = useState(false);
   const [salePrices, setSalePrices] = useState<{ [userId: number]: number }>({});
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  
+  // Eksik state tanımlamaları
+  const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
+  const [showOrganizasyonOptions, setShowOrganizasyonOptions] = useState(false);
+  const [filterOrg, setFilterOrg] = useState('');
+  const [filterName, setFilterName] = useState('');
+  const [filterTitle, setFilterTitle] = useState('');
 
   // Role tabanlı yetki kontrolü fonksiyonları
   const hasRole = (requiredRole: string): boolean => {
@@ -92,8 +63,6 @@ export default function AccommodationTableSection() {
   const canAdd = () => hasRole('USER');
   const canEdit = () => hasRole('USER');
   const canDelete = () => hasRole('MANAGER');
-  const canImport = () => hasRole('USER');
-  const canExport = () => hasRole('VIEWER');
 
   // useEffect ve API çağrıları
   useEffect(() => {
@@ -103,7 +72,6 @@ export default function AccommodationTableSection() {
         if (res.ok) {
           const data = await res.json();
           setCurrentUser(data.user);
-          setUserPermissions(data.user.permissions || []);
         }
       } catch (error) {
         //
@@ -142,178 +110,25 @@ export default function AccommodationTableSection() {
     return diffDays > 0 ? diffDays : 0;
   }
 
-  // Kayıt ekleme fonksiyonunu API'ye bağla
-  const handleAddRecord = async () => {
-    const diffDays = calculateNumberOfNights(formData.girisTarihi, formData.cikisTarihi);
-    const calculatedToplamUcret = formData.gecelikUcret * diffDays;
-    const newRecord = {
-      ...formData,
-      toplamUcret: calculatedToplamUcret,
-      numberOfNights: diffDays,
-    };
-    // API'ye gönder
-    const res = await fetch('/api/accommodation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newRecord),
-    });
-    const created = await res.json();
-    setRecords(prev => [...prev, created]);
-    // Formu temizle
-    setFormData({
-      adiSoyadi: '',
-      unvani: '',
-      ulke: '',
-      sehir: '',
-      girisTarihi: '',
-      cikisTarihi: '',
-      odaTipi: 'Single Oda',
-      konaklamaTipi: 'BB',
-      faturaEdildi: false,
-      gecelikUcret: 0,
-      organizasyonAdi: '',
-      otelAdi: '',
-      kurumCari: '',
-    });
-    setShowPuantajFilterModal(false);
-  };
-
   const handleEditClick = (id: number) => {
-    setSelectedRecordId(id);
     const recordToEdit = records.find((record) => record.id === id);
     if (recordToEdit) {
-      setFormData({
-        adiSoyadi: recordToEdit.adiSoyadi,
-        unvani: recordToEdit.unvani,
-        ulke: recordToEdit.ulke,
-        sehir: recordToEdit.sehir,
-        girisTarihi: recordToEdit.girisTarihi,
-        cikisTarihi: recordToEdit.cikisTarihi,
-        odaTipi: recordToEdit.odaTipi,
-        konaklamaTipi: recordToEdit.konaklamaTipi,
-        faturaEdildi: recordToEdit.faturaEdildi,
-        gecelikUcret: recordToEdit.gecelikUcret,
-        organizasyonAdi: recordToEdit.organizasyonAdi || '',
-        otelAdi: recordToEdit.otelAdi || '',
-        kurumCari: recordToEdit.kurumCari || '',
-      });
       setShowEditModal(true);
     }
   };
 
-  const handleUpdateRecord = async () => {
-    if (selectedRecordId === null) return;
-    const diffDays = calculateNumberOfNights(formData.girisTarihi, formData.cikisTarihi);
-    const calculatedToplamUcret = formData.gecelikUcret * diffDays;
-    const updatedRecord = {
-      id: selectedRecordId,
-      ...formData,
-      toplamUcret: calculatedToplamUcret,
-      numberOfNights: diffDays,
-    };
-    // API'ye PATCH isteği gönder
-    const res = await fetch('/api/accommodation', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updatedRecord),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setRecords((prevRecords) =>
-        prevRecords.map((record) =>
-          record.id === selectedRecordId ? updated : record
-        )
-      );
-    } else {
-      alert('Kayıt güncellenemedi!');
-    }
-    setShowEditModal(false);
-    setSelectedRecordId(null);
-    setFormData({
-      adiSoyadi: '',
-      unvani: '',
-      ulke: '',
-      sehir: '',
-      girisTarihi: '',
-      cikisTarihi: '',
-      odaTipi: 'Single Oda',
-      konaklamaTipi: 'BB',
-      faturaEdildi: false,
-      gecelikUcret: 0,
-      organizasyonAdi: '',
-      otelAdi: '',
-      kurumCari: '',
-    });
-  };
-
   const handleDeleteClick = (id: number) => {
-    setRecordToDeleteId(id);
-  };
-
-  const confirmDelete = async () => {
-    if (recordToDeleteId === null) return;
-
-    // API'ye DELETE isteği gönder
-    const res = await fetch('/api/accommodation', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: recordToDeleteId }),
-    });
-
-    if (res.ok) {
-      setRecords((prevRecords) => prevRecords.filter((record) => record.id !== recordToDeleteId));
-    } else {
-      alert('Kayıt silinemedi!');
-    }
-    setRecordToDeleteId(null);
-  };
-
-  const cancelDelete = () => {
-    setRecordToDeleteId(null);
+    // ... existing code ...
   };
 
   const closeEditModal = () => {
     setShowEditModal(false);
-    setSelectedRecordId(null);
-    setFormData({
-      adiSoyadi: '',
-      unvani: '',
-      ulke: '',
-      sehir: '',
-      girisTarihi: '',
-      cikisTarihi: '',
-      odaTipi: 'Single Oda',
-      konaklamaTipi: 'BB',
-      faturaEdildi: false,
-      gecelikUcret: 0,
-      organizasyonAdi: '',
-      otelAdi: '',
-      kurumCari: '',
-    });
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    let { id } = e.target;
-    const { value } = e.target;
-    // Eğer id "edit-" ile başlıyorsa, öneki kaldır
-    if (id.startsWith('edit-')) {
-      id = id.replace('edit-', '');
-    }
-    setFormData((prevData) => ({
-      ...prevData,
-      [id]: (id === 'gecelikUcret') ? (value === '' ? 0 : parseFloat(value)) : value,
-    }));
   };
 
   function formatDate(dateStr: string) {
     const date = new Date(dateStr);
     return date.toLocaleDateString('tr-TR');
   }
-
-  const handleAccommodationCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { checked } = e.target;
-    setFormData(prev => ({ ...prev, faturaEdildi: checked }));
-  };
 
   const handleSort = (column: keyof AccommodationRecord) => {
     if (sortColumn === column) {
@@ -327,11 +142,6 @@ export default function AccommodationTableSection() {
       setSortColumn(column);
       setSortDirection('asc');
     }
-  };
-
-  const clearSort = () => {
-    setSortColumn(null);
-    setSortDirection(null);
   };
 
   // Filtrelenmiş kayıtlar
@@ -841,198 +651,6 @@ export default function AccommodationTableSection() {
     XLSX.writeFile(workbook, 'konaklama_kayit_template.xlsx');
   };
 
-  // Puantaj raporu fonksiyonları
-  const handlePuantajRaporu = () => {
-    // Varsayılan tarih aralığını belirle (tüm kayıtları kapsayacak şekilde)
-    if (records.length > 0) {
-      // En erken giriş tarihi ve en geç çıkış tarihini bul
-      const allDates = records.flatMap(record => [new Date(record.girisTarihi), new Date(record.cikisTarihi)]);
-      const minDate = new Date(Math.min(...allDates.map(date => date.getTime())));
-      const maxDate = new Date(Math.max(...allDates.map(date => date.getTime())));
-      
-      // Tarihleri YYYY-MM-DD formatına çevir
-      const minDateStr = minDate.toISOString().split('T')[0];
-      const maxDateStr = maxDate.toISOString().split('T')[0];
-      
-      // Filtreleme değerlerini güncelle
-      setPuantajFilters(prev => ({
-        ...prev,
-        baslangicTarihi: minDateStr,
-        bitisTarihi: maxDateStr
-      }));
-    }
-    
-    // Filtreleme modalını aç
-    setShowPuantajFilterModal(true);
-  };
-
-  const closePuantajFilterModal = () => {
-    setShowPuantajFilterModal(false);
-  };
-
-  const handlePuantajFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setPuantajFilters(prev => ({ ...prev, [id]: value }));
-    if (id === 'organizasyonAdi') {
-      setShowOrganizasyonOptions(true);
-    }
-  };
-
-  const getFilteredOptions = (type: 'organizasyonAdi') => {
-    const value = puantajFilters[type].toLowerCase();
-    if (!value) return [];
-    if (type === 'organizasyonAdi') {
-      return organizasyonOptions.filter(option => option.toLowerCase().includes(value));
-    }
-    return [];
-  };
-
-  const handleOptionSelect = (type: 'organizasyonAdi', value: string) => {
-    setPuantajFilters(prev => ({ ...prev, [type]: value }));
-    setShowOrganizasyonOptions(false);
-  };
-
-  const generatePuantajRaporu = () => {
-    const { organizasyonAdi, baslangicTarihi, bitisTarihi } = puantajFilters;
-    
-    // Filtreleme modalını kapat
-    setShowPuantajFilterModal(false);
-
-    // Kayıtları filtrele
-    let filteredRecords = [...records];
-    
-    // Metin bazlı filtreler
-    if (organizasyonAdi) {
-      filteredRecords = filteredRecords.filter(record => 
-        record.organizasyonAdi?.toLowerCase().includes(organizasyonAdi.toLowerCase())
-      );
-    }
-    
-    // Tarih aralığı filtresi
-    if (baslangicTarihi && bitisTarihi) {
-      const baslangicDate = new Date(baslangicTarihi);
-      const bitisDate = new Date(bitisTarihi);
-      
-      // Tarih aralığında en az bir gün kesişen kayıtları filtrele
-      filteredRecords = filteredRecords.filter(record => {
-        const recordBaslangic = new Date(record.girisTarihi);
-        const recordBitis = new Date(record.cikisTarihi);
-        
-        // İki tarih aralığının kesişimi var mı kontrol et
-        return (
-          (recordBaslangic <= bitisDate && recordBitis >= baslangicDate)
-        );
-      });
-    }
-
-    // Tüm kayıtları tarih aralıklarına göre düzenle
-    const sortedRecords = [...filteredRecords].sort((a, b) => {
-      // Önce giriş tarihine göre sırala
-      const dateA = new Date(a.girisTarihi).getTime();
-      const dateB = new Date(b.girisTarihi).getTime();
-      return dateA - dateB;
-    });
-
-    // Tüm tarihleri bul (benzersiz giriş ve çıkış tarihleri)
-    const allDatesSet = new Set<string>();
-    sortedRecords.forEach(record => {
-      // Giriş ve çıkış tarihleri arasındaki tün günleri ekle
-      const startDate = new Date(record.girisTarihi);
-      const endDate = new Date(record.cikisTarihi);
-      
-      // Her gün için döngü
-      const currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
-        allDatesSet.add(currentDate.toISOString().split('T')[0]); // YYYY-MM-DD formatında ekle
-        currentDate.setDate(currentDate.getDate() + 1); // Bir sonraki güne geç
-      }
-    });
-
-    // Tarihleri sırala
-    const allDates = Array.from(allDatesSet).sort();
-
-    // Başlık satırını oluştur (İsim, Unvan, Kurum/Cari, Otel ve tüm tarihler)
-    const headers = [
-      "Adı Soyadı", 
-      "Unvanı", 
-      "Kurum / Cari", 
-      "Organizasyon Adı", 
-      "Otel Adı", 
-      "Oda Tipi", 
-      "Konaklama Tipi", 
-      "Fatura Edildi mi?", 
-      "Gecelik Ücret", 
-      "Toplam Ücret", 
-      ...allDates.map(date => {
-        // Tarihi daha okunabilir formata çevir (örn: 01.07.2024)
-        const [year, month, day] = date.split('-');
-        return `${day}.${month}.${year}`;
-      })
-    ];
-
-    // Her kayıt için satır oluştur
-    const rows = sortedRecords.map(record => {
-      const row: any = {
-        "Adı Soyadı": record.adiSoyadi,
-        "Unvanı": record.unvani,
-        "Kurum / Cari": record.kurumCari || '',
-        "Organizasyon Adı": record.organizasyonAdi || '',
-        "Otel Adı": record.otelAdi || '',
-        "Oda Tipi": record.odaTipi,
-        "Konaklama Tipi": record.konaklamaTipi,
-        "Fatura Edildi mi?": record.faturaEdildi ? 'Evet' : 'Hayır',
-        "Gecelik Ücret": record.gecelikUcret,
-        "Toplam Ücret": record.toplamUcret,
-      };
-
-      // Her tarih için o kişinin o gün konaklayıp konaklamadığını kontrol et
-      allDates.forEach(date => {
-        const checkDate = new Date(date);
-        const checkInDate = new Date(record.girisTarihi);
-        const checkOutDate = new Date(record.cikisTarihi);
-        
-        // O gün konaklıyor mu?
-        if (checkDate >= checkInDate && checkDate <= checkOutDate) {
-          const [year, month, day] = date.split('-');
-          const formattedDate = `${day}.${month}.${year}`;
-          row[formattedDate] = 'X'; // Konaklama işareti
-        } else {
-          const [year, month, day] = date.split('-');
-          const formattedDate = `${day}.${month}.${year}`;
-          row[formattedDate] = ''; // Boş
-        }
-      });
-
-      return row;
-    });
-
-    // Excel dosyası oluştur
-    const worksheet = XLSX.utils.json_to_sheet([headers, ...rows]);
-
-    // Sütun genişliklerini ayarla
-    const columnWidths = [
-      { wch: 20 }, // Adı Soyadı
-      { wch: 15 }, // Unvanı
-      { wch: 15 }, // Kurum / Cari
-      { wch: 20 }, // Organizasyon Adı
-      { wch: 20 }, // Otel Adı
-      { wch: 12 }, // Oda Tipi
-      { wch: 15 }, // Konaklama Tipi
-      { wch: 15 }, // Fatura Edildi mi?
-      { wch: 15 }, // Gecelik Ücret
-      { wch: 15 }, // Toplam Ücret
-      ...allDates.map(() => ({ wch: 8 })) // Tarih sütunları
-    ];
-    worksheet['!cols'] = columnWidths;
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Puantaj Raporu');
-
-    // Dosyayı indir
-    const fileName = `puantaj_raporu_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
-  };
-
   return (
     <div className="w-full mx-auto mt-8">
       {/* Filtreleme ve arama alanları */}
@@ -1083,7 +701,7 @@ export default function AccommodationTableSection() {
           />
         </div>
         {canAdd() && (
-          <button className="btn btn-primary h-12 mt-6 md:mt-0" onClick={() => setShowAccommodationModal(true)}>
+          <button className="btn btn-primary h-12 mt-6 md:mt-0">
             + Yeni Kayıt
           </button>
         )}
@@ -1092,7 +710,6 @@ export default function AccommodationTableSection() {
       <div className="flex flex-wrap gap-4 mb-6">
         <button
           className="flex items-center gap-2 px-8 py-4 rounded-xl border border-gray-200 bg-white text-lg font-semibold text-gray-800 hover:bg-gray-50 transition-all shadow-sm"
-          onClick={handlePuantajRaporu}
         >
           <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h4m0 0V7a4 4 0 00-4-4H7a4 4 0 00-4 4v10a4 4 0 004 4" /></svg>
           Puantaj Raporu

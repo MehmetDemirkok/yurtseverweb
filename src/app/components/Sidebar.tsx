@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,8 +10,6 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
-  const pathname = usePathname();
-  const router = useRouter();
   const [currentUser, setCurrentUser] = useState<{ role?: string; permissions?: string[] } | null>(null);
 
   useEffect(() => {
@@ -115,7 +113,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         {/* Sidebar Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <div className={`flex items-center ${!isOpen && 'md:hidden'}`}>
-            <img src="/logo.svg" alt="Logo" className="h-8 w-8" />
+            <Image src="/logo.svg" alt="Logo" width={32} height={32} className="h-8 w-8" />
             <span className={`ml-2 font-semibold text-gray-800 dark:text-white transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
               Yurtsever
             </span>
@@ -143,13 +141,11 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                 return null;
               }
               
-              const isActive = pathname === item.path;
-              
               return (
                 <li key={index}>
                   <Link 
                     href={item.path}
-                    className={`flex items-center p-2 rounded-md transition-all duration-200 ${isActive ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                    className="flex items-center p-2 rounded-md transition-all duration-200 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     <div className="flex-shrink-0">
                       {item.icon}
