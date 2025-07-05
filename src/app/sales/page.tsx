@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthGuard from "../components/AuthGuard";
 import * as XLSX from 'xlsx';
+import PageHeader from "../components/PageHeader";
 
 interface Sale {
   id: number;
@@ -367,6 +368,11 @@ function SalesPageContent() {
 
   return (
     <div className="w-full mx-auto px-4 py-8 animate-fade-in">
+      <PageHeader
+        title="Satışlar"
+        description="Tüm satış işlemlerini ve raporlarını görüntüleyin"
+        icon={<svg className="w-12 h-12 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 17v-2a4 4 0 014-4h10a4 4 0 014 4v2M16 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /></svg>}
+      />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 flex items-center gap-2 drop-shadow">

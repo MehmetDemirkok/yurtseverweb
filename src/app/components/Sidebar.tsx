@@ -47,6 +47,16 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
       permission: null, // Herkes erişebilir
     },
     {
+      name: 'Konaklama Kayıtları',
+      path: '/accommodation',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 10V7a5 5 0 0110 0v3M5 21h14a2 2 0 002-2v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7a2 2 0 002 2z" />
+        </svg>
+      ),
+      permission: null, // Herkes erişebilir
+    },
+    {
       name: 'Kullanıcı Yönetimi',
       path: '/admin',
       icon: (
@@ -65,6 +75,16 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         </svg>
       ),
       permission: 'sales',
+    },
+    {
+      name: 'Finans',
+      path: '/finance',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-2.21 0-4 1.343-4 3s1.79 3 4 3 4 1.343 4 3-1.79 3-4 3m0-12c1.657 0 3 .895 3 2s-1.343 2-3 2-3 .895-3 2 1.343 2 3 2m0-8v2m0 12v2" />
+        </svg>
+      ),
+      permission: null, // Herkes erişebilir
     },
     {
       name: 'Sistem Logları',

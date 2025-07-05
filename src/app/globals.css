@@ -80,6 +80,29 @@ html {
   background: var(--primary);
 }
 
+/* Sidebar layout fixes */
+.sidebar-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow: auto;
+  transition: margin-left 0.3s ease-in-out;
+}
+
+/* Table responsive fixes */
+.table-container {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.table-responsive {
+  min-width: max-content;
+}
+
 /* Animations */
 @keyframes fadeIn {
   from {

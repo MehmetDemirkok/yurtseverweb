@@ -32,13 +32,13 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="sidebar-layout">
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
       
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'md:ml-16'}`}>
-        <div className="relative h-full overflow-auto">
+      <div className={`sidebar-content ${sidebarOpen ? 'md:ml-64' : 'md:ml-16'} ml-0`}>
+        <div className="relative h-full">
           {/* Mobil menü butonu */}
           <button 
             onClick={toggleSidebar}
@@ -50,7 +50,7 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
           </button>
           
           {/* İçerik */}
-          <main className="p-4 md:p-6">
+          <main className="p-4 md:p-6 w-full h-full overflow-auto">
             {children}
           </main>
         </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import PageHeader from "../components/PageHeader";
 
 interface User {
   id: number;
@@ -352,30 +353,11 @@ export default function AdminPage() {
 
   return (
     <>
-      {/* Modern Header with Logo */}
-      <header className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-600 shadow-2xl">
-        <div className="absolute inset-0 bg-black opacity-10"></div>
-        <div className="relative container mx-auto px-6 py-8">
-          <div className="flex items-center justify-center space-x-4 animate-fade-in">
-            <div className="flex-shrink-0">
-              <img src="/logo.svg" alt="Yurtsever Logo" className="h-16 w-auto drop-shadow-lg" />
-            </div>
-            <div className="text-center">
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-lg">
-                Kullanıcı Yönetim Paneli
-              </h1>
-              <p className="text-blue-100 text-lg font-medium">
-                Sistem Kullanıcılarını Yönetin ve Rolleri Düzenleyin
-              </p>
-            </div>
-          </div>
-        </div>
-        {/* Decorative elements */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-white opacity-10 rounded-full"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-white opacity-10 rounded-full"></div>
-        </div>
-      </header>
+      <PageHeader
+        title="Kullanıcı Yönetimi"
+        description="Sistem kullanıcılarını ve yetkilerini yönetin"
+        icon={<svg className="w-12 h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
+      />
 
       <main className="container mx-auto px-6 py-8">
         {/* Navigation */}
@@ -389,16 +371,6 @@ export default function AdminPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
               Ana Sayfaya Dön
-            </button>
-            
-            <button
-              onClick={() => router.push('/admin/logs')}
-              className="btn btn-secondary flex items-center gap-2 px-6 py-3 text-lg"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Sistem Logları
             </button>
           </div>
           
