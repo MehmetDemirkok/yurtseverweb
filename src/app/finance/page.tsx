@@ -163,6 +163,27 @@ export default function FinancePage() {
     return 'Diğer';
   }
 
+  // Organizasyon adını description'dan ayıkla
+  function getOrgNameFromDescription(description: string) {
+    // Format: "Kurum Adı | Organizasyon Adı - ..."
+    if (!description) return 'Diğer';
+    const match = description.match(/^.*?\|\s*(.*?)\s*-/);
+    if (match) return match[1].trim();
+    return 'Diğer';
+  }
+
+  // Kurum > Organizasyon bazında özet
+  const kurumOrgSummary = transactions.reduce((acc, t) => {
+    if (t.type !== 'ALIS' && t.type !== 'SATIS') return acc;
+    const kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : 'Diğer';
+    const org = t.type === 'SATIS' ? getOrgNameFromDescription(t.description) : 'Diğer';
+    if (!acc[kurum]) acc[kurum] = {};
+    if (!acc[kurum][org]) acc[kurum][org] = { alis: 0, satis: 0 };
+    if (t.type === 'ALIS') acc[kurum][org].alis += t.amount;
+    if (t.type === 'SATIS') acc[kurum][org].satis += t.amount;
+    return acc;
+  }, {} as Record<string, Record<string, { alis: number; satis: number }>>);
+
   // Kurum bazında özet
   const kurumSummary = transactions.reduce((acc, t) => {
     const kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : 'Diğer';
@@ -243,6 +264,7 @@ export default function FinancePage() {
             )}
             
             {/* Tablo */}
+            {/*
             <div className="card overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
@@ -279,6 +301,7 @@ export default function FinancePage() {
                 </tbody>
               </table>
             </div>
+            */}
 
             {/* Kurum Bazında Finans Tablosu */}
             <div className="mb-8">
@@ -302,6 +325,37 @@ export default function FinancePage() {
                         <td className={`p-3 text-right font-bold ${val.satis - val.alis >= 0 ? 'text-green-700' : 'text-red-700'}`}>{(val.satis - val.alis).toLocaleString('tr-TR')}</td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Organizasyon Bazında Finans Tablosu */}
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold mb-2 text-purple-900">Organizasyon Bazında Finans Özeti</h2>
+              <div className="card overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="bg-purple-100">
+                      <th className="p-3 text-left">Kurum</th>
+                      <th className="p-3 text-left">Organizasyon</th>
+                      <th className="p-3 text-right">Toplam Alış (₺)</th>
+                      <th className="p-3 text-right">Toplam Satış (₺)</th>
+                      <th className="p-3 text-right">Net Kar/Zarar (₺)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(kurumOrgSummary).flatMap(([kurum, orgs]) =>
+                      Object.entries(orgs).map(([org, val]) => (
+                        <tr key={kurum + '-' + org} className="border-b last:border-b-0">
+                          <td className="p-3 font-bold text-blue-800">{kurum}</td>
+                          <td className="p-3 font-semibold text-purple-800">{org}</td>
+                          <td className="p-3 text-right">{val.alis.toLocaleString('tr-TR')}</td>
+                          <td className="p-3 text-right">{val.satis.toLocaleString('tr-TR')}</td>
+                          <td className={`p-3 text-right font-bold ${val.satis - val.alis >= 0 ? 'text-green-700' : 'text-red-700'}`}>{(val.satis - val.alis).toLocaleString('tr-TR')}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

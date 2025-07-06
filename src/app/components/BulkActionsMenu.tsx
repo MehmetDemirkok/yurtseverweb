@@ -128,7 +128,7 @@ export default function BulkActionsMenu({
                           setShowStatusMenu(false);
                           setIsOpen(false);
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-gray-100 transition-colors duration-150 text-sm"
+                        className="w-full px-4 py-2 text-left hover:bg-gray-100 transition-colors duration-150 text-sm text-gray-800 font-medium"
                       >
                         {status.label}
                       </button>

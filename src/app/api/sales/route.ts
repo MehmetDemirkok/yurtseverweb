@@ -147,8 +147,45 @@ export async function PATCH(request: Request) {
     }
 
     const data = await request.json();
-    const { id, fiyat, status } = data;
+    const { id, ids, fiyat, status } = data;
     
+    // TOPLU GÜNCELLEME
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+      // Her id için güncelleme yap
+      const updatedSales = [];
+      for (const saleId of ids) {
+        const existingSale = await prisma.sale.findUnique({
+          where: { id: Number(saleId) },
+          include: { accommodation: true }
+        });
+        if (!existingSale) continue;
+        const updateData: any = {};
+        if (typeof fiyat === 'number') updateData.fiyat = fiyat;
+        if (status) updateData.status = status;
+        const updated = await prisma.sale.update({
+          where: { id: Number(saleId) },
+          data: updateData,
+          include: { accommodation: true }
+        });
+        // Finans kaydı oluştur (FATURALANDI'ya geçişte)
+        if (status === 'FATURALANDI' && existingSale.status !== 'FATURALANDI') {
+          const totalAmount = (fiyat || existingSale.fiyat) * (existingSale.accommodation?.numberOfNights || 1);
+          await prisma.transaction.create({
+            data: {
+              type: 'SATIS',
+              description: `${existingSale.accommodation?.kurumCari || 'Bilinmeyen Kurum'} | ${existingSale.organizasyonAdi} - ${existingSale.accommodation?.adiSoyadi || 'Konaklama'} (Satış #${saleId})`,
+              amount: totalAmount,
+              date: new Date().toISOString().slice(0, 10),
+              userId: userId
+            }
+          });
+        }
+        updatedSales.push(updated);
+      }
+      return NextResponse.json({ success: true, updatedSales });
+    }
+
+    // TEKLİ GÜNCELLEME
     if (!id) {
       return NextResponse.json({ error: 'ID zorunlu.' }, { status: 400 });
     }
@@ -161,7 +198,7 @@ export async function PATCH(request: Request) {
 
     if (!existingSale) {
       return NextResponse.json({ error: 'Satış kaydı bulunamadı.' }, { status: 404 });
-  }
+    }
 
     // Güncelleme verilerini hazırla
     const updateData: any = {};
@@ -179,7 +216,6 @@ export async function PATCH(request: Request) {
     if (status === 'FATURALANDI' && existingSale.status !== 'FATURALANDI') {
       // Finans kaydı oluştur
       const totalAmount = (fiyat || existingSale.fiyat) * (existingSale.accommodation?.numberOfNights || 1);
-      
       await prisma.transaction.create({
         data: {
           type: 'SATIS',

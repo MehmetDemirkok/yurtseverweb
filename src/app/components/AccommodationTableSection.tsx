@@ -53,6 +53,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   const [saleModalOpen, setSaleModalOpen] = useState(false);
   const [salePrices, setSalePrices] = useState<{ [userId: number]: number }>({});
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
   
   // Eksik state tanımlamaları
   const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
@@ -60,6 +61,20 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   const [filterOrg, setFilterOrg] = useState('');
   const [filterName, setFilterName] = useState('');
   const [filterTitle, setFilterTitle] = useState('');
+
+  // Satışa aktar popup'ı için toplu fiyat state'i
+  const [useBulkPrice, setUseBulkPrice] = useState(false);
+  const [bulkPrice, setBulkPrice] = useState<number | ''>('');
+
+  // Seçili kayıtların kurum, organizasyon ve otel adı aynı mı?
+  const allSame = (() => {
+    if (selectedRecordIds.length < 2) return false;
+    const selected = records.filter(r => selectedRecordIds.includes(r.id));
+    const kurum = selected[0]?.kurumCari;
+    const org = selected[0]?.organizasyonAdi;
+    const otel = selected[0]?.otelAdi;
+    return selected.every(r => r.kurumCari === kurum && r.organizasyonAdi === org && r.otelAdi === otel);
+  })();
 
   // Role tabanlı yetki kontrolü fonksiyonları
   const hasRole = (requiredRole: string): boolean => {
@@ -404,28 +419,28 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
     );
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedRecordIds.length === 0) return;
+  // Toplu silme işlemini başlatan fonksiyon (popup açar)
+  const handleBulkDeleteRequest = () => {
+    setShowBulkDeleteModal(true);
+    setPendingBulkDelete(false);
+  };
 
+  // Toplu silme işlemini onaylayan fonksiyon (gerçek silme)
+  const handleBulkDeleteConfirm = async () => {
+    setPendingBulkDelete(true);
+    // Burada gerçek silme işlemi yapılır
+    // ... mevcut handleBulkDelete kodunu buraya taşı ...
     try {
-      const res = await fetch('/api/accommodation', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids: selectedRecordIds }),
-      });
-
-      if (res.ok) {
-        setRecords(prev => prev.filter(record => !selectedRecordIds.includes(record.id)));
-        setSelectedRecordIds([]);
-        setShowBulkDeleteModal(false);
-        alert('Kayıtlar başarıyla silindi!');
-      } else {
-        const errorData = await res.json();
-        alert(`Kayıtlar silinemedi! ${errorData.error || ''}`);
+      for (const id of selectedRecordIds) {
+        await fetch(`/api/accommodation/${id}`, { method: 'DELETE' });
       }
+      setRecords(prev => prev.filter(record => !selectedRecordIds.includes(record.id)));
+      setSelectedRecordIds([]);
+      setShowBulkDeleteModal(false);
     } catch (error) {
-      console.error('Bulk delete error:', error);
-      alert('Kayıtlar silinemedi!');
+      alert('Toplu silme sırasında hata oluştu!');
+    } finally {
+      setPendingBulkDelete(false);
     }
   };
 
@@ -919,7 +934,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
       <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mb-8">
         <BulkActionsMenu
           selectedCount={selectedRecordIds.length}
-          onBulkDelete={handleBulkDelete}
+          onBulkDelete={handleBulkDeleteRequest}
           onBulkExport={handleExportExcel}
           customActions={[
             {
@@ -1156,36 +1171,71 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
               </div>
               <h2 className="text-2xl font-bold text-gray-800">Seçili Kişiler İçin Satış Fiyatı</h2>
             </div>
-            <div className="space-y-3 max-h-80 overflow-y-auto mb-4">
-              {selectedRecordIds.map(accommodationId => {
-                const rec = records.find(r => r.id === accommodationId);
-                const isInvalid = !salePrices[accommodationId] || salePrices[accommodationId] <= 0;
-                return (
-                  <div key={accommodationId} className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 p-3 rounded-lg bg-gray-50 border border-gray-100">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-800 truncate">{rec?.adiSoyadi || accommodationId}</div>
-                      <div className="text-xs text-gray-500 flex flex-wrap gap-2 mt-1">
-                        <span className="inline-flex items-center gap-1"><svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" /></svg> {rec?.odaTipi}</span>
-                        <span className="inline-flex items-center gap-1"><svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10" /></svg> {rec?.numberOfNights || 0} gece</span>
-                        <span className="inline-flex items-center gap-1"><svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" /></svg> {rec?.gecelikUcret?.toLocaleString('tr-TR')} ₺ gecelik</span>
+            {/* Toplu fiyat seçeneği */}
+            {allSame && (
+              <div className="mb-6 p-4 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 flex flex-col md:flex-row md:items-center gap-3">
+                <div className="font-semibold text-gray-800 flex-1">Tüm seçili kişiler için toplu fiyat eklemek ister misiniz?</div>
+                <div className="flex gap-2">
+                  <button
+                    className={`px-4 py-2 rounded-lg font-bold border transition-colors ${useBulkPrice ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-blue-700 border-blue-300 hover:bg-blue-50'}`}
+                    onClick={() => setUseBulkPrice(true)}
+                  >Evet</button>
+                  <button
+                    className={`px-4 py-2 rounded-lg font-bold border transition-colors ${!useBulkPrice ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-blue-700 border-blue-300 hover:bg-blue-50'}`}
+                    onClick={() => setUseBulkPrice(false)}
+                  >Hayır</button>
+                </div>
+              </div>
+            )}
+            {/* Toplu fiyat inputu */}
+            {allSame && useBulkPrice && (
+              <div className="mb-6 flex items-center gap-3">
+                <label className="font-semibold text-gray-700">Toplu Fiyat (₺/gecelik):</label>
+                <input
+                  type="number"
+                  className="input w-32 text-base border border-blue-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-200"
+                  value={bulkPrice}
+                  onChange={e => setBulkPrice(Number(e.target.value))}
+                  placeholder="Fiyat"
+                  min={0}
+                />
+                <span className="text-gray-500 font-bold">₺</span>
+              </div>
+            )}
+            {/* Kişi bazlı fiyat inputları */}
+            {(!allSame || !useBulkPrice) && (
+              <div className="space-y-3 max-h-80 overflow-y-auto mb-4">
+                {selectedRecordIds.map(accommodationId => {
+                  const rec = records.find(r => r.id === accommodationId);
+                  const isInvalid = !salePrices[accommodationId] || salePrices[accommodationId] <= 0;
+                  return (
+                    <div key={accommodationId} className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-800 truncate">{rec?.adiSoyadi || accommodationId}</div>
+                        <div className="text-xs text-gray-500 flex flex-wrap gap-2 mt-1">
+                          <span className="inline-flex items-center gap-1"><svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" /></svg> {rec?.odaTipi}</span>
+                          <span className="inline-flex items-center gap-1"><svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10" /></svg> {rec?.numberOfNights || 0} gece</span>
+                          <span className="inline-flex items-center gap-1"><svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" /></svg> {rec?.gecelikUcret?.toLocaleString('tr-TR')} ₺ gecelik</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2 md:mt-0">
+                        <input
+                          type="number"
+                          className={`input w-28 text-base border ${isInvalid ? 'border-red-400 bg-red-50' : 'border-gray-300'} focus:border-blue-500 focus:ring-2 focus:ring-blue-200`}
+                          value={salePrices[accommodationId] || ''}
+                          onChange={e => handleSalePriceChange(accommodationId, Number(e.target.value))}
+                          placeholder="Fiyat"
+                          min={0}
+                        />
+                        <span className="text-gray-500 font-bold">₺</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-2 md:mt-0">
-                      <input
-                        type="number"
-                        className={`input w-28 text-base border ${isInvalid ? 'border-red-400 bg-red-50' : 'border-gray-300'} focus:border-blue-500 focus:ring-2 focus:ring-blue-200`}
-                        value={salePrices[accommodationId] || ''}
-                        onChange={e => handleSalePriceChange(accommodationId, Number(e.target.value))}
-                        placeholder="Fiyat"
-                        min={0}
-                      />
-                      <span className="text-gray-500 font-bold">₺</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {selectedRecordIds.some(accommodationId => !salePrices[accommodationId] || salePrices[accommodationId] <= 0) && (
+                  );
+                })}
+              </div>
+            )}
+            {/* Hata mesajı */}
+            {((allSame && useBulkPrice && (!bulkPrice || bulkPrice <= 0)) || (!allSame || !useBulkPrice) && selectedRecordIds.some(accommodationId => !salePrices[accommodationId] || salePrices[accommodationId] <= 0)) && (
               <div className="text-red-600 text-sm mb-2 font-semibold flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-12.728 12.728M5.636 5.636l12.728 12.728" /></svg>
                 Tüm kişiler için geçerli bir fiyat girilmelidir!
@@ -1193,7 +1243,24 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
             )}
             <div className="flex justify-end space-x-2 mt-6">
               <button className="btn btn-secondary" onClick={() => setSaleModalOpen(false)}>İptal</button>
-              <button className="btn btn-success" onClick={confirmSaleTransfer}>Satışa Aktar</button>
+              <button className="btn btn-success" onClick={() => {
+                if (allSame && useBulkPrice) {
+                  // Tüm kayıtlara toplu fiyatı uygula
+                  const newPrices: Record<number, number> = {};
+                  selectedRecordIds.forEach(id => { newPrices[id] = Number(bulkPrice); });
+                  setSalePrices(newPrices);
+                  confirmSaleTransfer();
+                } else {
+                  confirmSaleTransfer();
+                }
+              }}
+                disabled={
+                  (allSame && useBulkPrice && (!bulkPrice || bulkPrice <= 0)) ||
+                  ((!allSame || !useBulkPrice) && selectedRecordIds.some(accommodationId => !salePrices[accommodationId] || salePrices[accommodationId] <= 0))
+                }
+              >
+                Satışa Aktar
+              </button>
             </div>
           </div>
         </div>
@@ -1633,27 +1700,12 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
               ×
             </button>
             <h2 className="text-2xl font-bold text-red-700 mb-6">Toplu Silme Onayı</h2>
-            <p className="mb-4 text-gray-700 text-lg">Seçili <span className="font-bold text-black">{selectedRecordIds.length}</span> kaydı silmek istediğinize emin misiniz?</p>
-            <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
-              <div className="flex items-center mb-2">
-                <input
-                  type="checkbox"
-                  id="returnToAccommodationBulk"
-                  checked={true}
-                  disabled
-                  className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="returnToAccommodationBulk" className="ml-2 text-blue-800 font-medium">
-                  Konaklama kayıtlarına geri döndür
-                </label>
-              </div>
-              <p className="text-sm text-blue-700 ml-7">
-                Bu seçenek işaretlendiğinde, silinen kayıtlar otomatik olarak konaklama kayıtları tablosuna geri eklenecektir.
-              </p>
-            </div>
+            <p className="mb-8 text-gray-700 text-lg">Seçili <span className="font-bold text-black">{selectedRecordIds.length}</span> kaydı silmek istediğinize emin misiniz?</p>
             <div className="flex justify-end gap-2 mt-6">
-              <button className="btn btn-secondary" onClick={() => setShowBulkDeleteModal(false)}>Vazgeç</button>
-              <button className="btn btn-error bg-red-600 hover:bg-red-700 text-white font-bold" onClick={handleBulkDelete}>Evet, Sil</button>
+              <button className="btn btn-secondary" onClick={() => setShowBulkDeleteModal(false)} disabled={pendingBulkDelete}>Vazgeç</button>
+              <button className="btn btn-error bg-red-600 hover:bg-red-700 text-white font-bold" onClick={handleBulkDeleteConfirm} disabled={pendingBulkDelete}>
+                {pendingBulkDelete ? 'Siliniyor...' : 'Evet, Sil'}
+              </button>
             </div>
           </div>
         </div>
