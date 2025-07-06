@@ -154,6 +154,24 @@ export default function FinancePage() {
     }
   };
 
+  // Kurum adını description'dan ayıkla
+  function getKurumNameFromDescription(description: string) {
+    // Format: "Kurum Adı | Organizasyon Adı - ..."
+    if (!description) return 'Diğer';
+    const match = description.match(/^(.*?)\s*\|/);
+    if (match) return match[1].trim();
+    return 'Diğer';
+  }
+
+  // Kurum bazında özet
+  const kurumSummary = transactions.reduce((acc, t) => {
+    const kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : 'Diğer';
+    if (!acc[kurum]) acc[kurum] = { alis: 0, satis: 0 };
+    if (t.type === 'ALIS') acc[kurum].alis += t.amount;
+    if (t.type === 'SATIS') acc[kurum].satis += t.amount;
+    return acc;
+  }, {} as Record<string, { alis: number; satis: number }>);
+
   return (
     <AuthGuard requiredPermissions={['FINANCE_VIEW']}>
       <div className="w-full max-w-5xl mx-auto px-4 py-8 animate-fade-in">
@@ -175,7 +193,7 @@ export default function FinancePage() {
         ) : (
           <>
             {/* Özet Kartlar */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
               <div className="card p-6 flex items-center gap-4 bg-gradient-to-r from-blue-100 to-blue-50 border border-blue-200">
                 <div className="w-12 h-12 flex items-center justify-center rounded-full bg-blue-200">
                   <svg className="w-7 h-7 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-2.21 0-4 1.343-4 3s1.79 3 4 3 4 1.343 4 3-1.79 3-4 3m0-12c1.657 0 3 .895 3 2s-1.343 2-3 2-3 .895-3 2 1.343 2 3 2m0-8v2m0 12v2" /></svg>
@@ -201,6 +219,17 @@ export default function FinancePage() {
                 <div>
                   <div className="text-gray-500">Net Kar/Zarar</div>
                   <div className={`text-2xl font-bold ${net >= 0 ? 'text-green-700' : 'text-red-700'}`}>{net.toLocaleString('tr-TR')} ₺</div>
+                </div>
+              </div>
+              <div className="card p-6 flex items-center gap-4 bg-gradient-to-r from-orange-100 to-orange-50 border border-orange-200">
+                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-200">
+                  <svg className="w-7 h-7 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <div>
+                  <div className="text-gray-500">Satış Kaynaklı</div>
+                  <div className="text-2xl font-bold text-orange-700">
+                    {transactions.filter(t => t.type === 'SATIS' && t.description.includes('Satış #')).length}
+                  </div>
                 </div>
               </div>
             </div>
@@ -249,6 +278,33 @@ export default function FinancePage() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Kurum Bazında Finans Tablosu */}
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold mb-2 text-blue-900">Kurum Bazında Finans Özeti</h2>
+              <div className="card overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="bg-blue-100">
+                      <th className="p-3 text-left">Kurum</th>
+                      <th className="p-3 text-right">Toplam Alış (₺)</th>
+                      <th className="p-3 text-right">Toplam Satış (₺)</th>
+                      <th className="p-3 text-right">Net Kar/Zarar (₺)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(kurumSummary).map(([kurum, val]) => (
+                      <tr key={kurum} className="border-b last:border-b-0">
+                        <td className="p-3 font-bold text-blue-800">{kurum}</td>
+                        <td className="p-3 text-right">{val.alis.toLocaleString('tr-TR')}</td>
+                        <td className="p-3 text-right">{val.satis.toLocaleString('tr-TR')}</td>
+                        <td className={`p-3 text-right font-bold ${val.satis - val.alis >= 0 ? 'text-green-700' : 'text-red-700'}`}>{(val.satis - val.alis).toLocaleString('tr-TR')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </>
         )}

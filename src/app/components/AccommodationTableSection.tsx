@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import * as XLSX from 'xlsx';
+import BulkActionsMenu from "./BulkActionsMenu";
 
 export interface AccommodationRecord {
   id: number;
@@ -839,10 +840,8 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
 
   return (
     <div className="w-full mx-auto mt-8">
-      {/* Filtreleme, arama ve işlem butonları */}
-      <div className="flex flex-col gap-4 mb-4">
         {/* Filtreleme ve arama alanları */}
-        <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-wrap gap-2 items-center mb-4">
           <div className="relative w-full sm:w-auto">
             <div className="flex items-center bg-white border rounded-lg overflow-hidden shadow-sm">
               <div className="p-2 text-gray-400">
@@ -909,49 +908,52 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
             </div>
           </div>
           
-          {canAdd() && (
-            <button 
-              className="ml-auto btn btn-primary py-2 px-3 text-sm h-10"
-              onClick={openAddModal}
-            >
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Yeni Kayıt
-            </button>
-          )}
-        </div>
-        
-        {/* İşlem butonları */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all shadow-sm"
-            onClick={handlePuantajRaporu}
-          >
-            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h4m0 0V7a4 4 0 00-4-4H7a4 4 0 00-4 4v10a4 4 0 004 4" /></svg>
-            Puantaj Raporu
-          </button>
           <label className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all shadow-sm cursor-pointer">
             <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
             Excel'den İçe Aktar
             <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
           </label>
-          <button
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-400 to-teal-500 text-xs font-medium text-white shadow-sm hover:from-green-500 hover:to-teal-600 transition-all"
-            onClick={handleExportExcel}
-          >
-            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v16h16V4H4zm4 8h8m-4-4v8" /></svg>
-            Excel'e Aktar
-          </button>
-          <button
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-400 to-yellow-500 text-xs font-medium text-white shadow-sm hover:from-orange-500 hover:to-yellow-600 transition-all"
-            onClick={handleDownloadExcelTemplate}
-          >
-            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
-            Excel Şablonu
+      </div>
+
+      {/* Butonlar - Tablo üstü */}
+      <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mb-8">
+        <BulkActionsMenu
+          selectedCount={selectedRecordIds.length}
+          onBulkDelete={handleBulkDelete}
+          onBulkExport={handleExportExcel}
+          customActions={[
+            {
+              label: 'Satışa Aktar',
+              onClick: () => setSaleModalOpen(true),
+              icon: (
+                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              )
+            }
+          ]}
+        />
+        <button onClick={handleDownloadExcelTemplate} className="btn btn-primary">
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Excel Şablonu İndir
           </button>
         </div>
-      </div>
+
+      <button onClick={handlePuantajRaporu} className="btn btn-warning">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Puantaj Raporu
+      </button>
+
+      <button onClick={() => setShowAddModal(true)} className="btn btn-success">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        Yeni Kayıt
+      </button>
       {/* Tablo */}
       <div className="table-container overflow-x-auto bg-white rounded-lg shadow-md">
         <table className="table table-responsive text-xs w-full border-collapse">
@@ -1135,61 +1137,6 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
         </table>
       </div>
 
-      {/* Satışa Aktar ve Toplu Silme butonları */}
-      {selectedRecordIds.length > 0 && (
-        <div className="fixed bottom-4 right-4 z-50 flex gap-2">
-          <button 
-            className="flex items-center gap-1 px-3 py-2 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-lg transition-colors" 
-            onClick={() => setShowBulkDeleteModal(true)}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            <span>{selectedRecordIds.length} Kaydı Sil</span>
-          </button>
-          <button 
-            className="flex items-center gap-1 px-3 py-2 text-sm font-medium bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-lg transition-colors" 
-            onClick={handleSaleTransfer}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <span>Satışa Aktar</span>
-          </button>
-        </div>
-      )}
-      
-      {/* Toplu Silme Onay Modalı */}
-      {showBulkDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setShowBulkDeleteModal(false); }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8 relative animate-fade-in border border-red-100">
-            <button
-              onClick={() => setShowBulkDeleteModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
-              aria-label="Kapat"
-            >
-              ×
-            </button>
-            <div className="flex items-center mb-6">
-              <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-xl flex items-center justify-center mr-4">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-800">Seçili Kayıtları Sil</h2>
-            </div>
-            <div className="mb-6">
-              <p className="text-gray-600">
-                <span className="font-bold text-red-600">{selectedRecordIds.length}</span> adet kaydı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
-              </p>
-            </div>
-            <div className="flex justify-end space-x-2 mt-6">
-              <button className="btn btn-secondary" onClick={() => setShowBulkDeleteModal(false)}>İptal</button>
-              <button className="btn btn-error" onClick={handleBulkDelete}>Kayıtları Sil</button>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Satış fiyatı modalı */}
       {saleModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setSaleModalOpen(false); }}>
@@ -1670,6 +1617,43 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
             <div className="flex justify-end gap-2">
               <button className="btn btn-secondary" onClick={closeExportFilterModal}>İptal</button>
               <button className="btn btn-success" onClick={handleExportFilteredExcel}>Excel'e Aktar</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Toplu Silme Onay Modalı */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setShowBulkDeleteModal(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8 relative animate-fade-in border border-red-100">
+            <button
+              onClick={() => setShowBulkDeleteModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+              aria-label="Kapat"
+            >
+              ×
+            </button>
+            <h2 className="text-2xl font-bold text-red-700 mb-6">Toplu Silme Onayı</h2>
+            <p className="mb-4 text-gray-700 text-lg">Seçili <span className="font-bold text-black">{selectedRecordIds.length}</span> kaydı silmek istediğinize emin misiniz?</p>
+            <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <div className="flex items-center mb-2">
+                <input
+                  type="checkbox"
+                  id="returnToAccommodationBulk"
+                  checked={true}
+                  disabled
+                  className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="returnToAccommodationBulk" className="ml-2 text-blue-800 font-medium">
+                  Konaklama kayıtlarına geri döndür
+                </label>
+              </div>
+              <p className="text-sm text-blue-700 ml-7">
+                Bu seçenek işaretlendiğinde, silinen kayıtlar otomatik olarak konaklama kayıtları tablosuna geri eklenecektir.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button className="btn btn-secondary" onClick={() => setShowBulkDeleteModal(false)}>Vazgeç</button>
+              <button className="btn btn-error bg-red-600 hover:bg-red-700 text-white font-bold" onClick={handleBulkDelete}>Evet, Sil</button>
             </div>
           </div>
         </div>

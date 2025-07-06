@@ -129,18 +129,68 @@ export async function POST(request: Request) {
   }
 }
 
-// Satış fiyatı güncelle (PATCH)
+// Satış fiyatı ve durumu güncelle (PATCH)
 export async function PATCH(request: Request) {
-  const data = await request.json();
-  const { id, fiyat } = data;
-  if (!id || typeof fiyat !== 'number') {
-    return NextResponse.json({ error: 'Eksik veri.' }, { status: 400 });
-  }
   try {
+    // Kullanıcı bilgilerini al
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    let userId = null;
+    
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
+        userId = decoded.id;
+      } catch (e) {
+        console.error('Token çözme hatası:', e);
+      }
+    }
+
+    const data = await request.json();
+    const { id, fiyat, status } = data;
+    
+    if (!id) {
+      return NextResponse.json({ error: 'ID zorunlu.' }, { status: 400 });
+    }
+
+    // Mevcut satış kaydını al
+    const existingSale = await prisma.sale.findUnique({
+      where: { id: Number(id) },
+      include: { accommodation: true }
+    });
+
+    if (!existingSale) {
+      return NextResponse.json({ error: 'Satış kaydı bulunamadı.' }, { status: 404 });
+  }
+
+    // Güncelleme verilerini hazırla
+    const updateData: any = {};
+    if (typeof fiyat === 'number') updateData.fiyat = fiyat;
+    if (status) updateData.status = status;
+
+    // Satışı güncelle
     const updated = await prisma.sale.update({
       where: { id: Number(id) },
-      data: { fiyat },
+      data: updateData,
+      include: { accommodation: true }
     });
+
+    // Eğer durum FATURALANDI olarak değiştirildiyse ve daha önce FATURALANDI değilse
+    if (status === 'FATURALANDI' && existingSale.status !== 'FATURALANDI') {
+      // Finans kaydı oluştur
+      const totalAmount = (fiyat || existingSale.fiyat) * (existingSale.accommodation?.numberOfNights || 1);
+      
+      await prisma.transaction.create({
+        data: {
+          type: 'SATIS',
+          description: `${existingSale.accommodation?.kurumCari || 'Bilinmeyen Kurum'} | ${existingSale.organizasyonAdi} - ${existingSale.accommodation?.adiSoyadi || 'Konaklama'} (Satış #${id})`,
+          amount: totalAmount,
+          date: new Date().toISOString().slice(0, 10),
+          userId: userId
+        }
+      });
+    }
+
     return NextResponse.json(updated);
   } catch (error: unknown) {
     if (error instanceof Error) {
