@@ -4,9 +4,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL") // PostgreSQL bağlantı URL'i
-  directUrl = env("DIRECT_URL") // Doğrudan veritabanı bağlantısı
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
 }
 
 model User {
