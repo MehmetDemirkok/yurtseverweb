@@ -465,14 +465,21 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   const handleSaleTransfer = () => {
     if (selectedRecordIds.length === 0) return;
     
-    // Seçili kayıtlar için varsayılan fiyatları 0 olarak ayarla
+    // Seçili kayıtlar için varsayılan fiyatları konaklama kayıtlarından al
     const defaultPrices: { [key: number]: number } = {};
     selectedRecordIds.forEach(id => {
-      defaultPrices[id] = 0;
+      const record = records.find(r => r.id === id);
+      // Varsayılan olarak toplam ücret kullan, eğer yoksa gecelik ücret kullan, ikisi de yoksa 0 olarak ayarla
+      defaultPrices[id] = record?.toplamUcret || record?.gecelikUcret || 0;
     });
     
     setSalePrices(defaultPrices);
     setSaleModalOpen(true);
+    
+    // Kullanıcıya bilgi mesajı göster
+    if (selectedRecordIds.length > 0) {
+      alert('Satış fiyatları varsayılan olarak konaklama kayıtlarındaki toplam ücret değerleriyle doldurulmuştur. Gerekirse değiştirebilirsiniz.');
+    }
   };
 
   const handleSalePriceChange = (accommodationId: number, value: number) => {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import PageHeader from "../components/PageHeader";
 import AuthGuard from "../components/AuthGuard";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 interface Transaction {
   id: number;
@@ -27,6 +28,8 @@ interface User {
 
 export default function FinancePage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [sales, setSales] = useState<any[]>([]);
+  const [accommodations, setAccommodations] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<"ALIS" | "SATIS">("ALIS");
   const [form, setForm] = useState({ description: "", amount: "", date: "" });
@@ -34,10 +37,17 @@ export default function FinancePage() {
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const router = useRouter();
+  
+  // Kurum ve organizasyon seçimi için state'ler
+  const [selectedKurum, setSelectedKurum] = useState<string>("");
+  const [selectedOrg, setSelectedOrg] = useState<string>("");
+  const [availableOrgs, setAvailableOrgs] = useState<string[]>([]);
+  const [kurumList, setKurumList] = useState<string[]>([]);
+  const [showStats, setShowStats] = useState(false);
 
-  // Kullanıcı bilgilerini ve işlemleri çek
+  // Kullanıcı bilgilerini, işlemleri, satışları ve konaklama kayıtlarını çek
   useEffect(() => {
-    const fetchUserAndTransactions = async () => {
+    const fetchAllData = async () => {
       try {
         setLoading(true);
         // Kullanıcı bilgilerini al
@@ -60,15 +70,39 @@ export default function FinancePage() {
           return;
         }
         
-        // İşlemleri çek
-        const transRes = await fetch('/api/transactions');
+        // Paralel olarak tüm verileri çek
+        const [transRes, salesRes, accommodationsRes] = await Promise.all([
+          fetch('/api/transactions'),
+          fetch('/api/sales'),
+          fetch('/api/accommodation')
+        ]);
+        
+        // İşlemleri kontrol et
         if (!transRes.ok) {
           const errorData = await transRes.json();
           throw new Error(errorData.error || 'İşlemler alınamadı');
         }
         
+        // Satışları kontrol et
+        if (!salesRes.ok) {
+          const errorData = await salesRes.json();
+          throw new Error(errorData.error || 'Satışlar alınamadı');
+        }
+        
+        // Konaklama kayıtlarını kontrol et
+        if (!accommodationsRes.ok) {
+          const errorData = await accommodationsRes.json();
+          throw new Error(errorData.error || 'Konaklama kayıtları alınamadı');
+        }
+        
+        // Verileri ayarla
         const transData = await transRes.json();
+        const salesData = await salesRes.json();
+        const accommodationsData = await accommodationsRes.json();
+        
         setTransactions(transData);
+        setSales(salesData);
+        setAccommodations(accommodationsData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Bir hata oluştu');
         console.error('Veri çekme hatası:', err);
@@ -77,11 +111,27 @@ export default function FinancePage() {
       }
     };
     
-    fetchUserAndTransactions();
+    fetchAllData();
   }, [router]);
 
-  const totalAlis = transactions.filter(t => t.type === "ALIS").reduce((sum, t) => sum + t.amount, 0);
-  const totalSatis = transactions.filter(t => t.type === "SATIS").reduce((sum, t) => sum + t.amount, 0);
+  // Konaklama kayıtlarından toplam alış hesaplama
+  const totalAlisFromAccommodation = accommodations.reduce((sum, acc) => sum + (acc.toplamUcret || 0), 0);
+  
+  // Satışlardan toplam satış hesaplama
+  const totalSatisFromSales = sales.reduce((sum, sale) => {
+    // Satış fiyatı ve gece sayısını kontrol et
+    const fiyat = sale.fiyat || 0;
+    const numberOfNights = sale.accommodation?.numberOfNights || 1;
+    return sum + (fiyat * numberOfNights);
+  }, 0);
+  
+  // Eski işlemlerden toplam alış ve satış (geriye dönük uyumluluk için)
+  const totalAlisFromTransactions = transactions.filter(t => t.type === "ALIS").reduce((sum, t) => sum + t.amount, 0);
+  const totalSatisFromTransactions = transactions.filter(t => t.type === "SATIS").reduce((sum, t) => sum + t.amount, 0);
+  
+  // Toplam değerler
+  const totalAlis = totalAlisFromAccommodation + totalAlisFromTransactions;
+  const totalSatis = totalSatisFromSales + totalSatisFromTransactions;
   const net = totalSatis - totalAlis;
 
   // İşlem ekleme yetkisi kontrolü
@@ -172,26 +222,126 @@ export default function FinancePage() {
     return 'Diğer';
   }
 
-  // Kurum > Organizasyon bazında özet
-  const kurumOrgSummary = transactions.reduce((acc, t) => {
-    if (t.type !== 'ALIS' && t.type !== 'SATIS') return acc;
-    const kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : 'Diğer';
-    const org = t.type === 'SATIS' ? getOrgNameFromDescription(t.description) : 'Diğer';
-    if (!acc[kurum]) acc[kurum] = {};
-    if (!acc[kurum][org]) acc[kurum][org] = { alis: 0, satis: 0 };
-    if (t.type === 'ALIS') acc[kurum][org].alis += t.amount;
-    if (t.type === 'SATIS') acc[kurum][org].satis += t.amount;
-    return acc;
-  }, {} as Record<string, Record<string, { alis: number; satis: number }>>);
+  // Kurum ve organizasyon özetleri için state'ler
+  const [kurumOrgSummary, setKurumOrgSummary] = useState<Record<string, Record<string, { alis: number; satis: number }>>>({});
+  const [kurumSummary, setKurumSummary] = useState<Record<string, { alis: number; satis: number }>>({});
 
-  // Kurum bazında özet
-  const kurumSummary = transactions.reduce((acc, t) => {
-    const kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : 'Diğer';
-    if (!acc[kurum]) acc[kurum] = { alis: 0, satis: 0 };
-    if (t.type === 'ALIS') acc[kurum].alis += t.amount;
-    if (t.type === 'SATIS') acc[kurum].satis += t.amount;
-    return acc;
-  }, {} as Record<string, { alis: number; satis: number }>);
+  // Özet hesaplamalarını useEffect içinde yap
+  useEffect(() => {
+    // Kurum > Organizasyon bazında özet hesaplama
+    const calculateKurumOrgSummary = () => {
+      // Başlangıç özeti
+      const summary: Record<string, Record<string, { alis: number; satis: number }>> = {};
+      
+      // Eski işlemleri ekle (geriye dönük uyumluluk için)
+      transactions.forEach(t => {
+        if (t.type !== 'ALIS' && t.type !== 'SATIS') return;
+        const kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : 'Diğer';
+        const org = t.type === 'SATIS' ? getOrgNameFromDescription(t.description) : 'Diğer';
+        if (!summary[kurum]) summary[kurum] = {};
+        if (!summary[kurum][org]) summary[kurum][org] = { alis: 0, satis: 0 };
+        if (t.type === 'ALIS') summary[kurum][org].alis += t.amount;
+        if (t.type === 'SATIS') summary[kurum][org].satis += t.amount;
+      });
+      
+      // Satışları ekle
+      sales.forEach(sale => {
+        const kurum = sale.kurumCari || getKurumNameFromDescription(sale.organizasyonAdi) || 'Diğer';
+        const org = sale.organizasyonAdi || 'Diğer';
+        const fiyat = sale.fiyat || 0;
+        const numberOfNights = sale.accommodation?.numberOfNights || 1;
+        const satisTutari = fiyat * numberOfNights;
+        
+        if (!summary[kurum]) summary[kurum] = {};
+        if (!summary[kurum][org]) summary[kurum][org] = { alis: 0, satis: 0 };
+        summary[kurum][org].satis += satisTutari;
+      });
+      
+      // Konaklama kayıtlarını ekle
+      accommodations.forEach(acc => {
+        const kurum = acc.kurumCari || 'Diğer';
+        const org = acc.organizasyonAdi || 'Diğer';
+        const toplamUcret = acc.toplamUcret || 0;
+        
+        if (!summary[kurum]) summary[kurum] = {};
+        if (!summary[kurum][org]) summary[kurum][org] = { alis: 0, satis: 0 };
+        summary[kurum][org].alis += toplamUcret;
+      });
+      
+      return summary;
+    };
+
+    // Kurum bazında özet hesaplama
+    const calculateKurumSummary = () => {
+      // Başlangıç özeti
+      const summary: Record<string, { alis: number; satis: number }> = {};
+      
+      // Eski işlemleri ekle (geriye dönük uyumluluk için)
+      transactions.forEach(t => {
+        const kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : 'Diğer';
+        if (!summary[kurum]) summary[kurum] = { alis: 0, satis: 0 };
+        if (t.type === 'ALIS') summary[kurum].alis += t.amount;
+        if (t.type === 'SATIS') summary[kurum].satis += t.amount;
+      });
+      
+      // Satışları ekle
+      sales.forEach(sale => {
+        const kurum = sale.kurumCari || getKurumNameFromDescription(sale.organizasyonAdi) || 'Diğer';
+        const fiyat = sale.fiyat || 0;
+        const numberOfNights = sale.accommodation?.numberOfNights || 1;
+        const satisTutari = fiyat * numberOfNights;
+        
+        if (!summary[kurum]) summary[kurum] = { alis: 0, satis: 0 };
+        summary[kurum].satis += satisTutari;
+      });
+      
+      // Konaklama kayıtlarını ekle
+      accommodations.forEach(acc => {
+        const kurum = acc.kurumCari || 'Diğer';
+        const toplamUcret = acc.toplamUcret || 0;
+        
+        if (!summary[kurum]) summary[kurum] = { alis: 0, satis: 0 };
+        summary[kurum].alis += toplamUcret;
+      });
+      
+      return summary;
+    };
+
+    // Hesaplamaları yap ve state'leri güncelle
+    const orgSummary = calculateKurumOrgSummary();
+    const kurumSum = calculateKurumSummary();
+    
+    setKurumOrgSummary(orgSummary);
+    setKurumSummary(kurumSum);
+    
+    // Kurum listesini güncelle
+    const kurumlar = Object.keys(kurumSum).sort();
+    setKurumList(kurumlar);
+  }, [transactions, sales, accommodations]);
+
+  // Kurum listesi değiştiğinde kontrol et
+  useEffect(() => {
+    // Eğer seçili kurum varsa ve bu kurum listede yoksa, seçimi sıfırla
+    if (selectedKurum && !kurumList.includes(selectedKurum)) {
+      setSelectedKurum("");
+      setSelectedOrg("");
+    }
+  }, [kurumList]);
+
+  // Seçili kurum değiştiğinde organizasyon listesini güncelle
+  useEffect(() => {
+    if (selectedKurum && kurumOrgSummary[selectedKurum]) {
+      const orgs = Object.keys(kurumOrgSummary[selectedKurum]).sort();
+      setAvailableOrgs(orgs);
+      
+      // Eğer seçili organizasyon varsa ve bu organizasyon listede yoksa, seçimi sıfırla
+      if (selectedOrg && !orgs.includes(selectedOrg)) {
+        setSelectedOrg("");
+      }
+    } else {
+      setAvailableOrgs([]);
+    }
+  }, [selectedKurum, kurumOrgSummary]);
 
   return (
     <AuthGuard requiredPermissions={['FINANCE_VIEW']}>
@@ -222,6 +372,10 @@ export default function FinancePage() {
                 <div>
                   <div className="text-gray-500">Toplam Alış</div>
                   <div className="text-2xl font-bold text-blue-700">{totalAlis.toLocaleString('tr-TR')} ₺</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    <span className="inline-block mr-2">Konaklama: {totalAlisFromAccommodation.toLocaleString('tr-TR')} ₺</span>
+                    <span className="inline-block">Diğer: {totalAlisFromTransactions.toLocaleString('tr-TR')} ₺</span>
+                  </div>
                 </div>
               </div>
               <div className="card p-6 flex items-center gap-4 bg-gradient-to-r from-green-100 to-green-50 border border-green-200">
@@ -231,6 +385,10 @@ export default function FinancePage() {
                 <div>
                   <div className="text-gray-500">Toplam Satış</div>
                   <div className="text-2xl font-bold text-green-700">{totalSatis.toLocaleString('tr-TR')} ₺</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    <span className="inline-block mr-2">Satışlar: {totalSatisFromSales.toLocaleString('tr-TR')} ₺</span>
+                    <span className="inline-block">Diğer: {totalSatisFromTransactions.toLocaleString('tr-TR')} ₺</span>
+                  </div>
                 </div>
               </div>
               <div className="card p-6 flex items-center gap-4 bg-gradient-to-r from-purple-100 to-purple-50 border border-purple-200">
@@ -240,6 +398,9 @@ export default function FinancePage() {
                 <div>
                   <div className="text-gray-500">Net Kar/Zarar</div>
                   <div className={`text-2xl font-bold ${net >= 0 ? 'text-green-700' : 'text-red-700'}`}>{net.toLocaleString('tr-TR')} ₺</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Kar Marjı: {totalAlis > 0 ? Math.round((net / totalAlis) * 100) : 0}%
+                  </div>
                 </div>
               </div>
               <div className="card p-6 flex items-center gap-4 bg-gradient-to-r from-orange-100 to-orange-50 border border-orange-200">
@@ -247,21 +408,17 @@ export default function FinancePage() {
                   <svg className="w-7 h-7 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 </div>
                 <div>
-                  <div className="text-gray-500">Satış Kaynaklı</div>
-                  <div className="text-2xl font-bold text-orange-700">
-                    {transactions.filter(t => t.type === 'SATIS' && t.description.includes('Satış #')).length}
+                  <div className="text-gray-500">İstatistikler</div>
+                  <div className="text-sm font-bold text-orange-700 mt-1">
+                    <div>Satış Kaydı: {sales.length}</div>
+                    <div>Konaklama: {accommodations.length}</div>
                   </div>
                 </div>
               </div>
             </div>
             
             {/* Ekleme Butonları */}
-            {canAddTransaction() && (
-              <div className="flex gap-4 mb-6">
-                <button className="btn btn-primary" onClick={() => handleAdd("ALIS")}>Alış Ekle</button>
-                <button className="btn btn-success" onClick={() => handleAdd("SATIS")}>Satış Ekle</button>
-              </div>
-            )}
+            {/* Butonlar kaldırıldı */}
             
             {/* Tablo */}
             {/*
@@ -303,62 +460,213 @@ export default function FinancePage() {
             </div>
             */}
 
-            {/* Kurum Bazında Finans Tablosu */}
+            {/* Kurum ve Organizasyon Seçimi - Tek Kart Sistemi */}
             <div className="mb-8">
-              <h2 className="text-lg font-semibold mb-2 text-blue-900">Kurum Bazında Finans Özeti</h2>
-              <div className="card overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="bg-blue-100">
-                      <th className="p-3 text-left">Kurum</th>
-                      <th className="p-3 text-right">Toplam Alış (₺)</th>
-                      <th className="p-3 text-right">Toplam Satış (₺)</th>
-                      <th className="p-3 text-right">Net Kar/Zarar (₺)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(kurumSummary).map(([kurum, val]) => (
-                      <tr key={kurum} className="border-b last:border-b-0">
-                        <td className="p-3 font-bold text-blue-800">{kurum}</td>
-                        <td className="p-3 text-right">{val.alis.toLocaleString('tr-TR')}</td>
-                        <td className="p-3 text-right">{val.satis.toLocaleString('tr-TR')}</td>
-                        <td className={`p-3 text-right font-bold ${val.satis - val.alis >= 0 ? 'text-green-700' : 'text-red-700'}`}>{(val.satis - val.alis).toLocaleString('tr-TR')}</td>
-                      </tr>
+              <h2 className="text-lg font-semibold mb-4 text-blue-900 flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                Kurum ve Organizasyon Seçimi
+              </h2>
+              
+              {/* Kurum Seçimi - Dropdown */}
+              <div className="mb-6">
+                <h3 className="text-md font-medium mb-3 text-blue-800">Kurumlar</h3>
+                <div className="relative w-full max-w-md">
+                  <select 
+                    className="w-full p-3 bg-white border border-blue-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none text-gray-800"
+                    value={selectedKurum}
+                    onChange={(e) => {
+                      setSelectedKurum(e.target.value);
+                      setSelectedOrg("");
+                      setShowStats(!!e.target.value);
+                    }}
+                  >
+                    <option value="">Kurum Seçiniz</option>
+                    {Object.keys(kurumSummary).sort().map(kurum => (
+                      <option key={kurum} value={kurum}>
+                        {kurum} ({kurumSummary[kurum].alis.toLocaleString('tr-TR')} ₺ / {kurumSummary[kurum].satis.toLocaleString('tr-TR')} ₺)
+                      </option>
                     ))}
-                  </tbody>
-                </table>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-blue-600">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
-            </div>
-
-            {/* Organizasyon Bazında Finans Tablosu */}
-            <div className="mb-8">
-              <h2 className="text-lg font-semibold mb-2 text-purple-900">Organizasyon Bazında Finans Özeti</h2>
-              <div className="card overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="bg-purple-100">
-                      <th className="p-3 text-left">Kurum</th>
-                      <th className="p-3 text-left">Organizasyon</th>
-                      <th className="p-3 text-right">Toplam Alış (₺)</th>
-                      <th className="p-3 text-right">Toplam Satış (₺)</th>
-                      <th className="p-3 text-right">Net Kar/Zarar (₺)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(kurumOrgSummary).flatMap(([kurum, orgs]) =>
-                      Object.entries(orgs).map(([org, val]) => (
-                        <tr key={kurum + '-' + org} className="border-b last:border-b-0">
-                          <td className="p-3 font-bold text-blue-800">{kurum}</td>
-                          <td className="p-3 font-semibold text-purple-800">{org}</td>
-                          <td className="p-3 text-right">{val.alis.toLocaleString('tr-TR')}</td>
-                          <td className="p-3 text-right">{val.satis.toLocaleString('tr-TR')}</td>
-                          <td className={`p-3 text-right font-bold ${val.satis - val.alis >= 0 ? 'text-green-700' : 'text-red-700'}`}>{(val.satis - val.alis).toLocaleString('tr-TR')}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              
+              {/* Organizasyon Seçimi - Dropdown - Sadece bir kurum seçildiğinde göster */}
+              {selectedKurum && availableOrgs.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-md font-medium mb-3 text-purple-800">
+                    <span className="text-blue-700">{selectedKurum}</span> Kurumu - Organizasyonlar
+                  </h3>
+                  <div className="relative w-full max-w-md">
+                    <select 
+                      className="w-full p-3 bg-white border border-purple-200 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 appearance-none text-gray-800"
+                      value={selectedOrg}
+                      onChange={(e) => {
+                        setSelectedOrg(e.target.value);
+                        setShowStats(true);
+                      }}
+                    >
+                      <option value="">Tüm Organizasyonlar</option>
+                      {availableOrgs.map(org => {
+                        const data = kurumOrgSummary[selectedKurum]?.[org] || { alis: 0, satis: 0 };
+                        return (
+                          <option key={org} value={org}>
+                            {org} ({data.alis.toLocaleString('tr-TR')} ₺ / {data.satis.toLocaleString('tr-TR')} ₺)
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-purple-600">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Seçilen Kurum/Organizasyon Kartı */}
+              {showStats && selectedKurum && (
+                <motion.div 
+                  className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 overflow-hidden relative"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-blue-800">{selectedKurum}</h3>
+                      {selectedOrg && <p className="text-md text-purple-700">{selectedOrg}</p>}
+                    </div>
+                    <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                      {selectedOrg ? 'Organizasyon' : 'Kurum'}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    {/* Toplam Alış */}
+                    <div className="bg-red-50 p-4 rounded-lg border border-red-100">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 flex items-center justify-center rounded-full bg-red-100">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                          </svg>
+                        </div>
+                        <h4 className="text-lg font-semibold text-gray-800">Toplam Alış</h4>
+                      </div>
+                      <p className="text-2xl font-bold text-red-600">
+                        {(selectedOrg 
+                          ? (kurumOrgSummary[selectedKurum]?.[selectedOrg]?.alis || 0) 
+                          : (kurumSummary[selectedKurum]?.alis || 0)).toLocaleString('tr-TR')} ₺
+                      </p>
+                    </div>
+                    
+                    {/* Toplam Satış */}
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 flex items-center justify-center rounded-full bg-green-100">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                          </svg>
+                        </div>
+                        <h4 className="text-lg font-semibold text-gray-800">Toplam Satış</h4>
+                      </div>
+                      <p className="text-2xl font-bold text-green-600">
+                        {(selectedOrg 
+                          ? (kurumOrgSummary[selectedKurum]?.[selectedOrg]?.satis || 0) 
+                          : (kurumSummary[selectedKurum]?.satis || 0)).toLocaleString('tr-TR')} ₺
+                      </p>
+                    </div>
+                    
+                    {/* Net Kar/Zarar */}
+                    {(() => {
+                      const alis = selectedOrg 
+                        ? (kurumOrgSummary[selectedKurum]?.[selectedOrg]?.alis || 0) 
+                        : (kurumSummary[selectedKurum]?.alis || 0);
+                      const satis = selectedOrg 
+                        ? (kurumOrgSummary[selectedKurum]?.[selectedOrg]?.satis || 0) 
+                        : (kurumSummary[selectedKurum]?.satis || 0);
+                      const net = satis - alis;
+                      const karMarji = satis > 0 ? ((net / satis) * 100).toFixed(2) : "0";
+                      const isPositive = net >= 0;
+                      
+                      return (
+                        <div className={`${isPositive ? 'bg-blue-50 border-blue-100' : 'bg-red-50 border-red-100'} p-4 rounded-lg border`}>
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className={`w-10 h-10 flex items-center justify-center rounded-full ${isPositive ? 'bg-blue-100' : 'bg-red-100'}`}>
+                              <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${isPositive ? 'text-blue-500' : 'text-red-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                              </svg>
+                            </div>
+                            <h4 className="text-lg font-semibold text-gray-800">Net Kar/Zarar</h4>
+                          </div>
+                          <p className={`text-2xl font-bold ${isPositive ? 'text-blue-600' : 'text-red-600'}`}>
+                            {net.toLocaleString('tr-TR')} ₺
+                          </p>
+                          <p className="text-sm mt-1">
+                            Kar Marjı: <span className={`font-medium ${parseFloat(karMarji) >= 0 ? 'text-green-600' : 'text-red-600'}`}>%{karMarji}</span>
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  
+                  {/* Alış/Satış Oranı */}
+                  {(() => {
+                    const alis = selectedOrg 
+                      ? (kurumOrgSummary[selectedKurum]?.[selectedOrg]?.alis || 0) 
+                      : (kurumSummary[selectedKurum]?.alis || 0);
+                    const satis = selectedOrg 
+                      ? (kurumOrgSummary[selectedKurum]?.[selectedOrg]?.satis || 0) 
+                      : (kurumSummary[selectedKurum]?.satis || 0);
+                    const alisOrani = alis > 0 && satis > 0 ? ((alis / satis) * 100).toFixed(2) : "0";
+                    
+                    return (
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <h4 className="text-lg font-semibold mb-3 text-gray-800">Alış/Satış Oranı</h4>
+                        <div className="relative pt-1">
+                          <div className="flex mb-2 items-center justify-between">
+                            <div>
+                              <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">
+                                Alış
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs font-semibold inline-block text-red-600">
+                                {alisOrani}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-200">
+                            <div style={{ width: `${Math.min(parseFloat(alisOrani), 100)}%` }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-red-500"></div>
+                          </div>
+                          <div className="flex mb-2 items-center justify-between">
+                            <div>
+                              <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">
+                                Satış
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs font-semibold inline-block text-green-600">
+                                100%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="overflow-hidden h-2 text-xs flex rounded bg-green-200">
+                            <div style={{ width: '100%' }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500"></div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </motion.div>
+              )}
             </div>
           </>
         )}

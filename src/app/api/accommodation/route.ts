@@ -21,15 +21,66 @@ export async function GET() {
 export async function POST(request: Request) {
   const data = await request.json();
   try {
+    // Kullanıcı bilgilerini al
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    let userId = null;
+    
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
+        userId = decoded.id;
+      } catch (e) {
+        console.error('Token çözme hatası:', e);
+      }
+    }
+
     if (Array.isArray(data)) {
       // Toplu kayıt ekleme
-      const createdRecords = await prisma.$transaction(
-        data.map((record) => prisma.accommodation.create({ data: record }))
-      );
+      const createdRecords = await prisma.$transaction(async (tx) => {
+        const records = [];
+        for (const record of data) {
+          const createdRecord = await tx.accommodation.create({ data: record });
+          records.push(createdRecord);
+          
+          // Her kayıt için finans işlemi oluştur
+          if (record.organizasyonAdi && record.kurumCari) {
+            const totalAmount = record.toplamUcret || (record.gecelikUcret * (record.numberOfNights || 1));
+            await tx.transaction.create({
+              data: {
+                type: 'SATIS',
+                description: `${record.kurumCari} | ${record.organizasyonAdi} - ${record.adiSoyadi} (Konaklama)`,
+                amount: totalAmount,
+                date: new Date().toISOString().slice(0, 10),
+                userId: userId
+              }
+            });
+          }
+        }
+        return records;
+      });
       return NextResponse.json(createdRecords);
     } else {
       // Tek kayıt ekleme
-      const record = await prisma.accommodation.create({ data });
+      const record = await prisma.$transaction(async (tx) => {
+        const createdRecord = await tx.accommodation.create({ data });
+        
+        // Finans işlemi oluştur
+        if (data.organizasyonAdi && data.kurumCari) {
+          const totalAmount = data.toplamUcret || (data.gecelikUcret * (data.numberOfNights || 1));
+          await tx.transaction.create({
+            data: {
+              type: 'SATIS',
+              description: `${data.kurumCari} | ${data.organizasyonAdi} - ${data.adiSoyadi} (Konaklama)`,
+              amount: totalAmount,
+              date: new Date().toISOString().slice(0, 10),
+              userId: userId
+            }
+          });
+        }
+        
+        return createdRecord;
+      });
       return NextResponse.json(record);
     }
   } catch (error: unknown) {
@@ -48,10 +99,81 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'ID zorunlu' }, { status: 400 });
   }
   try {
-    const updated = await prisma.accommodation.update({
-      where: { id: Number(id) },
-      data: updateData,
+    // Kullanıcı bilgilerini al
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    let userId = null;
+    
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
+        userId = decoded.id;
+      } catch (e) {
+        console.error('Token çözme hatası:', e);
+      }
+    }
+
+    // Mevcut kaydı al
+    const existingRecord = await prisma.accommodation.findUnique({
+      where: { id: Number(id) }
     });
+
+    if (!existingRecord) {
+      return NextResponse.json({ error: 'Kayıt bulunamadı' }, { status: 404 });
+    }
+
+    // Kaydı güncelle ve ilgili finans kaydını da güncelle
+    const updated = await prisma.$transaction(async (tx) => {
+      // Konaklama kaydını güncelle
+      const updatedRecord = await tx.accommodation.update({
+        where: { id: Number(id) },
+        data: updateData,
+      });
+
+      // Eğer fiyat bilgisi değiştiyse ve organizasyon/kurum bilgisi varsa
+      if ((updateData.toplamUcret !== undefined || updateData.gecelikUcret !== undefined || updateData.numberOfNights !== undefined) && 
+          (updatedRecord.organizasyonAdi && updatedRecord.kurumCari)) {
+        
+        // Yeni toplam ücreti hesapla
+        const totalAmount = updatedRecord.toplamUcret || 
+                          (updatedRecord.gecelikUcret * (updatedRecord.numberOfNights || 1));
+        
+        // İlgili finans kaydını bul
+        const existingTransaction = await tx.transaction.findFirst({
+          where: {
+            description: {
+              contains: `${updatedRecord.kurumCari} | ${updatedRecord.organizasyonAdi} - ${updatedRecord.adiSoyadi}`
+            }
+          }
+        });
+
+        if (existingTransaction) {
+          // Finans kaydını güncelle
+          await tx.transaction.update({
+            where: { id: existingTransaction.id },
+            data: {
+              amount: totalAmount,
+              description: `${updatedRecord.kurumCari} | ${updatedRecord.organizasyonAdi} - ${updatedRecord.adiSoyadi} (Konaklama)`,
+              date: new Date().toISOString().slice(0, 10),
+            }
+          });
+        } else if (updateData.organizasyonAdi || updateData.kurumCari) {
+          // Eğer organizasyon veya kurum bilgisi değiştiyse ve finans kaydı yoksa yeni kayıt oluştur
+          await tx.transaction.create({
+            data: {
+              type: 'SATIS',
+              description: `${updatedRecord.kurumCari} | ${updatedRecord.organizasyonAdi} - ${updatedRecord.adiSoyadi} (Konaklama)`,
+              amount: totalAmount,
+              date: new Date().toISOString().slice(0, 10),
+              userId: userId
+            }
+          });
+        }
+      }
+
+      return updatedRecord;
+    });
+
     return NextResponse.json(updated);
   } catch (error: unknown) {
     if (error instanceof Error) {
@@ -95,24 +217,49 @@ export async function DELETE(request: Request) {
       where: { id: { in: ids.map(Number) } },
     });
     
-    // Log kayıtlarını oluştur
-    await Promise.all(recordsToDelete.map(record => {
-      return prisma.log.create({
-        data: {
-          action: 'DELETE',
-          modelName: 'Accommodation',
-          recordId: record.id,
-          recordData: JSON.stringify(record),
-          userId,
-          ipAddress,
-          userAgent
+    await prisma.$transaction(async (tx) => {
+      // Log kayıtlarını oluştur
+      await Promise.all(recordsToDelete.map(record => {
+        return tx.log.create({
+          data: {
+            action: 'DELETE',
+            modelName: 'Accommodation',
+            recordId: record.id,
+            recordData: JSON.stringify(record),
+            userId,
+            ipAddress,
+            userAgent
+          }
+        });
+      }));
+      
+      // İlgili finans kayıtlarını bul ve sil
+      for (const record of recordsToDelete) {
+        if (record.organizasyonAdi && record.kurumCari) {
+          const transactionsToDelete = await tx.transaction.findMany({
+            where: {
+              description: {
+                contains: `${record.kurumCari} | ${record.organizasyonAdi} - ${record.adiSoyadi}`
+              }
+            }
+          });
+          
+          if (transactionsToDelete.length > 0) {
+            await tx.transaction.deleteMany({
+              where: {
+                id: {
+                  in: transactionsToDelete.map(t => t.id)
+                }
+              }
+            });
+          }
         }
+      }
+      
+      // Kayıtları sil
+      await tx.accommodation.deleteMany({
+        where: { id: { in: ids.map(Number) } },
       });
-    }));
-    
-    // Kayıtları sil
-    await prisma.accommodation.deleteMany({
-      where: { id: { in: ids.map(Number) } },
     });
     
     return NextResponse.json({ success: true });
