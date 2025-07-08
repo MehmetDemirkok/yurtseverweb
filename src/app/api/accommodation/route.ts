@@ -41,9 +41,14 @@ export async function POST(request: Request) {
     if (Array.isArray(data)) {
       // Toplu kayıt ekleme
       console.log(`Toplu kayıt ekleme başladı, ${data.length} kayıt`);
+      // Her kayıtta faturaEdildi alanı yoksa false olarak ekle
+      const dataWithFatura = data.map((record) => ({
+        ...record,
+        faturaEdildi: typeof record.faturaEdildi === 'boolean' ? record.faturaEdildi : false
+      }));
       const createdRecords = await prisma.$transaction(async (tx) => {
         const records = [];
-        for (const record of data) {
+        for (const record of dataWithFatura) {
           console.log('Kayıt oluşturuluyor:', { adiSoyadi: record.adiSoyadi });
           const createdRecord = await tx.accommodation.create({ data: record });
           records.push(createdRecord);
@@ -74,13 +79,18 @@ export async function POST(request: Request) {
     } else {
       // Tek kayıt ekleme
       console.log('Tek kayıt ekleme başladı:', { adiSoyadi: data.adiSoyadi });
+      // faturaEdildi alanı yoksa false olarak ekle
+      const dataWithFatura = {
+        ...data,
+        faturaEdildi: typeof data.faturaEdildi === 'boolean' ? data.faturaEdildi : false
+      };
       const record = await prisma.$transaction(async (tx) => {
-        const createdRecord = await tx.accommodation.create({ data });
+        const createdRecord = await tx.accommodation.create({ data: dataWithFatura });
         console.log('Kayıt oluşturuldu, ID:', createdRecord.id);
         
         // Finans işlemi oluştur
-        if (data.organizasyonAdi && data.kurumCari) {
-          const totalAmount = data.toplamUcret || (data.gecelikUcret * (data.numberOfNights || 1));
+        if (dataWithFatura.organizasyonAdi && dataWithFatura.kurumCari) {
+          const totalAmount = dataWithFatura.toplamUcret || (dataWithFatura.gecelikUcret * (dataWithFatura.numberOfNights || 1));
           console.log('Finans işlemi oluşturuluyor:', { 
             kurumCari: data.kurumCari, 
             organizasyonAdi: data.organizasyonAdi,

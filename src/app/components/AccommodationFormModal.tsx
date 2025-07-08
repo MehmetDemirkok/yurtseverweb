@@ -93,10 +93,6 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
               <option value="UHD">UHD</option>
             </select>
           </div>
-          <div className="space-y-2 flex items-center mt-2">
-            <input id="faturaEdildi" type="checkbox" checked={formData.faturaEdildi} onChange={onCheckboxChange} className="mr-2 w-5 h-5 accent-blue-600" />
-            <label htmlFor="faturaEdildi" className="text-sm font-semibold text-gray-700">Fatura Edildi mi?</label>
-          </div>
           <div className="space-y-2">
             <label htmlFor="gecelikUcret" className="block text-sm font-semibold text-gray-700">Gecelik Ücret (₺)</label>
             <input type="number" id="gecelikUcret" className="input" value={formData.gecelikUcret || ''} onChange={onChange} step="1" min="0" placeholder="0" />

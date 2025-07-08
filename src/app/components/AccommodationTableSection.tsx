@@ -88,6 +88,10 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   const canEdit = () => hasRole('USER');
   const canDelete = () => hasRole('MANAGER');
 
+  // --- State ekle ---
+  const [kurumOptions, setKurumOptions] = useState<string[]>([]);
+  const [showKurumOptions, setShowKurumOptions] = useState(false);
+
   // useEffect ve API çağrıları
   useEffect(() => {
     async function fetchUser() {
@@ -114,6 +118,22 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
       .then(res => res.json())
       .then(data => setOrganizasyonOptions(data));
 
+    // Kurum/Cari seçeneklerini doldur
+    const fetchKurumOptions = async () => {
+      try {
+        const res = await fetch('/api/accommodation');
+        if (res.ok) {
+          const data = await res.json();
+          const kurumSet = new Set<string>();
+          (data || []).forEach((rec: any) => {
+            if (rec.kurumCari) kurumSet.add(rec.kurumCari);
+          });
+          setKurumOptions(Array.from(kurumSet));
+        }
+      } catch {}
+    };
+    fetchKurumOptions();
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         fetchRecords();
@@ -123,6 +143,15 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
+
+    const fetchOrganizasyonOptions = async () => {
+      const res = await fetch('/api/organizations');
+      if (res.ok) {
+        const data = await res.json();
+        setOrganizasyonOptions(data);
+      }
+    };
+    fetchOrganizasyonOptions();
   }, []);
 
   // Doğru gün sayısı hesaplama fonksiyonu (çıkış günü hariç)
@@ -248,7 +277,6 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
       cikisTarihi: '',
       odaTipi: '',
       konaklamaTipi: 'BB',
-      faturaEdildi: false,
       gecelikUcret: 0,
       toplamUcret: 0,
       organizasyonAdi: '',
@@ -265,29 +293,22 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    
-    if (type === 'number') {
-      setNewRecord(prev => ({
-        ...prev,
-        [name]: parseFloat(value) || 0
-      }));
-    } else {
-      setNewRecord(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-    
+
+    setNewRecord(prev => ({
+      ...prev,
+      [name]: value === '' ? null : (type === 'number' ? parseFloat(value) || 0 : value)
+    }));
+
     // Toplam ücret hesaplama
     if (name === 'girisTarihi' || name === 'cikisTarihi' || name === 'gecelikUcret') {
       const girisTarihi = name === 'girisTarihi' ? value : newRecord.girisTarihi;
       const cikisTarihi = name === 'cikisTarihi' ? value : newRecord.cikisTarihi;
       const gecelikUcret = name === 'gecelikUcret' ? parseFloat(value) || 0 : newRecord.gecelikUcret || 0;
-      
+
       if (girisTarihi && cikisTarihi) {
         const nights = calculateNumberOfNights(girisTarihi, cikisTarihi);
         const toplamUcret = nights * gecelikUcret;
-        
+
         setNewRecord(prev => ({
           ...prev,
           numberOfNights: nights,
@@ -299,14 +320,16 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    console.log('newRecord:', newRecord);
+
     if (!newRecord.adiSoyadi || !newRecord.girisTarihi || !newRecord.cikisTarihi || !newRecord.odaTipi || !newRecord.konaklamaTipi) {
       alert('Lütfen zorunlu alanları doldurunuz.');
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       const response = await fetch('/api/accommodation', {
         method: 'POST',
@@ -315,11 +338,13 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
         },
         body: JSON.stringify(newRecord),
       });
-      
+
       if (response.ok) {
         // Başarılı kayıt sonrası listeyi güncelle
         const data = await response.json();
         setRecords(prev => [...prev, data]);
+        await fetchOrganizasyonOptions(); // Yeni organizasyonları güncelle
+        await fetchKurumOptions(); // Yeni kurum/cari'leri güncelle
         closeAddModal();
       } else {
         const errorData = await response.json();
@@ -1394,15 +1419,16 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Organizasyon</label>
-                <select 
+                <select
                   name="organizasyonAdi"
                   value={editingRecord.organizasyonAdi || ''}
                   onChange={handleEditInputChange}
                   className="input w-full border border-gray-300 rounded-md"
+                  required
                 >
                   <option value="">Seçiniz</option>
-                  {organizasyonOptions.map(org => (
-                    <option key={org} value={org}>{org}</option>
+                  {organizasyonOptions.map((org, idx) => (
+                    <option key={idx} value={org}>{org}</option>
                   ))}
                 </select>
               </div>
@@ -1419,14 +1445,18 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Kurum/Cari</label>
-                <input 
-                  type="text" 
+                <select
                   name="kurumCari"
                   value={editingRecord.kurumCari || ''}
                   onChange={handleEditInputChange}
-                  className="input w-full border border-gray-300 rounded-md" 
-                  placeholder="Kurum/Cari" 
-                />
+                  className="input w-full border border-gray-300 rounded-md"
+                  required
+                >
+                  <option value="">Seçiniz</option>
+                  {kurumOptions.map((kurum, idx) => (
+                    <option key={idx} value={kurum}>{kurum}</option>
+                  ))}
+                </select>
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Gecelik Ücret</label>
@@ -1589,17 +1619,46 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Organizasyon</label>
-                <select 
-                  name="organizasyonAdi"
-                  value={newRecord.organizasyonAdi || ''}
-                  onChange={handleInputChange}
-                  className="input w-full border border-gray-300 rounded-md"
-                >
-                  <option value="">Seçiniz</option>
-                  {organizasyonOptions.map((org, index) => (
-                    <option key={index} value={org}>{org}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="organizasyonAdi"
+                    value={newRecord.organizasyonAdi || ''}
+                    onChange={e => {
+                      handleInputChange(e);
+                      setShowOrganizasyonOptions(true);
+                    }}
+                    onFocus={() => setShowOrganizasyonOptions(true)}
+                    onBlur={() => setTimeout(() => setShowOrganizasyonOptions(false), 150)}
+                    className="input w-full border border-gray-300 rounded-md"
+                    autoComplete="off"
+                    placeholder="Organizasyon adı yazın"
+                  />
+                  {showOrganizasyonOptions && (newRecord.organizasyonAdi || '').length > 0 && (
+                    <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded shadow max-h-40 overflow-y-auto mt-1">
+                      {organizasyonOptions.filter(org =>
+                        org.toLowerCase().includes((newRecord.organizasyonAdi || '').toLowerCase())
+                      ).length > 0 ? (
+                        organizasyonOptions.filter(org =>
+                          org.toLowerCase().includes((newRecord.organizasyonAdi || '').toLowerCase())
+                        ).map((org, idx) => (
+                          <li
+                            key={idx}
+                            className="px-3 py-2 cursor-pointer hover:bg-blue-100"
+                            onMouseDown={() => {
+                              setNewRecord(prev => ({ ...prev, organizasyonAdi: org }));
+                              setShowOrganizasyonOptions(false);
+                            }}
+                          >
+                            {org}
+                          </li>
+                        ))
+                      ) : (
+                        <li className="px-3 py-2 text-gray-400">Eşleşen organizasyon yok</li>
+                      )}
+                    </ul>
+                  )}
+                </div>
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Otel Adı</label>
@@ -1614,14 +1673,46 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Kurum/Cari</label>
-                <input 
-                  type="text" 
-                  name="kurumCari"
-                  value={newRecord.kurumCari || ''}
-                  onChange={handleInputChange}
-                  className="input w-full border border-gray-300 rounded-md" 
-                  placeholder="Kurum/Cari" 
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="kurumCari"
+                    value={newRecord.kurumCari || ''}
+                    onChange={e => {
+                      handleInputChange(e);
+                      setShowKurumOptions(true);
+                    }}
+                    onFocus={() => setShowKurumOptions(true)}
+                    onBlur={() => setTimeout(() => setShowKurumOptions(false), 150)}
+                    className="input w-full border border-gray-300 rounded-md"
+                    autoComplete="off"
+                    placeholder="Kurum/Cari adı yazın"
+                  />
+                  {showKurumOptions && (newRecord.kurumCari || '').length > 0 && (
+                    <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded shadow max-h-40 overflow-y-auto mt-1">
+                      {kurumOptions.filter((kurum: string) =>
+                        kurum.toLowerCase().includes((newRecord.kurumCari || '').toLowerCase())
+                      ).length > 0 ? (
+                        kurumOptions.filter((kurum: string) =>
+                          kurum.toLowerCase().includes((newRecord.kurumCari || '').toLowerCase())
+                        ).map((kurum: string, idx: number) => (
+                          <li
+                            key={idx}
+                            className="px-3 py-2 cursor-pointer hover:bg-blue-100 text-black"
+                            onMouseDown={() => {
+                              setNewRecord(prev => ({ ...prev, kurumCari: kurum }));
+                              setShowKurumOptions(false);
+                            }}
+                          >
+                            {kurum}
+                          </li>
+                        ))
+                      ) : (
+                        <li className="px-3 py-2 text-gray-400">Eşleşen kurum yok</li>
+                      )}
+                    </ul>
+                  )}
+                </div>
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Gecelik Ücret (₺)</label>
