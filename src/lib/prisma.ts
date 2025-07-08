@@ -7,12 +7,6 @@ const prismaClientOptions: Prisma.PrismaClientOptions = {
   log: process.env.NODE_ENV === 'production' 
     ? ['query', 'info', 'warn', 'error']
     : ['query', 'error', 'warn'],
-  // Doğrudan veritabanı bağlantısı için ayarlar
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
 };
 
 // Bağlantı hatalarını yönetmek için yeniden deneme mekanizması
