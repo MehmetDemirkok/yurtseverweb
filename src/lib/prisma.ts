@@ -7,7 +7,7 @@ const prismaClientOptions: Prisma.PrismaClientOptions = {
   log: process.env.NODE_ENV === 'production' 
     ? ['query', 'info', 'warn', 'error']
     : ['query', 'error', 'warn'],
-  // Prisma Data Proxy için gerekli ayarlar
+  // Doğrudan veritabanı bağlantısı için ayarlar
   datasources: {
     db: {
       url: process.env.DATABASE_URL,
@@ -21,12 +21,10 @@ const RETRY_DELAY_MS = 1000;
 
 // Veritabanı URL'i Prisma tarafından otomatik olarak .env veya .env.production dosyasından alınır
 // DATABASE_URL ve DIRECT_URL değişkenleri schema.prisma dosyasında tanımlanmıştır
-// Vercel'de Prisma Data Proxy kullanıldığında DATABASE_URL prisma:// ile başlamalıdır
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
     ...prismaClientOptions,
-    // Prisma Data Proxy için gerekli ayarlar
     log: ['query', 'info', 'warn', 'error'],
   });
 
