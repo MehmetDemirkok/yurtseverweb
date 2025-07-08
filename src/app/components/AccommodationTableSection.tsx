@@ -505,6 +505,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
 
         // API'nin beklediği formatta veri hazırla
         const organizasyonAdi = record.organizasyonAdi || '';
+        const kurumCari = record.kurumCari || '';
         
         const res = await fetch('/api/sales', {
           method: 'POST',
@@ -514,7 +515,8 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
               accommodationId: accommodationId,
               fiyat: salePrices[accommodationId]
             }],
-            organizasyonAdi: organizasyonAdi
+            organizasyonAdi: organizasyonAdi,
+            kurumCari: kurumCari
           }),
         });
 

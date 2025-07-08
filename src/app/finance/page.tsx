@@ -207,19 +207,19 @@ export default function FinancePage() {
   // Kurum adını description'dan ayıkla
   function getKurumNameFromDescription(description: string) {
     // Format: "Kurum Adı | Organizasyon Adı - ..."
-    if (!description) return 'Diğer';
+    if (!description) return '';
     const match = description.match(/^(.*?)\s*\|/);
     if (match) return match[1].trim();
-    return 'Diğer';
+    return '';
   }
 
   // Organizasyon adını description'dan ayıkla
   function getOrgNameFromDescription(description: string) {
     // Format: "Kurum Adı | Organizasyon Adı - ..."
-    if (!description) return 'Diğer';
+    if (!description) return '';
     const match = description.match(/^.*?\|\s*(.*?)\s*-/);
     if (match) return match[1].trim();
-    return 'Diğer';
+    return '';
   }
 
   // Kurum ve organizasyon özetleri için state'ler
@@ -236,8 +236,22 @@ export default function FinancePage() {
       // Eski işlemleri ekle (geriye dönük uyumluluk için)
       transactions.forEach(t => {
         if (t.type !== 'ALIS' && t.type !== 'SATIS') return;
-        const kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : 'Diğer';
-        const org = t.type === 'SATIS' ? getOrgNameFromDescription(t.description) : 'Diğer';
+        // Satış işlemleri için kurum ve organizasyon bilgisini al
+        let kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : '';
+        let org = t.type === 'SATIS' ? getOrgNameFromDescription(t.description) : '';
+        
+        // Eğer kurum bilgisi yoksa ve alış işlemi ise, bu işlemi dahil etme
+        if (!kurum && t.type === 'ALIS') return;
+        
+        // Kurum bilgisi yoksa ve satış işlemi ise, açıklamayı kullan
+        if (!kurum && t.type === 'SATIS') {
+          kurum = t.description || '';
+          if (!kurum) return; // Açıklama da yoksa, işlemi dahil etme
+        }
+        
+        // Organizasyon bilgisi yoksa, kurum bilgisini kullan
+        if (!org) org = kurum;
+        
         if (!summary[kurum]) summary[kurum] = {};
         if (!summary[kurum][org]) summary[kurum][org] = { alis: 0, satis: 0 };
         if (t.type === 'ALIS') summary[kurum][org].alis += t.amount;
@@ -246,8 +260,11 @@ export default function FinancePage() {
       
       // Satışları ekle
       sales.forEach(sale => {
-        const kurum = sale.kurumCari || getKurumNameFromDescription(sale.organizasyonAdi) || 'Diğer';
-        const org = sale.organizasyonAdi || 'Diğer';
+        const kurum = sale.kurumCari || getKurumNameFromDescription(sale.organizasyonAdi) || '';
+        // Kurum bilgisi yoksa, bu satışı dahil etme
+        if (!kurum) return;
+        
+        const org = sale.organizasyonAdi || kurum; // Organizasyon yoksa kurum adını kullan
         const fiyat = sale.fiyat || 0;
         const numberOfNights = sale.accommodation?.numberOfNights || 1;
         const satisTutari = fiyat * numberOfNights;
@@ -259,8 +276,11 @@ export default function FinancePage() {
       
       // Konaklama kayıtlarını ekle
       accommodations.forEach(acc => {
-        const kurum = acc.kurumCari || 'Diğer';
-        const org = acc.organizasyonAdi || 'Diğer';
+        const kurum = acc.kurumCari || '';
+        // Kurum bilgisi yoksa, bu kaydı dahil etme
+        if (!kurum) return;
+        
+        const org = acc.organizasyonAdi || kurum; // Organizasyon yoksa kurum adını kullan
         const toplamUcret = acc.toplamUcret || 0;
         
         if (!summary[kurum]) summary[kurum] = {};
@@ -278,7 +298,18 @@ export default function FinancePage() {
       
       // Eski işlemleri ekle (geriye dönük uyumluluk için)
       transactions.forEach(t => {
-        const kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : 'Diğer';
+        // Satış işlemleri için kurum bilgisini al
+        let kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : '';
+        
+        // Eğer kurum bilgisi yoksa ve alış işlemi ise, bu işlemi dahil etme
+        if (!kurum && t.type === 'ALIS') return;
+        
+        // Kurum bilgisi yoksa ve satış işlemi ise, açıklamayı kullan
+        if (!kurum && t.type === 'SATIS') {
+          kurum = t.description || '';
+          if (!kurum) return; // Açıklama da yoksa, işlemi dahil etme
+        }
+        
         if (!summary[kurum]) summary[kurum] = { alis: 0, satis: 0 };
         if (t.type === 'ALIS') summary[kurum].alis += t.amount;
         if (t.type === 'SATIS') summary[kurum].satis += t.amount;
@@ -286,7 +317,10 @@ export default function FinancePage() {
       
       // Satışları ekle
       sales.forEach(sale => {
-        const kurum = sale.kurumCari || getKurumNameFromDescription(sale.organizasyonAdi) || 'Diğer';
+        const kurum = sale.kurumCari || getKurumNameFromDescription(sale.organizasyonAdi) || '';
+        // Kurum bilgisi yoksa, bu satışı dahil etme
+        if (!kurum) return;
+        
         const fiyat = sale.fiyat || 0;
         const numberOfNights = sale.accommodation?.numberOfNights || 1;
         const satisTutari = fiyat * numberOfNights;
@@ -297,7 +331,10 @@ export default function FinancePage() {
       
       // Konaklama kayıtlarını ekle
       accommodations.forEach(acc => {
-        const kurum = acc.kurumCari || 'Diğer';
+        const kurum = acc.kurumCari || '';
+        // Kurum bilgisi yoksa, bu kaydı dahil etme
+        if (!kurum) return;
+        
         const toplamUcret = acc.toplamUcret || 0;
         
         if (!summary[kurum]) summary[kurum] = { alis: 0, satis: 0 };

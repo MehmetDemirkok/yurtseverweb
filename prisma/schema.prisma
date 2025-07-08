@@ -45,6 +45,7 @@ model Sale {
   accommodation   Accommodation? @relation(fields: [accommodationId], references: [id], onDelete: SetNull)
   accommodationId Int?
   organizasyonAdi String
+  kurumCari       String?   // Kurum Cari bilgisi eklendi
   fiyat           Float
   createdAt       DateTime   @default(now())
   status          SaleStatus @default(AKTARILDI)

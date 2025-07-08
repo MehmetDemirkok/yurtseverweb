@@ -1,4 +1,4 @@
-  import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
@@ -62,8 +62,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Yetki kontrolü başarısız.' }, { status: 401 });
   }
   const data = await request.json();
-  // data: { sales: [{ accommodationId, fiyat }], organizasyonAdi: string }
-  const { sales, organizasyonAdi } = data;
+  // data: { sales: [{ accommodationId, fiyat }], organizasyonAdi: string, kurumCari: string }
+  const { sales, organizasyonAdi, kurumCari } = data;
   if (!sales || !Array.isArray(sales) || !organizasyonAdi) {
     return NextResponse.json({ error: 'Eksik veri.' }, { status: 400 });
   }
@@ -96,16 +96,16 @@ export async function POST(request: Request) {
       // Önce satış kayıtlarını oluştur
       const sales = await Promise.all(
         newSales.map(async ({ accommodationId, fiyat }) => {
+          const accommodation = accommodationsToTransfer.find(a => a.id === accommodationId);
           return tx.sale.create({
             data: {
               accommodationId,
               organizasyonAdi,
+              kurumCari: kurumCari || accommodation?.kurumCari || null, // Önce istemciden gelen kurumCari'yi kullan, yoksa konaklama kaydından al
               fiyat,
               status: 'AKTARILDI',
               // Konaklama kaydının tüm verilerini JSON olarak sakla
-              accommodationData: JSON.stringify(
-                accommodationsToTransfer.find(a => a.id === accommodationId)
-              ),
+              accommodationData: JSON.stringify(accommodation),
             },
           });
         })

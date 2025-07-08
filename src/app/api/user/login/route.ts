@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, enhancedPrisma } from '@/lib/prisma';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
 import bcrypt from 'bcryptjs';
@@ -12,14 +12,26 @@ export async function POST(request: Request) {
     if (!email || !password) {
       return NextResponse.json({ success: false, error: 'Kullanıcı adı ve şifre zorunlu.' }, { status: 400 });
     }
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email },
-          { name: email }
-        ]
-      }
-    });
+    
+    // Geliştirilmiş Prisma istemcisi ile veritabanı sorgusunu yap
+    // Bu istemci otomatik olarak bağlantı hatalarını yeniden deneyecek
+    let user;
+    try {
+      user = await enhancedPrisma.user.findFirst({
+        where: {
+          OR: [
+            { email },
+            { name: email }
+          ]
+        }
+      });
+    } catch (dbError: any) {
+      console.error('Veritabanı bağlantı hatası (tüm yeniden denemeler başarısız):', dbError);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Veritabanına bağlanırken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' 
+      }, { status: 503 });
+    }
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return NextResponse.json({ success: false, error: 'Kullanıcı adı veya şifre hatalı.' }, { status: 401 });
     }
@@ -56,4 +68,4 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
-} 
+}
