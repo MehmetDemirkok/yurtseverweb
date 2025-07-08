@@ -24,7 +24,11 @@ const RETRY_DELAY_MS = 1000;
 // Vercel'de Prisma Data Proxy kullanıldığında DATABASE_URL prisma:// ile başlamalıdır
 export const prisma =
   globalForPrisma.prisma ||
-  new PrismaClient(prismaClientOptions);
+  new PrismaClient({
+    ...prismaClientOptions,
+    // Prisma Data Proxy için gerekli ayarlar
+    log: ['query', 'info', 'warn', 'error'],
+  });
 
 // Hata yakalama, loglama ve yeniden deneme için geliştirilmiş Prisma istemcisi
 const enhancedPrisma = prisma.$extends({

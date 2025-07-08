@@ -13,6 +13,7 @@
   "env": {
     "DATABASE_URL": "prisma://aws-0-eu-north-1.pooler.supabase.com:6543/postgres?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ2dmRxdHd4d3ZvdGNraGN6YWhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzNDgyNDQsImV4cCI6MjA2NTkyNDI0NH0.8GKD_CsS73D8aKetC0684TrWK_Pb2Xcga3dHEFWDu24",
     "DIRECT_URL": "postgresql://postgres.fvvdqtwxwvotckhczahh:Ankara0696__@aws-0-eu-north-1.pooler.supabase.com:5432/postgres",
-    "JWT_SECRET": "yurtsever_secure_jwt_secret_key_for_production"
+    "JWT_SECRET": "yurtsever_secure_jwt_secret_key_for_production",
+    "PRISMA_CLIENT_ENGINE_TYPE": "dataproxy"
   }
 }
