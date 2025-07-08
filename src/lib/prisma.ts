@@ -5,7 +5,7 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 // Prisma istemcisi oluşturulurken log seviyesini ortama göre ayarlıyoruz
 const prismaClientOptions: Prisma.PrismaClientOptions = {
   log: process.env.NODE_ENV === 'production' 
-    ? ['error', 'warn']
+    ? ['query', 'info', 'warn', 'error']
     : ['query', 'error', 'warn'],
   // Prisma Data Proxy için gerekli ayarlar
   datasources: {
