@@ -6,7 +6,8 @@
   },
   "build": {
     "env": {
-      "PRISMA_GENERATE_DATAPROXY": "true"
+      "PRISMA_GENERATE_DATAPROXY": "true",
+      "PRISMA_CLIENT_ENGINE_TYPE": "dataproxy"
     }
   },
   "env": {

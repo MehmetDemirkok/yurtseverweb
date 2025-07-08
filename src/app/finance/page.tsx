@@ -260,7 +260,24 @@ export default function FinancePage() {
       
       // Satışları ekle
       sales.forEach(sale => {
-        const kurum = sale.kurumCari || getKurumNameFromDescription(sale.organizasyonAdi) || '';
+        // Önce sale.kurumCari'yi kontrol et, yoksa accommodationData içindeki kurumCari'yi kontrol et
+        let kurum = sale.kurumCari || '';
+        
+        // Eğer sale.kurumCari yoksa ve accommodationData varsa, accommodationData içindeki kurumCari'yi kullan
+        if (!kurum && sale.accommodationData) {
+          try {
+            const accommodationData = JSON.parse(sale.accommodationData);
+            kurum = accommodationData.kurumCari || '';
+          } catch (e) {
+            console.error('JSON parse hatası:', e);
+          }
+        }
+        
+        // Hala kurum bilgisi yoksa, organizasyonAdi'ndan çıkarmayı dene
+        if (!kurum) {
+          kurum = getKurumNameFromDescription(sale.organizasyonAdi) || '';
+        }
+        
         // Kurum bilgisi yoksa, bu satışı dahil etme
         if (!kurum) return;
         
@@ -317,7 +334,24 @@ export default function FinancePage() {
       
       // Satışları ekle
       sales.forEach(sale => {
-        const kurum = sale.kurumCari || getKurumNameFromDescription(sale.organizasyonAdi) || '';
+        // Önce sale.kurumCari'yi kontrol et, yoksa accommodationData içindeki kurumCari'yi kontrol et
+        let kurum = sale.kurumCari || '';
+        
+        // Eğer sale.kurumCari yoksa ve accommodationData varsa, accommodationData içindeki kurumCari'yi kullan
+        if (!kurum && sale.accommodationData) {
+          try {
+            const accommodationData = JSON.parse(sale.accommodationData);
+            kurum = accommodationData.kurumCari || '';
+          } catch (e) {
+            console.error('JSON parse hatası:', e);
+          }
+        }
+        
+        // Hala kurum bilgisi yoksa, organizasyonAdi'ndan çıkarmayı dene
+        if (!kurum) {
+          kurum = getKurumNameFromDescription(sale.organizasyonAdi) || '';
+        }
+        
         // Kurum bilgisi yoksa, bu satışı dahil etme
         if (!kurum) return;
         

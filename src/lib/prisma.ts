@@ -7,6 +7,12 @@ const prismaClientOptions: Prisma.PrismaClientOptions = {
   log: process.env.NODE_ENV === 'production' 
     ? ['error', 'warn']
     : ['query', 'error', 'warn'],
+  // Prisma Data Proxy için gerekli ayarlar
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
 };
 
 // Bağlantı hatalarını yönetmek için yeniden deneme mekanizması
