@@ -1,19 +1,19 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
+// Prisma istemcisi oluşturulurken log seviyesini ortama göre ayarlıyoruz
+const prismaClientOptions: Prisma.PrismaClientOptions = {
+  log: process.env.NODE_ENV === 'production' 
+    ? ['error', 'warn']
+    : ['query', 'error', 'warn'],
+};
+
+// Veritabanı URL'i Prisma tarafından otomatik olarak .env veya .env.production dosyasından alınır
+// DATABASE_URL ve DIRECT_URL değişkenleri schema.prisma dosyasında tanımlanmıştır
 export const prisma =
   globalForPrisma.prisma ||
-  new PrismaClient({
-    log: ['error', 'warn'],
-    datasources: {
-      db: {
-        url: process.env.DATABASE_URL
-      },
-    },
-    // Bağlantı havuzu ayarları Prisma'nın güncel sürümünde doğrudan desteklenmiyor
-    // Bu nedenle kaldırıldı
-  });
+  new PrismaClient(prismaClientOptions);
 
 // Hata yakalama ve loglama için try-catch bloğu kullanımı
 // Event listener'lar yerine bu yaklaşımı kullanıyoruz
