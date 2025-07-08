@@ -1,3 +1,5 @@
+# Yurtsever Konaklama Yönetim Sistemi
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -34,3 +36,54 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Vercel Deployment Kılavuzu
+
+Bu proje Vercel'de çalışacak şekilde yapılandırılmıştır. Aşağıdaki adımları izleyerek uygulamanızı Vercel'de başarıyla çalıştırabilirsiniz.
+
+### 1. Vercel'de Çevre Değişkenlerini Ayarlama
+
+Vercel Dashboard'da projenizin Environment Variables bölümünde aşağıdaki değişkenleri ayarlayın:
+
+```
+DATABASE_URL=<PostgreSQL veritabanı bağlantı URL'niz>
+DIRECT_URL=<PostgreSQL veritabanı doğrudan bağlantı URL'niz>
+SUPABASE_URL=<Supabase URL'niz>
+SUPABASE_ANON_KEY=<Supabase anonim anahtar>
+GMAIL_USER=<Gmail kullanıcı adı>
+GMAIL_PASS=<Gmail uygulama şifresi>
+MAIL_TO=<Bildirim e-postaları alacak adresler>
+PRISMA_GENERATE_DATAPROXY=true
+```
+
+### 2. Vercel Yapılandırması
+
+Proje kök dizininde `vercel.json` dosyası bulunmaktadır. Bu dosya, Vercel'deki serverless fonksiyonlar için zaman aşımı süresini artırır ve Prisma yapılandırmasını optimize eder.
+
+```json
+{
+  "functions": {
+    "api/**/*": {
+      "maxDuration": 10
+    }
+  },
+  "build": {
+    "env": {
+      "PRISMA_GENERATE_DATAPROXY": "true"
+    }
+  }
+}
+```
+
+### 3. Prisma Yapılandırması
+
+Prisma istemcisi, `src/lib/prisma.ts` dosyasında optimize edilmiş bağlantı havuzu ayarları ve hata yakalama mekanizmaları ile yapılandırılmıştır.
+
+### 4. Hata Ayıklama
+
+Uygulama 500 Internal Server Error hatası verirse:
+
+1. Vercel Dashboard'da Function Logs bölümünü kontrol edin
+2. Çevre değişkenlerinin doğru ayarlandığından emin olun
+3. Veritabanı bağlantısının çalıştığını doğrulayın
+4. Prisma şemasının güncel olduğundan emin olun

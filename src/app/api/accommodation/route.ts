@@ -21,6 +21,8 @@ export async function GET() {
 export async function POST(request: Request) {
   const data = await request.json();
   try {
+    console.log('POST /api/accommodation başladı', { dataType: Array.isArray(data) ? 'array' : 'object' });
+    
     // Kullanıcı bilgilerini al
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
@@ -30,6 +32,7 @@ export async function POST(request: Request) {
       try {
         const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
         userId = decoded.id;
+        console.log('Token doğrulandı, userId:', userId);
       } catch (e) {
         console.error('Token çözme hatası:', e);
       }
@@ -37,15 +40,22 @@ export async function POST(request: Request) {
 
     if (Array.isArray(data)) {
       // Toplu kayıt ekleme
+      console.log(`Toplu kayıt ekleme başladı, ${data.length} kayıt`);
       const createdRecords = await prisma.$transaction(async (tx) => {
         const records = [];
         for (const record of data) {
+          console.log('Kayıt oluşturuluyor:', { adiSoyadi: record.adiSoyadi });
           const createdRecord = await tx.accommodation.create({ data: record });
           records.push(createdRecord);
           
           // Her kayıt için finans işlemi oluştur
           if (record.organizasyonAdi && record.kurumCari) {
             const totalAmount = record.toplamUcret || (record.gecelikUcret * (record.numberOfNights || 1));
+            console.log('Finans işlemi oluşturuluyor:', { 
+              kurumCari: record.kurumCari, 
+              organizasyonAdi: record.organizasyonAdi,
+              amount: totalAmount 
+            });
             await tx.transaction.create({
               data: {
                 type: 'SATIS',
@@ -59,15 +69,23 @@ export async function POST(request: Request) {
         }
         return records;
       });
+      console.log('Toplu kayıt ekleme tamamlandı');
       return NextResponse.json(createdRecords);
     } else {
       // Tek kayıt ekleme
+      console.log('Tek kayıt ekleme başladı:', { adiSoyadi: data.adiSoyadi });
       const record = await prisma.$transaction(async (tx) => {
         const createdRecord = await tx.accommodation.create({ data });
+        console.log('Kayıt oluşturuldu, ID:', createdRecord.id);
         
         // Finans işlemi oluştur
         if (data.organizasyonAdi && data.kurumCari) {
           const totalAmount = data.toplamUcret || (data.gecelikUcret * (data.numberOfNights || 1));
+          console.log('Finans işlemi oluşturuluyor:', { 
+            kurumCari: data.kurumCari, 
+            organizasyonAdi: data.organizasyonAdi,
+            amount: totalAmount 
+          });
           await tx.transaction.create({
             data: {
               type: 'SATIS',
@@ -81,11 +99,22 @@ export async function POST(request: Request) {
         
         return createdRecord;
       });
+      console.log('Tek kayıt ekleme tamamlandı');
       return NextResponse.json(record);
     }
   } catch (error: unknown) {
+    console.error('POST /api/accommodation hatası:', error);
     if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('Hata detayları:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      return NextResponse.json({ 
+        error: error.message,
+        type: error.name,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      }, { status: 500 });
     }
     return NextResponse.json({ error: 'Bilinmeyen bir hata oluştu.' }, { status: 500 });
   }
