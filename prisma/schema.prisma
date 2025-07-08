@@ -4,10 +4,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-  // Vercel'de Prisma Data Proxy kullanıyorsanız, url değişkeni prisma:// ile başlamalıdır
-  // Local geliştirmede postgresql:// ile başlayan standart bağlantı kullanılır
+  url      = env("DATABASE_URL") // Vercel'de prisma:// ile başlamalı
+  directUrl = env("DIRECT_URL") // Doğrudan veritabanı bağlantısı için postgresql:// ile başlamalı
 }
 
 model User {

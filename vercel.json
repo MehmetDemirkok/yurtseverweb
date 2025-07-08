@@ -8,5 +8,9 @@
     "env": {
       "PRISMA_GENERATE_DATAPROXY": "true"
     }
+  },
+  "env": {
+    "DATABASE_URL": "prisma://aws-0-eu-north-1.pooler.supabase.com:6543/postgres",
+    "DIRECT_URL": "postgresql://postgres.fvvdqtwxwvotckhczahh:Ankara0696__@aws-0-eu-north-1.pooler.supabase.com:5432/postgres"
   }
 }

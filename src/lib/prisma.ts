@@ -11,6 +11,7 @@ const prismaClientOptions: Prisma.PrismaClientOptions = {
 
 // Veritabanı URL'i Prisma tarafından otomatik olarak .env veya .env.production dosyasından alınır
 // DATABASE_URL ve DIRECT_URL değişkenleri schema.prisma dosyasında tanımlanmıştır
+// Vercel'de Prisma Data Proxy kullanıldığında DATABASE_URL prisma:// ile başlamalıdır
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient(prismaClientOptions);
