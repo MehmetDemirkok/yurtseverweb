@@ -8,7 +8,7 @@
     "env": {}
   },
   "env": {
-    "DATABASE_URL": "postgresql://postgres.fvvdqtwxwvotckhczahh:Ankara0696__@aws-0-eu-north-1.pooler.supabase.com:5432/postgres?pgbouncer=true&connection_limit=1&pool_timeout=30",
+    "DATABASE_URL": "prisma://aws-0-eu-north-1.pooler.supabase.com:5432/postgres?api_key=Ankara0696__&user=postgres.fvvdqtwxwvotckhczahh&connection_limit=1&pool_timeout=30",
     "DIRECT_URL": "postgresql://postgres.fvvdqtwxwvotckhczahh:Ankara0696__@aws-0-eu-north-1.pooler.supabase.com:5432/postgres",
     "JWT_SECRET": "yurtsever_secure_jwt_secret_key_for_production"
   }
