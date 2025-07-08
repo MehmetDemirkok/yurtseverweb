@@ -22,6 +22,8 @@ export const prisma =
     log: ['query', 'info', 'warn', 'error'],
   });
 
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
 // Hata yakalama, loglama ve yeniden deneme için geliştirilmiş Prisma istemcisi
 const enhancedPrisma = prisma.$extends({
   query: {
@@ -72,5 +74,3 @@ const enhancedPrisma = prisma.$extends({
 
 // Geliştirilmiş Prisma istemcisini dışa aktar
 export { enhancedPrisma };
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
