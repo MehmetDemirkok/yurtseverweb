@@ -4,8 +4,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") // Vercel'de prisma:// ile başlamalı
-  directUrl = env("DIRECT_URL") // Doğrudan veritabanı bağlantısı için postgresql:// ile başlamalı
+  url      = env("DATABASE_URL") // Vercel'de veya production'da kullanılır
+  directUrl = "postgresql://postgres.fvvdqtwxwvotckhczahh:Ankara0696__@aws-0-eu-north-1.pooler.supabase.com:5432/postgres" // Doğrudan ana veritabanı bağlantısı
 }
 
 model User {
