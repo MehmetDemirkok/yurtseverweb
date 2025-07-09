@@ -114,24 +114,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
     };
     fetchRecords();
 
-    fetch('/api/organizations')
-      .then(res => res.json())
-      .then(data => setOrganizasyonOptions(data));
-
-    // Kurum/Cari seçeneklerini doldur
-    const fetchKurumOptions = async () => {
-      try {
-        const res = await fetch('/api/accommodation');
-        if (res.ok) {
-          const data = await res.json();
-          const kurumSet = new Set<string>();
-          (data || []).forEach((rec: any) => {
-            if (rec.kurumCari) kurumSet.add(rec.kurumCari);
-          });
-          setKurumOptions(Array.from(kurumSet));
-        }
-      } catch {}
-    };
+    fetchOrganizasyonOptions();
     fetchKurumOptions();
 
     const handleVisibilityChange = () => {
@@ -140,18 +123,10 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-
-    const fetchOrganizasyonOptions = async () => {
-      const res = await fetch('/api/organizations');
-      if (res.ok) {
-        const data = await res.json();
-        setOrganizasyonOptions(data);
-      }
-    };
-    fetchOrganizasyonOptions();
   }, []);
 
   // Doğru gün sayısı hesaplama fonksiyonu (çıkış günü hariç)
@@ -885,6 +860,30 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
 
     // Dosyayı indir
     XLSX.writeFile(workbook, 'konaklama_kayit_template.xlsx');
+  };
+
+  // fetchOrganizasyonOptions fonksiyonunu component fonksiyonunun içine taşı
+  const fetchOrganizasyonOptions = async () => {
+    const res = await fetch('/api/organizations');
+    if (res.ok) {
+      const data = await res.json();
+      setOrganizasyonOptions(data);
+    }
+  };
+
+  // fetchKurumOptions fonksiyonunu component fonksiyonunun içine taşı
+  const fetchKurumOptions = async () => {
+    try {
+      const res = await fetch('/api/accommodation');
+      if (res.ok) {
+        const data = await res.json();
+        const kurumSet = new Set<string>();
+        (data || []).forEach((rec: any) => {
+          if (rec.kurumCari) kurumSet.add(rec.kurumCari);
+        });
+        setKurumOptions(Array.from(kurumSet));
+      }
+    } catch {}
   };
 
   return (
