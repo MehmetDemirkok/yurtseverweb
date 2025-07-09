@@ -296,7 +296,10 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log('newRecord:', newRecord);
+    // Konaklama tipi boşsa otomatik olarak 'BB' yap
+    if (!newRecord.konaklamaTipi) {
+      newRecord.konaklamaTipi = 'BB';
+    }
 
     if (!newRecord.adiSoyadi || !newRecord.girisTarihi || !newRecord.cikisTarihi || !newRecord.odaTipi || !newRecord.konaklamaTipi) {
       alert('Lütfen zorunlu alanları doldurunuz.');
