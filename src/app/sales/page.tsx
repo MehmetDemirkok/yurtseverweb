@@ -24,12 +24,14 @@ interface Sale {
     odaTipi?: string;
     toplamUcret?: number;
     gecelikUcret?: number;
+    kurumCari?: string;
   };
+  kurumCari?: string;
 }
 
 export default function SalesPage() {
   return (
-    <AuthGuard requiredPermissions={["sales"]}>
+    <AuthGuard>
       <SalesPageContent />
     </AuthGuard>
   );
@@ -53,6 +55,7 @@ function SalesPageContent() {
   const [showExportFilterModal, setShowExportFilterModal] = useState(false);
   const availableColumns = [
     { key: 'id', label: 'ID' },
+    { key: 'kurumCari', label: 'Kurum' },
     { key: 'organizasyonAdi', label: 'Organizasyon' },
     { key: 'adiSoyadi', label: 'Adı Soyadı' },
     { key: 'unvani', label: 'Unvanı' },
@@ -212,6 +215,7 @@ function SalesPageContent() {
         else if (key === 'createdAt') row.push(formatDate(sale.createdAt));
         else if (key === 'organizasyonAdi') row.push(sale.organizasyonAdi);
         else if (key === 'id') row.push(sale.id);
+        else if (key === 'kurumCari') row.push(sale.accommodation?.kurumCari || sale.kurumCari || '-');
         else row.push('-');
       });
       return row;
@@ -382,6 +386,7 @@ function SalesPageContent() {
                   />
                 </th>
               {selectedColumns.includes('id') && <th className="w-10 py-2">ID</th>}
+              {selectedColumns.includes('kurumCari') && <th className="w-20 py-2">Kurum</th>}
               {selectedColumns.includes('organizasyonAdi') && <th className="w-20 py-2">Organizasyon</th>}
               {selectedColumns.includes('adiSoyadi') && <th className="w-24 py-2">Adı Soyadı</th>}
               {selectedColumns.includes('unvani') && <th className="w-16 py-2 hidden md:table-cell">Unvanı</th>}
@@ -416,6 +421,9 @@ function SalesPageContent() {
                       />
                     </td>
                   {selectedColumns.includes('id') && <td className="font-medium text-blue-600 whitespace-nowrap py-1.5">{sale.id}</td>}
+                  {selectedColumns.includes('kurumCari') && (
+                    <td className="truncate py-1.5">{sale.accommodation?.kurumCari || sale.kurumCari || '-'}</td>
+                  )}
                   {selectedColumns.includes('organizasyonAdi') && <td className="truncate py-1.5">{sale.organizasyonAdi}</td>}
                   {selectedColumns.includes('adiSoyadi') && (
                     <td className="truncate py-1.5">
