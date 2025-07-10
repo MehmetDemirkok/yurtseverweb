@@ -4,6 +4,7 @@ import "./globals.css";
 import AuthGuard from "./components/AuthGuard";
 import UserStatus from "./components/UserStatus";
 import SidebarLayout from "./components/SidebarLayout";
+import CookieConsentBanner from "./components/CookieConsentBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +38,7 @@ export default function RootLayout({
         <SidebarLayout>
           <UserStatus />
           <AuthGuard>{children}</AuthGuard>
+          <CookieConsentBanner />
         </SidebarLayout>
       </body>
     </html>

@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 // Belirli bir konaklama kaydını getir
 export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const id = parseInt(await params.id);
+  const id = parseInt(params.id);
   if (isNaN(id)) {
     return NextResponse.json({ error: 'Geçersiz ID' }, { status: 400 });
   }
@@ -36,7 +36,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
 // Konaklama kaydını güncelle
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
-  const id = parseInt(await params.id);
+  const id = parseInt(params.id);
   if (isNaN(id)) {
     return NextResponse.json({ error: 'Geçersiz ID' }, { status: 400 });
   }
@@ -58,7 +58,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
 // Konaklama kaydını sil
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  const id = parseInt(await params.id);
+  const id = parseInt(params.id);
   if (isNaN(id)) {
     return NextResponse.json({ error: 'Geçersiz ID' }, { status: 400 });
   }

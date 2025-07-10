@@ -135,7 +135,7 @@ export default function Home() {
       .then(res => res.json())
       .then(data => {
         setCurrentUser(data.user);
-        setUserPermissions(data.user.permissions || []);
+        setUserPermissions((data.user && data.user.permissions) ? data.user.permissions : []);
       })
       .catch(err => console.error('Kullanıcı bilgisi alınamadı:', err));
 
@@ -1038,7 +1038,7 @@ export default function Home() {
   // Filtreleme işlemi üstte tanımlandı
 
   return (
-    <AuthGuard requiredPermissions={["dashboard"]}>
+    <AuthGuard>
       <main className="w-full px-4 py-8 max-w-full overflow-hidden">
         <PageHeader
           title="Konaklama Yönetim Sistemi"

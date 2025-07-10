@@ -61,9 +61,8 @@ export default function FinancePage() {
         setCurrentUser(userData.user);
         
         // Finans sayfasına erişim yetkisi kontrolü
-        const hasPermission = userData.user.permissions.includes('FINANCE_VIEW') || 
-                             userData.user.role === 'ADMIN' || 
-                             userData.user.role === 'MANAGER';
+        const hasPermission = (userData.user && userData.user.permissions && userData.user.permissions.includes('FINANCE_VIEW')) || 
+                             (userData.user && (userData.user.role === 'ADMIN' || userData.user.role === 'MANAGER'));
         
         if (!hasPermission) {
           router.replace('/no-access');
@@ -415,7 +414,7 @@ export default function FinancePage() {
   }, [selectedKurum, kurumOrgSummary]);
 
   return (
-    <AuthGuard requiredPermissions={['FINANCE_VIEW']}>
+    <AuthGuard>
       <div className="w-full max-w-5xl mx-auto px-4 py-8 animate-fade-in">
         <PageHeader
           title="Finans Takibi"

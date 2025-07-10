@@ -2,51 +2,34 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-export default function AuthGuard({ children, requiredPermissions }: { children: React.ReactNode, requiredPermissions?: string[] }) {
+export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let ignore = false;
     async function checkAuth() {
       try {
         const res = await fetch("/api/user", { credentials: "include" });
-        if (res.status === 401 && pathname !== "/login") {
+        if (res.status === 401) {
+          alert("Oturumunuz sona erdi, lütfen tekrar giriş yapın.");
           router.replace("/login");
         } else if (res.status === 200) {
-          const data = await res.json();
-          if (requiredPermissions && requiredPermissions.length > 0) {
-            const userPerms = data.user.permissions || [];
-            const userRole = data.user.role;
-            
-            // İzin kontrolü - önce kullanıcının rolü ADMIN veya MANAGER mi kontrol et
-            let hasPermission = userRole === 'ADMIN' || userRole === 'MANAGER';
-            
-            // Eğer ADMIN veya MANAGER değilse, gerekli izinlere sahip mi kontrol et
-            if (!hasPermission && requiredPermissions && requiredPermissions.length > 0) {
-              // Gerekli izinlerden en az birine sahip olmalı
-              hasPermission = requiredPermissions.some((perm: string) => userPerms.includes(perm));
-            }
-            
-            if (!hasPermission) {
-              router.replace("/no-access");
-              return;
-            }
-          }
-          if (pathname === "/login") {
-            router.replace("/");
+          if (process.env.NODE_ENV === "development") {
+            console.log("Kullanıcı doğrulandı, cookie mevcut.");
           }
         }
-      } catch {
-        if (pathname !== "/login") router.replace("/login");
+      } catch (err) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("Auth kontrolünde hata:", err);
+        }
+        router.replace("/login");
       } finally {
-        if (!ignore) setLoading(false);
+        setLoading(false);
       }
     }
     checkAuth();
-    return () => { ignore = true; };
-  }, [pathname, router, requiredPermissions]);
+  }, [pathname, router]);
 
   if (loading) return null;
   return <>{children}</>;

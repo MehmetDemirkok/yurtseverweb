@@ -20,12 +20,28 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        if (process.env.NODE_ENV === "development") {
+          setTimeout(() => {
+            const cookies = document.cookie;
+            if (!cookies.includes("token")) {
+              console.warn("Dikkat! Token cookie'si set edilmedi. JWT_SECRET, domain veya secure flag ayarlarını kontrol edin.");
+            } else {
+              console.log("Token cookie başarıyla set edildi.");
+            }
+          }, 1000);
+        }
         router.push("/");
       } else {
-        setError(data.error || "Kullanıcı adı veya şifre hatalı!");
+        setError("Giriş başarısız! Lütfen bilgilerinizi kontrol edin.");
+        if (process.env.NODE_ENV === "development") {
+          console.error("Login error:", data.error);
+        }
       }
-    } catch {
+    } catch (err) {
       setError("Bir hata oluştu. Lütfen tekrar deneyin.");
+      if (process.env.NODE_ENV === "development") {
+        console.error("Login exception:", err);
+      }
     }
   };
 
