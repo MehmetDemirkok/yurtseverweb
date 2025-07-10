@@ -3,6 +3,51 @@ const { faker } = require('@faker-js/faker');
 
 const prisma = new PrismaClient();
 
+async function seedAccommodations() {
+  const kurumlar = [
+    { name: 'Kurum A', organizasyonlar: ['OrgA1', 'OrgA2'] },
+    { name: 'Kurum B', organizasyonlar: ['OrgB1', 'OrgB2'] },
+    { name: 'Kurum C', organizasyonlar: ['OrgC1', 'OrgC2'] },
+  ];
+  const odaTipleri = ['Single Oda', 'Double Oda', 'Suite'];
+  const konaklamaTipleri = ['BB', 'HB', 'FB', 'UHD'];
+  const ulkeler = ['Türkiye', 'Almanya', 'Fransa'];
+  const sehirler = ['İstanbul', 'Berlin', 'Paris'];
+  const now = new Date();
+
+  let count = 0;
+  for (const kurum of kurumlar) {
+    for (const org of kurum.organizasyonlar) {
+      for (let i = 0; i < 50 / (kurumlar.length * kurum.organizasyonlar.length); i++) {
+        const girisTarihi = new Date(now.getFullYear(), now.getMonth(), now.getDate() - Math.floor(Math.random() * 30));
+        const cikisTarihi = new Date(girisTarihi);
+        cikisTarihi.setDate(girisTarihi.getDate() + 2 + Math.floor(Math.random() * 5));
+        const numberOfNights = Math.max(1, Math.round((cikisTarihi - girisTarihi) / (1000 * 60 * 60 * 24)));
+        const gecelikUcret = 100 + Math.floor(Math.random() * 200);
+        await prisma.accommodation.create({
+          data: {
+            adiSoyadi: `Demo Kullanıcı ${++count}`,
+            unvani: `Unvan ${count}`,
+            ulke: ulkeler[Math.floor(Math.random() * ulkeler.length)],
+            sehir: sehirler[Math.floor(Math.random() * sehirler.length)],
+            girisTarihi: girisTarihi.toISOString().slice(0, 10),
+            cikisTarihi: cikisTarihi.toISOString().slice(0, 10),
+            odaTipi: odaTipleri[Math.floor(Math.random() * odaTipleri.length)],
+            konaklamaTipi: konaklamaTipleri[Math.floor(Math.random() * konaklamaTipleri.length)],
+            faturaEdildi: Math.random() > 0.5,
+            gecelikUcret,
+            toplamUcret: gecelikUcret * numberOfNights,
+            organizasyonAdi: org,
+            otelAdi: `Otel ${org}`,
+            kurumCari: kurum.name,
+          }
+        });
+      }
+    }
+  }
+  console.log('Demo Accommodation kayıtları eklendi!');
+}
+
 async function main() {
   console.log('Seeding started...');
 
@@ -39,6 +84,8 @@ async function main() {
       });
     }
   }
+
+  await seedAccommodations();
 
   console.log('Seeding finished.');
 }
