@@ -162,6 +162,7 @@ export async function PATCH(request: Request) {
         const updateData: any = {};
         if (typeof fiyat === 'number') updateData.fiyat = fiyat;
         if (status) updateData.status = status;
+        if (existingSale.accommodationData) updateData.accommodationData = existingSale.accommodationData;
         const updated = await prisma.sale.update({
           where: { id: Number(saleId) },
           data: updateData,
@@ -204,6 +205,8 @@ export async function PATCH(request: Request) {
     const updateData: any = {};
     if (typeof fiyat === 'number') updateData.fiyat = fiyat;
     if (status) updateData.status = status;
+    // accommodationData'yı koru
+    if (existingSale.accommodationData) updateData.accommodationData = existingSale.accommodationData;
 
     // Satışı güncelle
     const updated = await prisma.sale.update({

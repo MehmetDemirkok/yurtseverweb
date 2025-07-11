@@ -245,6 +245,22 @@ function SalesPageContent() {
     }
   };
 
+  // Satış detay ve tablo için yardımcı fonksiyon
+  function getAccommodationField(sale: any, field: string) {
+    if (sale.accommodation && sale.accommodation[field]) return sale.accommodation[field];
+    if (sale.accommodationData) {
+      try {
+        const data = typeof sale.accommodationData === 'string'
+          ? JSON.parse(sale.accommodationData)
+          : sale.accommodationData;
+        return data[field] || '-';
+      } catch {
+        return '-';
+      }
+    }
+    return '-';
+  }
+
   return (
     <div className="w-full mx-auto px-4 py-8 animate-fade-in">
       <PageHeader
@@ -428,25 +444,25 @@ function SalesPageContent() {
                   {selectedColumns.includes('adiSoyadi') && (
                     <td className="truncate py-1.5">
                       <div className="flex flex-col">
-                        <span className="font-medium leading-tight">{sale.accommodation?.adiSoyadi || '-'}</span>
+                        <span className="font-medium leading-tight">{getAccommodationField(sale, 'adiSoyadi')}</span>
                       </div>
                     </td>
                   )}
                   {selectedColumns.includes('unvani') && (
                     <td className="truncate hidden md:table-cell py-1.5">
-                      <span className="text-[9px] leading-tight">{sale.accommodation?.unvani || '-'}</span>
+                      <span className="text-[9px] leading-tight">{getAccommodationField(sale, 'unvani')}</span>
                     </td>
                   )}
-                  {selectedColumns.includes('girisTarihi') && <td className="whitespace-nowrap py-1.5 text-[10px]">{formatDate(sale.accommodation?.girisTarihi)}</td>}
-                  {selectedColumns.includes('cikisTarihi') && <td className="whitespace-nowrap py-1.5 text-[10px]">{formatDate(sale.accommodation?.cikisTarihi)}</td>}
+                  {selectedColumns.includes('girisTarihi') && <td className="whitespace-nowrap py-1.5 text-[10px]">{formatDate(getAccommodationField(sale, 'girisTarihi'))}</td>}
+                  {selectedColumns.includes('cikisTarihi') && <td className="whitespace-nowrap py-1.5 text-[10px]">{formatDate(getAccommodationField(sale, 'cikisTarihi'))}</td>}
                   {selectedColumns.includes('odaTipi') && (
                     <td className="text-center py-1.5">
                       <span className="px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-[9px] font-medium inline-block">
-                        {sale.accommodation?.odaTipi || '-'}
+                        {getAccommodationField(sale, 'odaTipi')}
                       </span>
                     </td>
                   )}
-                  {selectedColumns.includes('numberOfNights') && <td className="text-center whitespace-nowrap py-1.5">{sale.accommodation?.numberOfNights ?? '-'}</td>}
+                  {selectedColumns.includes('numberOfNights') && <td className="text-center whitespace-nowrap py-1.5">{getAccommodationField(sale, 'numberOfNights')}</td>}
                   {selectedColumns.includes('fiyat') && <td className="font-medium text-gray-600 hidden md:table-cell whitespace-nowrap text-right py-1.5">{sale.fiyat.toLocaleString('tr-TR')} ₺</td>}
                   {selectedColumns.includes('toplamSatis') && <td className="font-bold text-green-600 hidden sm:table-cell whitespace-nowrap text-right py-1.5">{(sale.fiyat * (sale.accommodation?.numberOfNights ?? 0)).toLocaleString('tr-TR')} ₺</td>}
                   {selectedColumns.includes('status') && (
@@ -495,12 +511,12 @@ function SalesPageContent() {
               Satış Detayı
             </h2>
             <div className="space-y-2">
-              <div><span className="font-semibold">Adı Soyadı:</span> {detailSale.accommodation?.adiSoyadi || '-'}</div>
-              <div><span className="font-semibold">Unvanı:</span> {detailSale.accommodation?.unvani || '-'}</div>
-              <div><span className="font-semibold">Organizasyon:</span> {detailSale.accommodation?.organizasyonAdi || detailSale.organizasyonAdi}</div>
-              <div><span className="font-semibold">Giriş Tarihi:</span> {formatDate(detailSale.accommodation?.girisTarihi)}</div>
-              <div><span className="font-semibold">Çıkış Tarihi:</span> {formatDate(detailSale.accommodation?.cikisTarihi)}</div>
-              <div><span className="font-semibold">Gece:</span> {detailSale.accommodation?.numberOfNights ?? '-'}</div>
+              <div><span className="font-semibold">Adı Soyadı:</span> {getAccommodationField(detailSale, 'adiSoyadi')}</div>
+              <div><span className="font-semibold">Unvanı:</span> {getAccommodationField(detailSale, 'unvani')}</div>
+              <div><span className="font-semibold">Organizasyon:</span> {getAccommodationField(detailSale, 'organizasyonAdi') || detailSale.organizasyonAdi}</div>
+              <div><span className="font-semibold">Giriş Tarihi:</span> {formatDate(getAccommodationField(detailSale, 'girisTarihi'))}</div>
+              <div><span className="font-semibold">Çıkış Tarihi:</span> {formatDate(getAccommodationField(detailSale, 'cikisTarihi'))}</div>
+              <div><span className="font-semibold">Gece:</span> {getAccommodationField(detailSale, 'numberOfNights') ?? '-'}</div>
               <div><span className="font-semibold">Fiyat:</span> {detailSale.fiyat.toLocaleString('tr-TR')} ₺</div>
               <div><span className="font-semibold">Tarih:</span> {formatDate(detailSale.createdAt)}</div>
               <div><span className="font-semibold">Durum:</span> <span className={`px-2 py-1 rounded-full text-xs font-bold ${statusColor(detailSale.status)}`}>{detailSale.status}</span></div>
@@ -552,7 +568,7 @@ function SalesPageContent() {
               aria-label="Kapat"
             >×</button>
             <h2 className="text-2xl font-bold text-red-700 mb-6">Satış Kaydını Sil</h2>
-            <p className="mb-4 text-gray-700">Bu satış kaydını silmek istediğinize emin misiniz?<br/><span className="font-semibold">{selectedSale.accommodation?.adiSoyadi}</span> ({selectedSale.fiyat.toLocaleString('tr-TR')} ₺)</p>
+            <p className="mb-4 text-gray-700">Bu satış kaydını silmek istediğinize emin misiniz?<br/><span className="font-semibold">{getAccommodationField(selectedSale, 'adiSoyadi')}</span> ({selectedSale.fiyat.toLocaleString('tr-TR')} ₺)</p>
             
             <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-100">
               <div className="flex items-center mb-2">
