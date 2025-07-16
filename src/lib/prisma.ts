@@ -72,5 +72,5 @@ const enhancedPrisma = prisma.$extends({
   },
 });
 
-// Geliştirilmiş Prisma istemcisini dışa aktar
-export { enhancedPrisma };
+// Sadece bir kez export et
+export default prisma;

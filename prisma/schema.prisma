@@ -3,21 +3,21 @@ generator client {
 }
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  password  String
-  role      Role     @default(USER)
-  permissions String[] @default([])
-  logs      Log[]    // Kullanıcının yaptığı işlemlerin logları
-  transactions Transaction[] // Kullanıcının finans işlemleri
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
+  name         String?
+  createdAt    DateTime      @default(now())
+  password     String
+  role         Role          @default(USER)
+  permissions  String[]      @default([])
+  logs         Log[]
+  transactions Transaction[]
 }
 
 model Accommodation {
@@ -41,29 +41,40 @@ model Accommodation {
 }
 
 model Sale {
-  id              Int        @id @default(autoincrement())
-  accommodation   Accommodation? @relation(fields: [accommodationId], references: [id], onDelete: SetNull)
-  accommodationId Int?
-  organizasyonAdi String
-  kurumCari       String?   // Kurum Cari bilgisi eklendi
-  fiyat           Float
-  createdAt       DateTime   @default(now())
-  status          SaleStatus @default(AKTARILDI)
-  accommodationData String?  // Konaklama kaydının JSON verisi
+  id                Int            @id @default(autoincrement())
+  organizasyonAdi   String
+  fiyat             Float
+  createdAt         DateTime       @default(now())
+  status            SaleStatus     @default(AKTARILDI)
+  accommodationId   Int?
+  accommodationData String?
+  kurumCari         String?
+  accommodation     Accommodation? @relation(fields: [accommodationId], references: [id])
 }
 
-// Yeni Log modeli
 model Log {
-  id          Int       @id @default(autoincrement())
-  action      String    // Yapılan işlem: DELETE, UPDATE, CREATE
-  modelName   String    // İşlem yapılan model: Accommodation, Sale
-  recordId    Int       // İşlem yapılan kaydın ID'si
-  recordData  String    // Silinen/değiştirilen kaydın JSON verisi
-  userId      Int?      // İşlemi yapan kullanıcı ID'si (nullable)
-  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt   DateTime  @default(now())
-  ipAddress   String?   // İşlemi yapan kullanıcının IP adresi
-  userAgent   String?   // İşlemi yapan kullanıcının tarayıcı bilgisi
+  id         Int      @id @default(autoincrement())
+  action     String
+  modelName  String
+  recordId   Int
+  recordData String
+  userId     Int?
+  createdAt  DateTime @default(now())
+  ipAddress  String?
+  userAgent  String?
+  user       User?    @relation(fields: [userId], references: [id])
+}
+
+model Transaction {
+  id          Int             @id @default(autoincrement())
+  type        TransactionType
+  description String
+  amount      Float
+  date        String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  userId      Int?
+  user        User?           @relation(fields: [userId], references: [id])
 }
 
 enum Role {
@@ -77,18 +88,6 @@ enum SaleStatus {
   AKTARILDI
   FATURALANDI
   IPTAL
-}
-
-model Transaction {
-  id          Int       @id @default(autoincrement())
-  type        TransactionType
-  description String
-  amount      Float
-  date        String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  userId      Int?      // İşlemi yapan kullanıcı ID'si (nullable)
-  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 enum TransactionType {

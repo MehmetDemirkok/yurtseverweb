@@ -231,38 +231,10 @@ export default function FinancePage() {
     const calculateKurumOrgSummary = () => {
       // Başlangıç özeti
       const summary: Record<string, Record<string, { alis: number; satis: number }>> = {};
-      
-      // Eski işlemleri ekle (geriye dönük uyumluluk için)
-      transactions.forEach(t => {
-        if (t.type !== 'ALIS' && t.type !== 'SATIS') return;
-        // Satış işlemleri için kurum ve organizasyon bilgisini al
-        let kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : '';
-        let org = t.type === 'SATIS' ? getOrgNameFromDescription(t.description) : '';
-        
-        // Eğer kurum bilgisi yoksa ve alış işlemi ise, bu işlemi dahil etme
-        if (!kurum && t.type === 'ALIS') return;
-        
-        // Kurum bilgisi yoksa ve satış işlemi ise, açıklamayı kullan
-        if (!kurum && t.type === 'SATIS') {
-          kurum = t.description || '';
-          if (!kurum) return; // Açıklama da yoksa, işlemi dahil etme
-        }
-        
-        // Organizasyon bilgisi yoksa, kurum bilgisini kullan
-        if (!org) org = kurum;
-        
-        if (!summary[kurum]) summary[kurum] = {};
-        if (!summary[kurum][org]) summary[kurum][org] = { alis: 0, satis: 0 };
-        if (t.type === 'ALIS') summary[kurum][org].alis += t.amount;
-        if (t.type === 'SATIS') summary[kurum][org].satis += t.amount;
-      });
-      
+      // transactions kaldırıldı, sadece sales ve accommodations kullanılacak
       // Satışları ekle
       sales.forEach(sale => {
-        // Önce sale.kurumCari'yi kontrol et, yoksa accommodationData içindeki kurumCari'yi kontrol et
         let kurum = sale.kurumCari || '';
-        
-        // Eğer sale.kurumCari yoksa ve accommodationData varsa, accommodationData içindeki kurumCari'yi kullan
         if (!kurum && sale.accommodationData) {
           try {
             const accommodationData = JSON.parse(sale.accommodationData);
@@ -271,72 +243,36 @@ export default function FinancePage() {
             console.error('JSON parse hatası:', e);
           }
         }
-        
-        // Hala kurum bilgisi yoksa, organizasyonAdi'ndan çıkarmayı dene
         if (!kurum) {
           kurum = getKurumNameFromDescription(sale.organizasyonAdi) || '';
         }
-        
-        // Kurum bilgisi yoksa, bu satışı dahil etme
         if (!kurum) return;
-        
-        const org = sale.organizasyonAdi || kurum; // Organizasyon yoksa kurum adını kullan
+        const org = sale.organizasyonAdi || kurum;
         const fiyat = sale.fiyat || 0;
         const numberOfNights = sale.accommodation?.numberOfNights || 1;
         const satisTutari = fiyat * numberOfNights;
-        
         if (!summary[kurum]) summary[kurum] = {};
         if (!summary[kurum][org]) summary[kurum][org] = { alis: 0, satis: 0 };
         summary[kurum][org].satis += satisTutari;
       });
-      
       // Konaklama kayıtlarını ekle
       accommodations.forEach(acc => {
         const kurum = acc.kurumCari || '';
-        // Kurum bilgisi yoksa, bu kaydı dahil etme
         if (!kurum) return;
-        
-        const org = acc.organizasyonAdi || kurum; // Organizasyon yoksa kurum adını kullan
+        const org = acc.organizasyonAdi || kurum;
         const toplamUcret = acc.toplamUcret || 0;
-        
         if (!summary[kurum]) summary[kurum] = {};
         if (!summary[kurum][org]) summary[kurum][org] = { alis: 0, satis: 0 };
         summary[kurum][org].alis += toplamUcret;
       });
-      
       return summary;
     };
-
     // Kurum bazında özet hesaplama
     const calculateKurumSummary = () => {
-      // Başlangıç özeti
       const summary: Record<string, { alis: number; satis: number }> = {};
-      
-      // Eski işlemleri ekle (geriye dönük uyumluluk için)
-      transactions.forEach(t => {
-        // Satış işlemleri için kurum bilgisini al
-        let kurum = t.type === 'SATIS' ? getKurumNameFromDescription(t.description) : '';
-        
-        // Eğer kurum bilgisi yoksa ve alış işlemi ise, bu işlemi dahil etme
-        if (!kurum && t.type === 'ALIS') return;
-        
-        // Kurum bilgisi yoksa ve satış işlemi ise, açıklamayı kullan
-        if (!kurum && t.type === 'SATIS') {
-          kurum = t.description || '';
-          if (!kurum) return; // Açıklama da yoksa, işlemi dahil etme
-        }
-        
-        if (!summary[kurum]) summary[kurum] = { alis: 0, satis: 0 };
-        if (t.type === 'ALIS') summary[kurum].alis += t.amount;
-        if (t.type === 'SATIS') summary[kurum].satis += t.amount;
-      });
-      
-      // Satışları ekle
+      // transactions kaldırıldı, sadece sales ve accommodations kullanılacak
       sales.forEach(sale => {
-        // Önce sale.kurumCari'yi kontrol et, yoksa accommodationData içindeki kurumCari'yi kontrol et
         let kurum = sale.kurumCari || '';
-        
-        // Eğer sale.kurumCari yoksa ve accommodationData varsa, accommodationData içindeki kurumCari'yi kullan
         if (!kurum && sale.accommodationData) {
           try {
             const accommodationData = JSON.parse(sale.accommodationData);
@@ -345,49 +281,33 @@ export default function FinancePage() {
             console.error('JSON parse hatası:', e);
           }
         }
-        
-        // Hala kurum bilgisi yoksa, organizasyonAdi'ndan çıkarmayı dene
         if (!kurum) {
           kurum = getKurumNameFromDescription(sale.organizasyonAdi) || '';
         }
-        
-        // Kurum bilgisi yoksa, bu satışı dahil etme
         if (!kurum) return;
-        
         const fiyat = sale.fiyat || 0;
         const numberOfNights = sale.accommodation?.numberOfNights || 1;
         const satisTutari = fiyat * numberOfNights;
-        
         if (!summary[kurum]) summary[kurum] = { alis: 0, satis: 0 };
         summary[kurum].satis += satisTutari;
       });
-      
-      // Konaklama kayıtlarını ekle
       accommodations.forEach(acc => {
         const kurum = acc.kurumCari || '';
-        // Kurum bilgisi yoksa, bu kaydı dahil etme
         if (!kurum) return;
-        
         const toplamUcret = acc.toplamUcret || 0;
-        
         if (!summary[kurum]) summary[kurum] = { alis: 0, satis: 0 };
         summary[kurum].alis += toplamUcret;
       });
-      
       return summary;
     };
-
     // Hesaplamaları yap ve state'leri güncelle
     const orgSummary = calculateKurumOrgSummary();
     const kurumSum = calculateKurumSummary();
-    
     setKurumOrgSummary(orgSummary);
     setKurumSummary(kurumSum);
-    
-    // Kurum listesini güncelle
     const kurumlar = Object.keys(kurumSum).sort();
     setKurumList(kurumlar);
-  }, [transactions, sales, accommodations]);
+  }, [sales, accommodations]);
 
   // Kurum listesi değiştiğinde kontrol et
   useEffect(() => {
