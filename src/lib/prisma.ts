@@ -25,7 +25,7 @@ export const prisma =
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 // Hata yakalama, loglama ve yeniden deneme için geliştirilmiş Prisma istemcisi
-const enhancedPrisma = prisma.$extends({
+export const enhancedPrisma = prisma.$extends({
   query: {
     async $allOperations({ operation, model, args, query }) {
       const start = performance.now();
