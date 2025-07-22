@@ -33,8 +33,8 @@ export default function SidebarLayout({ children }: { children: React.ReactNode 
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Login ve no-access sayfalarında sidebar'ı gösterme
-  if (pathname === '/login' || pathname === '/no-access') {
+  // Login, no-access ve dashboard sayfalarında sidebar'ı gösterme
+  if (pathname === '/login' || pathname === '/no-access' || pathname === '/dashboard') {
     return (
       <div className="sidebar-layout">
         <div className="sidebar-content w-full">

@@ -30,7 +30,7 @@ export default function LoginPage() {
             }
           }, 1000);
         }
-        router.push("/");
+        router.push("/dashboard");
       } else {
         setError("Giriş başarısız! Lütfen bilgilerinizi kontrol edin.");
         if (process.env.NODE_ENV === "development") {
@@ -89,4 +89,4 @@ export default function LoginPage() {
       </div>
     </div>
   );
-} 
+}

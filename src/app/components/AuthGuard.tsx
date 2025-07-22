@@ -1,19 +1,24 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const alertShownRef = useRef(false); // Alert'in gösterilip gösterilmediğini takip etmek için
 
   useEffect(() => {
     async function checkAuth() {
       try {
         const res = await fetch("/api/user", { credentials: "include" });
         if (res.status === 401) {
-          alert("Oturumunuz sona erdi, lütfen tekrar giriş yapın.");
-          router.replace("/login");
+          // Eğer alert daha önce gösterilmediyse göster
+          if (!alertShownRef.current) {
+            alertShownRef.current = true;
+            alert("Oturumunuz sona erdi, lütfen tekrar giriş yapın.");
+            router.replace("/login");
+          }
         } else if (res.status === 200) {
           if (process.env.NODE_ENV === "development") {
             console.log("Kullanıcı doğrulandı, cookie mevcut.");
@@ -23,7 +28,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         if (process.env.NODE_ENV === "development") {
           console.error("Auth kontrolünde hata:", err);
         }
-        router.replace("/login");
+        // Hata durumunda da alert'i bir kez göster
+        if (!alertShownRef.current) {
+          alertShownRef.current = true;
+          router.replace("/login");
+        }
       } finally {
         setLoading(false);
       }

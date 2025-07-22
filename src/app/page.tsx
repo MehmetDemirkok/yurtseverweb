@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import Statistics from './components/Statistics';
 import AccommodationFormModal from './components/AccommodationFormModal';
@@ -35,10 +36,16 @@ interface User {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [records, setRecords] = useState<AccommodationRecord[]>([]);
   const [isTableCollapsed, setIsTableCollapsed] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  
+  // Dashboard sayfasından gelen kullanıcılar için ana sayfa normal çalışacak
+  // useEffect(() => {
+  //   router.replace('/dashboard');
+  // }, [router]);
 
   const [formData, setFormData] = useState<Omit<AccommodationRecord, 'id' | 'toplamUcret' | 'numberOfNights'>>({
     adiSoyadi: '',

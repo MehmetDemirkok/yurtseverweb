@@ -160,6 +160,10 @@ html {
   animation: fadeIn 0.6s ease-out;
 }
 
+.animate-fade-in-delayed {
+  animation: fadeIn 0.6s ease-out 0.3s both;
+}
+
 .animate-slide-in {
   animation: slideIn 0.5s ease-out;
 }
