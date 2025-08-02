@@ -1,0 +1,51 @@
+Halihazırda geliştirdiğim bir Next.js (App Router yapısı ile) ve Supabase tabanlı bir uygulamam var. Bu mevcut projeye entegre edilecek, bağımsız çalışan yeni bir “araç takip ve havalimanı transfer yönetimi” modülü oluşturmak istiyorum.
+
+Lütfen aşağıdaki kurallara uy:
+
+❗️ÖNEMLİ:
+- Mevcut dosyalara kesinlikle dokunma veya değiştirme.
+- Sadece yeni dosyalar ve klasörler oluştur.
+- Yeni oluşturulan modül kendi içinde bağımsız ve modüler olsun. Örneğin: `/moduller/transfer` veya benzeri bir klasör altında tüm ilgili dosyaları topla.
+- Geliştirme dili **Türkçe** olacak. Değişken isimleri, bileşen isimleri, yorumlar ve arayüz metinleri Türkçe olsun.
+
+✅ GEREKSİNİMLER:
+
+🔐 Giriş / Kimlik Doğrulama:
+- Supabase Auth sistemi kullanılacak (zaten mevcut sistemle entegre)
+- Rol bazlı kullanıcı sistemi: Yönetici, Planlayıcı, Şoför
+- Her rol, sadece kendine özel ekranları görebilmeli
+
+🚐 Araç Takip:
+- Araç ekle, düzenle, sil
+- Bilgiler: plaka, marka, yolcu kapasitesi, durum (müsait / bakımda)
+- Anlık konum gösterimi (şimdilik manuel enlem-boylam girişi)
+
+👨‍✈️ Şoför Yönetimi:
+- Şoför ekle, düzenle, sil
+- Bilgiler: ad-soyad, telefon, ehliyet sınıfı, atandığı araç
+
+📅 Transfer Planlama:
+- Transfer oluştur (kalkış yeri, saat, varış yeri, kişi sayısı)
+- Araca ve şoföre atama yapılabilmeli
+- Yaklaşan transferler listelenebilmeli (örneğin bugünkü transferler)
+
+📍 Konum Sistemi:
+- Gerçek zamanlı konum ileride entegre edilecek
+- Şimdilik araçlara manuel konum verisi girilecek
+
+🎨 Arayüz:
+- Tailwind CSS kullanılacak
+- Varsayılan tema koyu mod olacak
+- Mobil uyumlu tasarım
+- Yönetici paneli gibi kenar menülü bir yapı
+- Tüm metinler Türkçe olacak
+
+🗂 Yapı:
+- Yeni modül ayrı bir klasörde olsun (örneğin: `moduller/transfer`)
+- Sayfalar, bileşenler, veritabanı işlemleri, yardımcı fonksiyonlar modüler yapı içinde düzenlensin
+
+💾 Veritabanı:
+- Supabase içinde yeni tablolar oluştur: `araclar`, `soforler`, `transferler`
+- Basit satır bazlı güvenlik kuralları tanımlayabilirsin (şimdilik opsiyonel)
+
+Bu yapıyı başlat, gerekli klasörleri ve sayfaları oluştur. Mevcut kod yapısına hiçbir zarar verme.

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
-import jwt from 'jsonwebtoken';
+import jwt, { JsonWebTokenError } from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
@@ -46,7 +46,18 @@ export async function POST(request: Request) {
     if (!token) {
       return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 });
     }
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string; permissions?: string[] };
+    
+    let decoded: { id: number; role: string; permissions?: string[] };
+    try {
+      decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string; permissions?: string[] };
+    } catch (jwtError) {
+      if (jwtError instanceof JsonWebTokenError) {
+        console.error('JWT verification failed:', jwtError.message);
+        return NextResponse.json({ error: 'Geçersiz oturum. Lütfen tekrar giriş yapın.' }, { status: 401 });
+      }
+      throw jwtError;
+    }
+    
     if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Geçersiz oturum.' }, { status: 401 });
     }
@@ -58,7 +69,8 @@ export async function POST(request: Request) {
     if (!user || !user.permissions || !user.permissions.includes('sales')) {
       return NextResponse.json({ error: 'Satışa aktarma yetkiniz yok.' }, { status: 403 });
     }
-  } catch {
+  } catch (error) {
+    console.error('Error in sales POST route:', error);
     return NextResponse.json({ error: 'Yetki kontrolü başarısız.' }, { status: 401 });
   }
   const data = await request.json();
@@ -141,8 +153,13 @@ export async function PATCH(request: Request) {
       try {
         const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
         userId = decoded.id;
-      } catch (e) {
-        console.error('Token çözme hatası:', e);
+      } catch (jwtError) {
+        if (jwtError instanceof JsonWebTokenError) {
+          console.error('JWT verification failed:', jwtError.message);
+          // Don't fail the request, just log the error and continue without userId
+        } else {
+          console.error('Token çözme hatası:', jwtError);
+        }
       }
     }
 

@@ -33,8 +33,8 @@ export default function DashboardPage() {
       // Mevcut otel sistemine yönlendir
       router.push('/');
     } else {
-      // Araç takip sistemi yapım aşamasında bildirimi göster
-      alert('Araç takip sistemi yapım aşamasındadır. Lütfen daha sonra tekrar deneyiniz.');
+      // Transfer modülüne yönlendir
+      router.push('/moduller/transfer');
     }
   };
 

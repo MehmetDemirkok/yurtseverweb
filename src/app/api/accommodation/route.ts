@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
-import jwt from 'jsonwebtoken';
+import jwt, { JsonWebTokenError } from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
@@ -33,8 +33,13 @@ export async function POST(request: Request) {
         const decoded = jwt.verify(token, JWT_SECRET) as { id: number };
         userId = decoded.id;
         console.log('Token doğrulandı, userId:', userId);
-      } catch (e) {
-        console.error('Token çözme hatası:', e);
+      } catch (jwtError) {
+        if (jwtError instanceof JsonWebTokenError) {
+          console.error('JWT verification failed:', jwtError.message);
+          // Don't fail the request, just log the error and continue without userId
+        } else {
+          console.error('Token çözme hatası:', jwtError);
+        }
       }
     }
 

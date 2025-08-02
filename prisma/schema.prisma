@@ -94,3 +94,70 @@ enum TransactionType {
   ALIS
   SATIS
 }
+
+// Transfer Modülü Tabloları
+model Arac {
+  id              String    @id @default(cuid())
+  plaka           String    @unique
+  marka           String
+  model           String
+  yolcuKapasitesi Int
+  durum           AracDurum @default(MUSAIT)
+  enlem           Float     @default(0)
+  boylam          Float     @default(0)
+  sonGuncelleme   DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  soforler        Sofor[]
+  transferler     Transfer[]
+}
+
+model Sofor {
+  id            String      @id @default(cuid())
+  ad            String
+  soyad         String
+  telefon       String      @unique
+  ehliyetSinifi String
+  atananAracId  String?
+  durum         SoforDurum  @default(MUSAIT)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  atananArac    Arac?       @relation(fields: [atananAracId], references: [id])
+  transferler   Transfer[]
+}
+
+model Transfer {
+  id           String         @id @default(cuid())
+  kalkisYeri   String
+  varisYeri    String
+  kalkisSaati  String
+  kalkisTarihi DateTime
+  yolcuSayisi  Int
+  aracId       String?
+  soforId      String?
+  durum        TransferDurum  @default(BEKLEMEDE)
+  notlar       String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  arac         Arac?          @relation(fields: [aracId], references: [id])
+  sofor        Sofor?         @relation(fields: [soforId], references: [id])
+}
+
+enum AracDurum {
+  MUSAIT
+  TRANSFERDE
+  BAKIMDA
+}
+
+enum SoforDurum {
+  MUSAIT
+  TRANSFERDE
+  IZINLI
+}
+
+enum TransferDurum {
+  BEKLEMEDE
+  YOLDA
+  TAMAMLANDI
+  IPTAL
+}
