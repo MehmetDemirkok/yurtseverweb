@@ -108,7 +108,7 @@ export async function DELETE(
     const activeTransfer = await prisma.transfer.findFirst({
       where: {
         soforId: params.id,
-        durum: { in: ['beklemede', 'yolda'] }
+        durum: { in: ['BEKLEMEDE', 'YOLDA'] }
       }
     });
 
@@ -131,4 +131,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-} 
+}

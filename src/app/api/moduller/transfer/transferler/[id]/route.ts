@@ -83,7 +83,7 @@ export async function PUT(
         );
       }
 
-      if (arac.durum === 'bakımda') {
+      if (arac.durum === 'BAKIMDA') {
         return NextResponse.json(
           { error: 'Seçilen araç bakımda' },
           { status: 400 }
@@ -103,7 +103,7 @@ export async function PUT(
         );
       }
 
-      if (sofor.durum === 'izinli') {
+      if (sofor.durum === 'IZINLI') {
         return NextResponse.json(
           { error: 'Seçilen şoför izinli' },
           { status: 400 }
@@ -169,7 +169,7 @@ export async function DELETE(
     }
 
     // Aktif transfer kontrolü
-    if (transfer.durum === 'yolda') {
+    if (transfer.durum === 'YOLDA') {
       return NextResponse.json(
         { error: 'Yolda olan transfer silinemez' },
         { status: 400 }
@@ -188,4 +188,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-} 
+}

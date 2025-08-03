@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (arac.durum === 'bakımda') {
+      if (arac.durum === 'BAKIMDA') {
         return NextResponse.json(
           { error: 'Seçilen araç bakımda' },
           { status: 400 }
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (sofor.durum === 'izinli') {
+      if (sofor.durum === 'IZINLI') {
         return NextResponse.json(
           { error: 'Seçilen şoför izinli' },
           { status: 400 }
@@ -137,4 +137,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
