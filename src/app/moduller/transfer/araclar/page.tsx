@@ -43,6 +43,21 @@ export default function AraclarPage() {
     enlem: 0,
     boylam: 0
   });
+  
+  // Form validation
+  const [formErrors, setFormErrors] = useState({
+    plaka: '',
+    marka: '',
+    model: '',
+    yolcuKapasitesi: ''
+  });
+  
+  // Plaka formatını kontrol eden fonksiyon
+  const validatePlaka = (plaka: string) => {
+    // Türk plaka formatı: 2 rakam + boşluk + 1-3 harf + boşluk + 2-4 rakam
+    const plakaRegex = /^(0[1-9]|[1-7][0-9]|8[0-1])\s[A-Z]{1,3}\s\d{2,4}$/;
+    return plakaRegex.test(plaka.toUpperCase());
+  };
 
   useEffect(() => {
     fetchAraclar();
@@ -67,6 +82,52 @@ export default function AraclarPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Form validasyonu
+    let hasError = false;
+    const newErrors = { ...formErrors };
+    
+    // Plaka validasyonu
+    if (!formData.plaka.trim()) {
+      newErrors.plaka = 'Plaka alanı zorunludur';
+      hasError = true;
+    } else if (!validatePlaka(formData.plaka)) {
+      newErrors.plaka = 'Geçerli bir plaka formatı giriniz (örn: 34 ABC 123)';
+      hasError = true;
+    } else {
+      newErrors.plaka = '';
+    }
+    
+    // Marka validasyonu
+    if (!formData.marka.trim()) {
+      newErrors.marka = 'Marka alanı zorunludur';
+      hasError = true;
+    } else {
+      newErrors.marka = '';
+    }
+    
+    // Model validasyonu
+    if (!formData.model.trim()) {
+      newErrors.model = 'Model alanı zorunludur';
+      hasError = true;
+    } else {
+      newErrors.model = '';
+    }
+    
+    // Yolcu kapasitesi validasyonu
+    if (isNaN(formData.yolcuKapasitesi) || formData.yolcuKapasitesi < 1) {
+      newErrors.yolcuKapasitesi = 'Geçerli bir yolcu kapasitesi giriniz (en az 1)';
+      hasError = true;
+    } else {
+      newErrors.yolcuKapasitesi = '';
+    }
+    
+    setFormErrors(newErrors);
+    
+    if (hasError) {
+      return;
+    }
+    
     try {
       if (editingArac) {
         // Güncelleme işlemi
@@ -79,8 +140,12 @@ export default function AraclarPage() {
       setEditingArac(null);
       resetForm();
       fetchAraclar();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Araç kaydedilemedi:', error);
+      // API'den gelen hata mesajını göster
+      if (error.message) {
+        alert(error.message);
+      }
     }
   };
 
@@ -148,6 +213,12 @@ export default function AraclarPage() {
       durum: 'MUSAIT',
       enlem: 0,
       boylam: 0
+    });
+    setFormErrors({
+      plaka: '',
+      marka: '',
+      model: '',
+      yolcuKapasitesi: ''
     });
   };
 
@@ -361,12 +432,23 @@ export default function AraclarPage() {
                 </label>
                 <input
                   type="text"
-                  required
                   value={formData.plaka}
-                  onChange={(e) => setFormData({...formData, plaka: e.target.value})}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      placeholder="Plaka girin"
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase();
+                    setFormData({...formData, plaka: value});
+                    // Anlık validasyon
+                    if (value && !validatePlaka(value)) {
+                      setFormErrors({...formErrors, plaka: 'Geçerli bir plaka formatı giriniz (örn: 34 ABC 123)'});
+                    } else {
+                      setFormErrors({...formErrors, plaka: ''});
+                    }
+                  }}
+                  className={`w-full border ${formErrors.plaka ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.plaka ? 'focus:ring-red-500' : 'focus:ring-blue-500'}`}
+                  placeholder="Plaka girin (34 ABC 123)"
                 />
+                {formErrors.plaka && (
+                  <p className="mt-1 text-sm text-red-500">{formErrors.plaka}</p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -375,12 +457,22 @@ export default function AraclarPage() {
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.marka}
-                    onChange={(e) => setFormData({...formData, marka: e.target.value})}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({...formData, marka: value});
+                      if (!value.trim()) {
+                        setFormErrors({...formErrors, marka: 'Marka alanı zorunludur'});
+                      } else {
+                        setFormErrors({...formErrors, marka: ''});
+                      }
+                    }}
+                    className={`w-full border ${formErrors.marka ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.marka ? 'focus:ring-red-500' : 'focus:ring-blue-500'}`}
                     placeholder="Marka girin"
                   />
+                  {formErrors.marka && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.marka}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -388,12 +480,22 @@ export default function AraclarPage() {
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.model}
-                    onChange={(e) => setFormData({...formData, model: e.target.value})}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({...formData, model: value});
+                      if (!value.trim()) {
+                        setFormErrors({...formErrors, model: 'Model alanı zorunludur'});
+                      } else {
+                        setFormErrors({...formErrors, model: ''});
+                      }
+                    }}
+                    className={`w-full border ${formErrors.model ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.model ? 'focus:ring-red-500' : 'focus:ring-blue-500'}`}
                     placeholder="Model girin"
                   />
+                  {formErrors.model && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.model}</p>
+                  )}
                 </div>
               </div>
               <div>
@@ -402,13 +504,23 @@ export default function AraclarPage() {
                 </label>
                 <input
                   type="number"
-                  required
                   min="1"
                   max="20"
                   value={formData.yolcuKapasitesi}
-                  onChange={(e) => setFormData({...formData, yolcuKapasitesi: parseInt(e.target.value)})}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    setFormData({...formData, yolcuKapasitesi: value});
+                    if (isNaN(value) || value < 1) {
+                      setFormErrors({...formErrors, yolcuKapasitesi: 'Geçerli bir yolcu kapasitesi giriniz (en az 1)'});
+                    } else {
+                      setFormErrors({...formErrors, yolcuKapasitesi: ''});
+                    }
+                  }}
+                  className={`w-full border ${formErrors.yolcuKapasitesi ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.yolcuKapasitesi ? 'focus:ring-red-500' : 'focus:ring-blue-500'}`}
                 />
+                {formErrors.yolcuKapasitesi && (
+                  <p className="mt-1 text-sm text-red-500">{formErrors.yolcuKapasitesi}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -473,4 +585,4 @@ export default function AraclarPage() {
       )}
     </div>
   );
-} 
+}

@@ -18,6 +18,8 @@ interface Sofor {
   soyad: string;
   telefon: string;
   ehliyetSinifi: string;
+  ehliyetSiniflari: string[];
+  srcBelgeleri: string[];
   atananAracId: string | null;
   atananArac: {
     id: string;
@@ -25,6 +27,7 @@ interface Sofor {
   } | null;
   durum: 'MUSAIT' | 'TRANSFERDE' | 'IZINLI';
   createdAt: string;
+  updatedAt?: string;
 }
 
 export default function SoforlerPage() {
@@ -42,9 +45,25 @@ export default function SoforlerPage() {
     soyad: '',
     telefon: '',
     ehliyetSinifi: 'B',
+    ehliyetSiniflari: ['B'] as string[],
+    srcBelgeleri: [] as string[],
     atananAracId: '',
-    durum: 'MUSAIT' as const
+    durum: 'MUSAIT' as 'MUSAIT' | 'TRANSFERDE' | 'IZINLI'
   });
+  
+  // Form validation state
+  const [formErrors, setFormErrors] = useState({
+    ad: '',
+    soyad: '',
+    telefon: ''
+  });
+  
+  // Telefon numarası validasyonu
+  const validateTelefon = (telefon: string) => {
+    // Türkiye telefon formatı: 05XX XXX XX XX veya 5XX XXX XX XX
+    const telefonRegex = /^(0?5[0-9]{2})[\s]?([0-9]{3})[\s]?([0-9]{2})[\s]?([0-9]{2})$/;
+    return telefonRegex.test(telefon);
+  };
 
   useEffect(() => {
     fetchSoforler();
@@ -82,6 +101,45 @@ export default function SoforlerPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Form validasyonu
+    let hasError = false;
+    const newErrors = { ...formErrors };
+    
+    // Ad validasyonu
+    if (!formData.ad.trim()) {
+      newErrors.ad = 'Ad alanı zorunludur';
+      hasError = true;
+    } else {
+      newErrors.ad = '';
+    }
+    
+    // Soyad validasyonu
+    if (!formData.soyad.trim()) {
+      newErrors.soyad = 'Soyad alanı zorunludur';
+      hasError = true;
+    } else {
+      newErrors.soyad = '';
+    }
+    
+    // Telefon validasyonu
+    if (!formData.telefon.trim()) {
+      newErrors.telefon = 'Telefon alanı zorunludur';
+      hasError = true;
+    } else if (!validateTelefon(formData.telefon)) {
+      newErrors.telefon = 'Geçerli bir telefon numarası giriniz (örn: 0555 123 45 67)';
+      hasError = true;
+    } else {
+      newErrors.telefon = '';
+    }
+    
+    setFormErrors(newErrors);
+    
+    if (hasError) {
+      alert('Lütfen form alanlarını kontrol ediniz');
+      return;
+    }
+    
     try {
       if (editingSofor) {
         // Güncelleme işlemi
@@ -94,8 +152,9 @@ export default function SoforlerPage() {
       setEditingSofor(null);
       resetForm();
       fetchSoforler();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Şoför kaydedilemedi:', error);
+      alert(error.message || 'Şoför kaydedilemedi');
     }
   };
 
@@ -160,8 +219,16 @@ export default function SoforlerPage() {
       soyad: '',
       telefon: '',
       ehliyetSinifi: 'B',
+      ehliyetSiniflari: ['B'] as string[],
+      srcBelgeleri: [] as string[],
       atananAracId: '',
-      durum: 'MUSAIT'
+      durum: 'MUSAIT' as 'MUSAIT' | 'TRANSFERDE' | 'IZINLI'
+    });
+    
+    setFormErrors({
+      ad: '',
+      soyad: '',
+      telefon: ''
     });
   };
 
@@ -172,8 +239,10 @@ export default function SoforlerPage() {
       soyad: sofor.soyad,
       telefon: sofor.telefon,
       ehliyetSinifi: sofor.ehliyetSinifi,
+      ehliyetSiniflari: sofor.ehliyetSiniflari || [sofor.ehliyetSinifi] as string[], // Geriye uyumluluk için
+      srcBelgeleri: sofor.srcBelgeleri || [] as string[],
       atananAracId: sofor.atananAracId || '',
-      durum: sofor.durum
+      durum: sofor.durum as 'MUSAIT' | 'TRANSFERDE' | 'IZINLI'
     });
     setShowModal(true);
   };
@@ -319,9 +388,22 @@ export default function SoforlerPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                      {sofor.ehliyetSinifi}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {Array.isArray(sofor.ehliyetSiniflari) ? sofor.ehliyetSiniflari.map((ehliyet, index) => (
+                        <span key={index} className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          {ehliyet}
+                        </span>
+                      )) : (
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          {sofor.ehliyetSinifi}
+                        </span>
+                      )}
+                      {Array.isArray(sofor.srcBelgeleri) && sofor.srcBelgeleri.length > 0 && sofor.srcBelgeleri.map((src, index) => (
+                        <span key={`src-${index}`} className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                          {src}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                      {sofor.atananArac ? (
@@ -392,12 +474,22 @@ export default function SoforlerPage() {
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.ad}
-                    onChange={(e) => setFormData({...formData, ad: e.target.value})}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({...formData, ad: value});
+                      if (!value.trim()) {
+                        setFormErrors({...formErrors, ad: 'Ad alanı zorunludur'});
+                      } else {
+                        setFormErrors({...formErrors, ad: ''});
+                      }
+                    }}
+                    className={`w-full border ${formErrors.ad ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.ad ? 'focus:ring-red-500' : 'focus:ring-green-500'}`}
                     placeholder="Ad girin"
                   />
+                  {formErrors.ad && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.ad}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -405,12 +497,22 @@ export default function SoforlerPage() {
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.soyad}
-                    onChange={(e) => setFormData({...formData, soyad: e.target.value})}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({...formData, soyad: value});
+                      if (!value.trim()) {
+                        setFormErrors({...formErrors, soyad: 'Soyad alanı zorunludur'});
+                      } else {
+                        setFormErrors({...formErrors, soyad: ''});
+                      }
+                    }}
+                    className={`w-full border ${formErrors.soyad ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.soyad ? 'focus:ring-red-500' : 'focus:ring-green-500'}`}
                     placeholder="Soyad girin"
                   />
+                  {formErrors.soyad && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.soyad}</p>
+                  )}
                 </div>
               </div>
               <div>
@@ -419,27 +521,88 @@ export default function SoforlerPage() {
                 </label>
                 <input
                   type="tel"
-                  required
                   value={formData.telefon}
-                  onChange={(e) => setFormData({...formData, telefon: e.target.value})}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                                      placeholder="Telefon numarası girin"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({...formData, telefon: value});
+                    if (!value.trim()) {
+                      setFormErrors({...formErrors, telefon: 'Telefon alanı zorunludur'});
+                    } else if (!validateTelefon(value)) {
+                      setFormErrors({...formErrors, telefon: 'Geçerli bir telefon numarası giriniz (örn: 0555 123 45 67)'});
+                    } else {
+                      setFormErrors({...formErrors, telefon: ''});
+                    }
+                  }}
+                  className={`w-full border ${formErrors.telefon ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.telefon ? 'focus:ring-red-500' : 'focus:ring-green-500'}`}
+                  placeholder="Telefon numarası girin (0555 123 45 67)"
                 />
+                {formErrors.telefon && (
+                  <p className="mt-1 text-sm text-red-500">{formErrors.telefon}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Ehliyet Sınıfı
+                  Ehliyet Sınıfları
                 </label>
-                <select
-                  value={formData.ehliyetSinifi}
-                  onChange={(e) => setFormData({...formData, ehliyetSinifi: e.target.value})}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="B">B - Otomobil</option>
-                  <option value="C">C - Kamyon</option>
-                  <option value="D">D - Minibüs</option>
-                  <option value="E">E - Çekici</option>
-                </select>
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  {['A1', 'A2', 'A', 'B1', 'B', 'C1', 'C', 'D1', 'D', 'BE', 'C1E', 'CE', 'D1E', 'DE', 'F', 'G', 'M'].map((ehliyet) => (
+                    <div key={ehliyet} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`ehliyet-${ehliyet}`}
+                        checked={formData.ehliyetSiniflari.includes(ehliyet)}
+                        onChange={(e) => {
+                           if (e.target.checked) {
+                             setFormData({
+                               ...formData,
+                               ehliyetSiniflari: [...formData.ehliyetSiniflari, ehliyet] as string[],
+                               ehliyetSinifi: formData.ehliyetSiniflari.length === 0 ? ehliyet : formData.ehliyetSinifi
+                             });
+                           } else {
+                             const updatedEhliyetler = formData.ehliyetSiniflari.filter(e => e !== ehliyet) as string[];
+                             setFormData({
+                               ...formData,
+                               ehliyetSiniflari: updatedEhliyetler,
+                               ehliyetSinifi: updatedEhliyetler.length > 0 ? updatedEhliyetler[0] : ''
+                             });
+                           }
+                         }}
+                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor={`ehliyet-${ehliyet}`} className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                        {ehliyet}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  SRC Belgeleri
+                </label>
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {['SRC1', 'SRC2', 'SRC3', 'SRC4', 'SRC5'].map((src) => (
+                    <div key={src} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`src-${src}`}
+                        checked={formData.srcBelgeleri.includes(src)}
+                        onChange={(e) => {
+                           if (e.target.checked) {
+                             setFormData({...formData, srcBelgeleri: [...formData.srcBelgeleri, src] as string[]});
+                           } else {
+                             setFormData({...formData, srcBelgeleri: formData.srcBelgeleri.filter(s => s !== src) as string[]});
+                           }
+                         }}
+                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor={`src-${src}`} className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                        {src}
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -493,4 +656,4 @@ export default function SoforlerPage() {
       )}
     </div>
   );
-} 
+}

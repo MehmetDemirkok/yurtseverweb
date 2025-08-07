@@ -32,10 +32,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { ad, soyad, telefon, ehliyetSinifi, atananAracId, durum } = body;
+    const { ad, soyad, telefon, ehliyetSinifi, ehliyetSiniflari, srcBelgeleri, atananAracId, durum } = body;
 
     // Validasyon
-    if (!ad || !soyad || !telefon || !ehliyetSinifi) {
+    if (!ad || !soyad || !telefon || !ehliyetSiniflari || ehliyetSiniflari.length === 0) {
       return NextResponse.json(
         { error: 'Gerekli alanlar eksik' },
         { status: 400 }
@@ -59,7 +59,9 @@ export async function POST(request: NextRequest) {
         ad,
         soyad,
         telefon,
-        ehliyetSinifi,
+        ehliyetSinifi: ehliyetSiniflari[0], // Geriye uyumluluk için ilk ehliyet sınıfını kullan
+        ehliyetSiniflari,
+        srcBelgeleri: srcBelgeleri || [],
         atananAracId: atananAracId || null,
         durum
       },
@@ -81,4 +83,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

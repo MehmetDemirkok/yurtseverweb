@@ -48,7 +48,9 @@ export async function POST(request: NextRequest) {
       aracId, 
       soforId, 
       durum, 
-      notlar 
+      notlar,
+      fiyat,
+      tahsisli
     } = body;
 
     // Validasyon
@@ -110,7 +112,9 @@ export async function POST(request: NextRequest) {
         aracId: aracId || null,
         soforId: soforId || null,
         durum,
-        notlar: notlar || ''
+        notlar: notlar || '',
+        fiyat: fiyat ? parseFloat(fiyat) : null,
+        tahsisli: tahsisli || false
       },
       include: {
         arac: {

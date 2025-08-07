@@ -11,8 +11,10 @@ import {
   Car,
   Search,
   Calendar,
-  Filter
+  Filter,
+  FileDown
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface Transfer {
   id: string;
@@ -34,6 +36,8 @@ interface Transfer {
   } | null;
   durum: 'BEKLEMEDE' | 'YOLDA' | 'TAMAMLANDI' | 'IPTAL';
   notlar: string;
+  fiyat: number | null;
+  tahsisli: boolean;
   createdAt: string;
 }
 
@@ -43,6 +47,7 @@ export default function TransferlerPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDurum, setFilterDurum] = useState<string>('tümü');
   const [filterTarih, setFilterTarih] = useState<string>('');
+  const [filterTahsisli, setFilterTahsisli] = useState<string>('tümü');
   const [showModal, setShowModal] = useState(false);
   const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null);
   const [araclar, setAraclar] = useState<any[]>([]);
@@ -57,9 +62,31 @@ export default function TransferlerPage() {
     yolcuSayisi: 1,
     aracId: '',
     soforId: '',
-    durum: 'BEKLEMEDE' as const,
-    notlar: ''
+    durum: 'BEKLEMEDE' as 'BEKLEMEDE' | 'YOLDA' | 'TAMAMLANDI' | 'IPTAL',
+    notlar: '',
+    fiyat: null as number | null,
+    tahsisli: false
   });
+  
+  // Form validation state
+  const [formErrors, setFormErrors] = useState({
+    kalkisYeri: '',
+    varisYeri: '',
+    kalkisTarihi: '',
+    kalkisSaati: '',
+    yolcuSayisi: ''
+  });
+  
+  // Tarih validasyonu - bugünden önceki tarihleri kabul etme
+  const validateTarih = (tarih: string) => {
+    if (!tarih) return false;
+    
+    const secilenTarih = new Date(tarih);
+    const bugun = new Date();
+    bugun.setHours(0, 0, 0, 0); // Bugünün başlangıcı
+    
+    return secilenTarih >= bugun;
+  };
 
   useEffect(() => {
     fetchTransferler();
@@ -110,6 +137,61 @@ export default function TransferlerPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Form validasyonu
+    let hasError = false;
+    const newErrors = { ...formErrors };
+    
+    // Kalkış yeri validasyonu
+    if (!formData.kalkisYeri.trim()) {
+      newErrors.kalkisYeri = 'Kalkış yeri alanı zorunludur';
+      hasError = true;
+    } else {
+      newErrors.kalkisYeri = '';
+    }
+    
+    // Varış yeri validasyonu
+    if (!formData.varisYeri.trim()) {
+      newErrors.varisYeri = 'Varış yeri alanı zorunludur';
+      hasError = true;
+    } else {
+      newErrors.varisYeri = '';
+    }
+    
+    // Tarih validasyonu
+    if (!formData.kalkisTarihi) {
+      newErrors.kalkisTarihi = 'Tarih alanı zorunludur';
+      hasError = true;
+    } else if (!validateTarih(formData.kalkisTarihi)) {
+      newErrors.kalkisTarihi = 'Geçmiş tarihli transfer oluşturulamaz';
+      hasError = true;
+    } else {
+      newErrors.kalkisTarihi = '';
+    }
+    
+    // Saat validasyonu
+    if (!formData.kalkisSaati) {
+      newErrors.kalkisSaati = 'Saat alanı zorunludur';
+      hasError = true;
+    } else {
+      newErrors.kalkisSaati = '';
+    }
+    
+    // Yolcu sayısı validasyonu
+    if (isNaN(formData.yolcuSayisi) || formData.yolcuSayisi < 1) {
+      newErrors.yolcuSayisi = 'Geçerli bir yolcu sayısı giriniz (en az 1)';
+      hasError = true;
+    } else {
+      newErrors.yolcuSayisi = '';
+    }
+    
+    setFormErrors(newErrors);
+    
+    if (hasError) {
+      alert('Lütfen form alanlarını kontrol ediniz');
+      return;
+    }
+    
     try {
       if (editingTransfer) {
         // Güncelleme işlemi
@@ -122,8 +204,9 @@ export default function TransferlerPage() {
       setEditingTransfer(null);
       resetForm();
       fetchTransferler();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Transfer kaydedilemedi:', error);
+      alert(error.message || 'Transfer kaydedilemedi');
     }
   };
 
@@ -192,7 +275,17 @@ export default function TransferlerPage() {
       aracId: '',
       soforId: '',
       durum: 'BEKLEMEDE',
-      notlar: ''
+      notlar: '',
+      fiyat: null,
+      tahsisli: false
+    });
+    
+    setFormErrors({
+      kalkisYeri: '',
+      varisYeri: '',
+      kalkisTarihi: '',
+      kalkisSaati: '',
+      yolcuSayisi: ''
     });
   };
 
@@ -207,7 +300,9 @@ export default function TransferlerPage() {
       aracId: transfer.aracId || '',
       soforId: transfer.soforId || '',
       durum: transfer.durum,
-      notlar: transfer.notlar
+      notlar: transfer.notlar,
+      fiyat: transfer.fiyat,
+      tahsisli: transfer.tahsisli
     });
     setShowModal(true);
   };
@@ -227,14 +322,47 @@ export default function TransferlerPage() {
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
   };
+  
+  // Excel'e aktarma fonksiyonu
+  const exportToExcel = () => {
+    // Dışa aktarılacak veriyi hazırla
+    const exportData = filteredTransferler.map(transfer => ({
+      'Kalkış Yeri': transfer.kalkisYeri,
+      'Varış Yeri': transfer.varisYeri,
+      'Tarih': new Date(transfer.kalkisTarihi).toLocaleDateString('tr-TR'),
+      'Saat': transfer.kalkisSaati,
+      'Yolcu Sayısı': transfer.yolcuSayisi,
+      'Araç Plakası': transfer.arac ? transfer.arac.plaka : 'Atanmamış',
+      'Şoför': transfer.sofor ? `${transfer.sofor.ad} ${transfer.sofor.soyad}` : 'Atanmamış',
+      'Durum': transfer.durum === 'BEKLEMEDE' ? 'Beklemede' : 
+               transfer.durum === 'YOLDA' ? 'Yolda' : 
+               transfer.durum === 'TAMAMLANDI' ? 'Tamamlandı' : 'İptal',
+      'Fiyat (TL)': transfer.fiyat ? transfer.fiyat.toLocaleString('tr-TR') : '-',
+      'Tahsisli': transfer.tahsisli ? 'Evet' : 'Hayır',
+      'Notlar': transfer.notlar || '-',
+      'Oluşturulma Tarihi': new Date(transfer.createdAt).toLocaleDateString('tr-TR')
+    }));
+    
+    // Excel çalışma kitabı oluştur
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Transferler');
+    
+    // Excel dosyasını indir
+    const today = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
+    XLSX.writeFile(workbook, `Transferler_${today}.xlsx`);
+  };
 
   const filteredTransferler = transferler.filter(transfer => {
     const matchesSearch = transfer.kalkisYeri.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          transfer.varisYeri.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transfer.soforAdi?.toLowerCase().includes(searchTerm.toLowerCase());
+                         (transfer.sofor && `${transfer.sofor.ad} ${transfer.sofor.soyad}`.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesFilter = filterDurum === 'tümü' || transfer.durum === filterDurum;
     const matchesDate = !filterTarih || transfer.kalkisTarihi === filterTarih;
-    return matchesSearch && matchesFilter && matchesDate;
+    const matchesTahsisli = filterTahsisli === 'tümü' || 
+                           (filterTahsisli === 'tahsisli' && transfer.tahsisli) || 
+                           (filterTahsisli === 'normal' && !transfer.tahsisli);
+    return matchesSearch && matchesFilter && matchesDate && matchesTahsisli;
   });
 
   if (loading) {
@@ -268,7 +396,7 @@ export default function TransferlerPage() {
 
       {/* Filtreler */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Ara
@@ -302,6 +430,20 @@ export default function TransferlerPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tahsis Durumu
+            </label>
+            <select
+              value={filterTahsisli}
+              onChange={(e) => setFilterTahsisli(e.target.value)}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="tümü">Tümü</option>
+              <option value="tahsisli">Tahsisli Araçlar</option>
+              <option value="normal">Normal Transferler</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Tarih Filtresi
             </label>
             <input
@@ -310,6 +452,18 @@ export default function TransferlerPage() {
               onChange={(e) => setFilterTarih(e.target.value)}
               className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Excel'e Aktar
+            </label>
+            <button
+              onClick={exportToExcel}
+              className="w-full flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-green-600 hover:bg-green-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              Excel İndir
+            </button>
           </div>
         </div>
       </div>
@@ -334,6 +488,9 @@ export default function TransferlerPage() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Durum
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Fiyat/Tahsis
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Notlar
@@ -393,6 +550,18 @@ export default function TransferlerPage() {
                        {transfer.durum === 'IPTAL' && 'İptal'}
                      </span>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <div>
+                      {transfer.fiyat ? `${transfer.fiyat.toLocaleString('tr-TR')} TL` : '-'}
+                    </div>
+                    {transfer.tahsisli && (
+                      <div className="mt-1">
+                        <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
+                          Tahsisli
+                        </span>
+                      </div>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                     <div className="max-w-xs truncate">
                       {transfer.notlar || '-'}
@@ -447,12 +616,22 @@ export default function TransferlerPage() {
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.kalkisYeri}
-                    onChange={(e) => setFormData({...formData, kalkisYeri: e.target.value})}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({...formData, kalkisYeri: value});
+                      if (!value.trim()) {
+                        setFormErrors({...formErrors, kalkisYeri: 'Kalkış yeri alanı zorunludur'});
+                      } else {
+                        setFormErrors({...formErrors, kalkisYeri: ''});
+                      }
+                    }}
+                    className={`w-full border ${formErrors.kalkisYeri ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.kalkisYeri ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
                     placeholder="Kalkış yerini girin"
                   />
+                  {formErrors.kalkisYeri && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.kalkisYeri}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -460,12 +639,22 @@ export default function TransferlerPage() {
                   </label>
                   <input
                     type="text"
-                    required
                     value={formData.varisYeri}
-                    onChange={(e) => setFormData({...formData, varisYeri: e.target.value})}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({...formData, varisYeri: value});
+                      if (!value.trim()) {
+                        setFormErrors({...formErrors, varisYeri: 'Varış yeri alanı zorunludur'});
+                      } else {
+                        setFormErrors({...formErrors, varisYeri: ''});
+                      }
+                    }}
+                    className={`w-full border ${formErrors.varisYeri ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.varisYeri ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
                     placeholder="Varış yerini girin"
                   />
+                  {formErrors.varisYeri && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.varisYeri}</p>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -475,11 +664,23 @@ export default function TransferlerPage() {
                   </label>
                   <input
                     type="date"
-                    required
                     value={formData.kalkisTarihi}
-                    onChange={(e) => setFormData({...formData, kalkisTarihi: e.target.value})}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({...formData, kalkisTarihi: value});
+                      if (!value) {
+                        setFormErrors({...formErrors, kalkisTarihi: 'Tarih alanı zorunludur'});
+                      } else if (!validateTarih(value)) {
+                        setFormErrors({...formErrors, kalkisTarihi: 'Geçmiş tarihli transfer oluşturulamaz'});
+                      } else {
+                        setFormErrors({...formErrors, kalkisTarihi: ''});
+                      }
+                    }}
+                    className={`w-full border ${formErrors.kalkisTarihi ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.kalkisTarihi ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
                   />
+                  {formErrors.kalkisTarihi && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.kalkisTarihi}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -487,11 +688,21 @@ export default function TransferlerPage() {
                   </label>
                   <input
                     type="time"
-                    required
                     value={formData.kalkisSaati}
-                    onChange={(e) => setFormData({...formData, kalkisSaati: e.target.value})}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({...formData, kalkisSaati: value});
+                      if (!value) {
+                        setFormErrors({...formErrors, kalkisSaati: 'Saat alanı zorunludur'});
+                      } else {
+                        setFormErrors({...formErrors, kalkisSaati: ''});
+                      }
+                    }}
+                    className={`w-full border ${formErrors.kalkisSaati ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.kalkisSaati ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
                   />
+                  {formErrors.kalkisSaati && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.kalkisSaati}</p>
+                  )}
                 </div>
               </div>
               <div>
@@ -500,13 +711,24 @@ export default function TransferlerPage() {
                 </label>
                 <input
                   type="number"
-                  required
                   min="1"
                   max="20"
                   value={formData.yolcuSayisi}
-                  onChange={(e) => setFormData({...formData, yolcuSayisi: parseInt(e.target.value)})}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const numValue = parseInt(value);
+                    setFormData({...formData, yolcuSayisi: numValue || 0});
+                    if (!value || numValue < 1) {
+                      setFormErrors({...formErrors, yolcuSayisi: 'Yolcu sayısı en az 1 olmalıdır'});
+                    } else {
+                      setFormErrors({...formErrors, yolcuSayisi: ''});
+                    }
+                  }}
+                  className={`w-full border ${formErrors.yolcuSayisi ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.yolcuSayisi ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
                 />
+                {formErrors.yolcuSayisi && (
+                  <p className="mt-1 text-sm text-red-500">{formErrors.yolcuSayisi}</p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -559,6 +781,37 @@ export default function TransferlerPage() {
                    <option value="IPTAL">İptal</option>
                 </select>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Fiyat (TL)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.fiyat !== null ? formData.fiyat : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({...formData, fiyat: value ? parseFloat(value) : null});
+                    }}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Fiyat girin"
+                  />
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="tahsisli"
+                    checked={formData.tahsisli}
+                    onChange={(e) => setFormData({...formData, tahsisli: e.target.checked})}
+                    className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="tahsisli" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                    Gün Boyu Tahsisli
+                  </label>
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Notlar
@@ -592,4 +845,4 @@ export default function TransferlerPage() {
       )}
     </div>
   );
-} 
+}

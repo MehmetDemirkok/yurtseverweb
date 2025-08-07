@@ -117,7 +117,9 @@ model Sofor {
   ad            String
   soyad         String
   telefon       String      @unique
-  ehliyetSinifi String
+  ehliyetSinifi String      // Eski alan, geriye uyumluluk için tutuldu
+  ehliyetSiniflari String[] // Yeni çoklu ehliyet sınıfları (B, C, D, E, vb.)
+  srcBelgeleri  String[]    // SRC belgeleri (SRC1, SRC2, SRC3, SRC4, SRC5)
   atananAracId  String?
   durum         SoforDurum  @default(MUSAIT)
   createdAt     DateTime    @default(now())
@@ -137,6 +139,8 @@ model Transfer {
   soforId      String?
   durum        TransferDurum  @default(BEKLEMEDE)
   notlar       String?
+  fiyat        Float?         // Yeni eklenen fiyat alanı
+  tahsisli     Boolean        @default(false) // Gün boyu tahsis edilen araçlar için
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   arac         Arac?          @relation(fields: [aracId], references: [id])
