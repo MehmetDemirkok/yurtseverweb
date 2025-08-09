@@ -18,7 +18,8 @@ export async function GET() {
             ad: true,
             soyad: true
           }
-        }
+        },
+        yolcular: true
       },
       orderBy: {
         kalkisTarihi: 'desc'
@@ -50,7 +51,8 @@ export async function POST(request: NextRequest) {
       durum, 
       notlar,
       fiyat,
-      tahsisli
+      tahsisli,
+      yolcular
     } = body;
 
     // Validasyon
@@ -114,7 +116,10 @@ export async function POST(request: NextRequest) {
         durum,
         notlar: notlar || '',
         fiyat: fiyat ? parseFloat(fiyat) : null,
-        tahsisli: tahsisli || false
+        tahsisli: tahsisli || false,
+        yolcular: {
+          create: yolcular || []
+        }
       },
       include: {
         arac: {
@@ -129,7 +134,8 @@ export async function POST(request: NextRequest) {
             ad: true,
             soyad: true
           }
-        }
+        },
+        yolcular: true
       }
     });
 

@@ -145,6 +145,20 @@ model Transfer {
   updatedAt    DateTime       @updatedAt
   arac         Arac?          @relation(fields: [aracId], references: [id])
   sofor        Sofor?         @relation(fields: [soforId], references: [id])
+  yolcular     Yolcu[]        // Transferdeki yolcular
+}
+
+model Yolcu {
+  id          String   @id @default(cuid())
+  ad          String
+  soyad       String
+  telefon     String?
+  ucusSaati   String?
+  ucusTkKodu  String?
+  transferId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  transfer    Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
 }
 
 enum AracDurum {
@@ -164,4 +178,60 @@ enum TransferDurum {
   YOLDA
   TAMAMLANDI
   IPTAL
+}
+
+// Transfer Modülü - Cariler ve Tedarikçiler
+model Cari {
+  id            String     @id @default(cuid())
+  ad            String
+  soyad         String?
+  sirket        String?
+  email         String?
+  telefon       String?
+  adres         String?
+  sehir         String?
+  ulke          String     @default("Türkiye")
+  vergiNo       String?
+  vergiDairesi  String?
+  notlar        String?
+  tip           CariTip    @default(MUSTERI)
+  durum         CariDurum  @default(AKTIF)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model Tedarikci {
+  id            String         @id @default(cuid())
+  sirketAdi     String
+  yetkiliKisi   String?
+  email         String?
+  telefon       String?
+  adres         String?
+  sehir         String?
+  ulke          String         @default("Türkiye")
+  vergiNo       String?
+  vergiDairesi  String?
+  hizmetTuru    String?        // Hangi hizmetleri sağlıyor
+  notlar        String?
+  durum         TedarikciDurum @default(AKTIF)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+enum CariTip {
+  MUSTERI
+  BAYI
+  KURUMSAL
+}
+
+enum CariDurum {
+  AKTIF
+  PASIF
+  ENGELLI
+}
+
+enum TedarikciDurum {
+  AKTIF
+  PASIF
+  ENGELLI
 }

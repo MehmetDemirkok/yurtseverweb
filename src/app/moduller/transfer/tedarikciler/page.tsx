@@ -1,0 +1,689 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { 
+  Truck, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Search,
+  Filter,
+  FileDown,
+  Mail,
+  Phone,
+  MapPin,
+  Building,
+  User
+} from 'lucide-react';
+import * as XLSX from 'xlsx';
+
+interface Tedarikci {
+  id: string;
+  sirketAdi: string;
+  yetkiliKisi: string | null;
+  email: string | null;
+  telefon: string | null;
+  adres: string | null;
+  sehir: string | null;
+  ulke: string;
+  vergiNo: string | null;
+  vergiDairesi: string | null;
+  hizmetTuru: string | null;
+  notlar: string | null;
+  durum: 'AKTIF' | 'PASIF' | 'ENGELLI';
+  createdAt: string;
+}
+
+export default function TedarikcilerPage() {
+  const [tedarikciler, setTedarikciler] = useState<Tedarikci[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterDurum, setFilterDurum] = useState<string>('tümü');
+  const [showModal, setShowModal] = useState(false);
+  const [editingTedarikci, setEditingTedarikci] = useState<Tedarikci | null>(null);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    sirketAdi: '',
+    yetkiliKisi: '',
+    email: '',
+    telefon: '',
+    adres: '',
+    sehir: '',
+    ulke: 'Türkiye',
+    vergiNo: '',
+    vergiDairesi: '',
+    hizmetTuru: '',
+    notlar: '',
+    durum: 'AKTIF' as 'AKTIF' | 'PASIF' | 'ENGELLI'
+  });
+  
+  // Form validation state
+  const [formErrors, setFormErrors] = useState({
+    sirketAdi: '',
+    email: ''
+  });
+
+  useEffect(() => {
+    fetchTedarikciler();
+  }, []);
+
+  const fetchTedarikciler = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/moduller/transfer/tedarikciler');
+      if (response.ok) {
+        const data = await response.json();
+        setTedarikciler(data.tedarikciler);
+      } else {
+        console.error('Tedarikçiler alınamadı');
+      }
+    } catch (error) {
+      console.error('Tedarikçiler alınamadı:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Form validasyonu
+    let hasError = false;
+    const newErrors = { ...formErrors };
+    
+    // Şirket adı validasyonu
+    if (!formData.sirketAdi.trim()) {
+      newErrors.sirketAdi = 'Şirket adı alanı zorunludur';
+      hasError = true;
+    } else {
+      newErrors.sirketAdi = '';
+    }
+    
+    // Email validasyonu (varsa)
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Geçersiz email formatı';
+      hasError = true;
+    } else {
+      newErrors.email = '';
+    }
+    
+    setFormErrors(newErrors);
+    
+    if (hasError) {
+      alert('Lütfen form alanlarını kontrol ediniz');
+      return;
+    }
+    
+    try {
+      if (editingTedarikci) {
+        await updateTedarikci(editingTedarikci.id, formData);
+      } else {
+        await createTedarikci(formData);
+      }
+      setShowModal(false);
+      setEditingTedarikci(null);
+      resetForm();
+      fetchTedarikciler();
+    } catch (error: any) {
+      console.error('Tedarikçi kaydedilemedi:', error);
+      alert(error.message || 'Tedarikçi kaydedilemedi');
+    }
+  };
+
+  const createTedarikci = async (data: typeof formData) => {
+    const response = await fetch('/api/moduller/transfer/tedarikciler', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Tedarikçi oluşturulamadı');
+    }
+
+    return response.json();
+  };
+
+  const updateTedarikci = async (id: string, data: typeof formData) => {
+    const response = await fetch(`/api/moduller/transfer/tedarikciler/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Tedarikçi güncellenemedi');
+    }
+
+    return response.json();
+  };
+
+  const deleteTedarikci = async (id: string) => {
+    if (window.confirm('Bu tedarikçiyi silmek istediğinizden emin misiniz?')) {
+      try {
+        const response = await fetch(`/api/moduller/transfer/tedarikciler/${id}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          alert(errorData.error || 'Tedarikçi silinemedi');
+          return;
+        }
+
+        fetchTedarikciler();
+      } catch (error) {
+        console.error('Tedarikçi silinemedi:', error);
+        alert('Tedarikçi silinemedi');
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      sirketAdi: '',
+      yetkiliKisi: '',
+      email: '',
+      telefon: '',
+      adres: '',
+      sehir: '',
+      ulke: 'Türkiye',
+      vergiNo: '',
+      vergiDairesi: '',
+      hizmetTuru: '',
+      notlar: '',
+      durum: 'AKTIF'
+    });
+    
+    setFormErrors({
+      sirketAdi: '',
+      email: ''
+    });
+  };
+
+  const openEditModal = (tedarikci: Tedarikci) => {
+    setEditingTedarikci(tedarikci);
+    setFormData({
+      sirketAdi: tedarikci.sirketAdi,
+      yetkiliKisi: tedarikci.yetkiliKisi || '',
+      email: tedarikci.email || '',
+      telefon: tedarikci.telefon || '',
+      adres: tedarikci.adres || '',
+      sehir: tedarikci.sehir || '',
+      ulke: tedarikci.ulke,
+      vergiNo: tedarikci.vergiNo || '',
+      vergiDairesi: tedarikci.vergiDairesi || '',
+      hizmetTuru: tedarikci.hizmetTuru || '',
+      notlar: tedarikci.notlar || '',
+      durum: tedarikci.durum
+    });
+    setShowModal(true);
+  };
+
+  const openCreateModal = () => {
+    setEditingTedarikci(null);
+    resetForm();
+    setShowModal(true);
+  };
+
+  const getDurumRenk = (durum: string) => {
+    switch (durum) {
+      case 'AKTIF': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'PASIF': return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+      case 'ENGELLI': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    }
+  };
+  
+  // Excel'e aktarma fonksiyonu
+  const exportToExcel = () => {
+    const exportData = filteredTedarikciler.map(tedarikci => ({
+      'Şirket Adı': tedarikci.sirketAdi,
+      'Yetkili Kişi': tedarikci.yetkiliKisi || '-',
+      'Email': tedarikci.email || '-',
+      'Telefon': tedarikci.telefon || '-',
+      'Şehir': tedarikci.sehir || '-',
+      'Ülke': tedarikci.ulke,
+      'Vergi No': tedarikci.vergiNo || '-',
+      'Vergi Dairesi': tedarikci.vergiDairesi || '-',
+      'Hizmet Türü': tedarikci.hizmetTuru || '-',
+      'Durum': tedarikci.durum === 'AKTIF' ? 'Aktif' : 
+               tedarikci.durum === 'PASIF' ? 'Pasif' : 'Engelli',
+      'Notlar': tedarikci.notlar || '-',
+      'Oluşturulma Tarihi': new Date(tedarikci.createdAt).toLocaleDateString('tr-TR')
+    }));
+    
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Tedarikçiler');
+    
+    const today = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
+    XLSX.writeFile(workbook, `Tedarikciler_${today}.xlsx`);
+  };
+
+  const filteredTedarikciler = tedarikciler.filter(tedarikci => {
+    const matchesSearch = tedarikci.sirketAdi.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (tedarikci.yetkiliKisi && tedarikci.yetkiliKisi.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (tedarikci.email && tedarikci.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (tedarikci.hizmetTuru && tedarikci.hizmetTuru.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesDurum = filterDurum === 'tümü' || tedarikci.durum === filterDurum;
+    return matchesSearch && matchesDurum;
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Sayfa Başlığı */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Tedarikçi Yönetimi
+          </h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            Hizmet sağlayıcıları ve tedarikçi firmalarını yönetin
+          </p>
+        </div>
+        <button
+          onClick={openCreateModal}
+          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Yeni Tedarikçi
+        </button>
+      </div>
+
+      {/* Filtreler */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Ara
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Şirket adı, yetkili kişi, email, hizmet türü..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Durum Filtresi
+            </label>
+            <select
+              value={filterDurum}
+              onChange={(e) => setFilterDurum(e.target.value)}
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="tümü">Tümü</option>
+              <option value="AKTIF">Aktif</option>
+              <option value="PASIF">Pasif</option>
+              <option value="ENGELLI">Engelli</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Excel'e Aktar
+            </label>
+            <button
+              onClick={exportToExcel}
+              className="w-full flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-green-600 hover:bg-green-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              Excel İndir
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tedarikçiler Tablosu */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Şirket/Yetkili
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  İletişim
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Konum
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Hizmet/Vergi
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Durum
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  İşlemler
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {filteredTedarikciler.map((tedarikci) => (
+                <tr key={tedarikci.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                        <Building className="h-4 w-4 mr-2 text-gray-400" />
+                        {tedarikci.sirketAdi}
+                      </div>
+                      {tedarikci.yetkiliKisi && (
+                        <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center mt-1">
+                          <User className="h-3 w-3 mr-1" />
+                          {tedarikci.yetkiliKisi}
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {tedarikci.email && (
+                      <div className="flex items-center mb-1">
+                        <Mail className="h-3 w-3 mr-1" />
+                        {tedarikci.email}
+                      </div>
+                    )}
+                    {tedarikci.telefon && (
+                      <div className="flex items-center">
+                        <Phone className="h-3 w-3 mr-1" />
+                        {tedarikci.telefon}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center">
+                      <MapPin className="h-3 w-3 mr-1" />
+                      {tedarikci.sehir && `${tedarikci.sehir}, `}{tedarikci.ulke}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {tedarikci.hizmetTuru && (
+                      <div className="mb-1">
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                          {tedarikci.hizmetTuru}
+                        </span>
+                      </div>
+                    )}
+                    {tedarikci.vergiNo && (
+                      <div>VN: {tedarikci.vergiNo}</div>
+                    )}
+                    {tedarikci.vergiDairesi && (
+                      <div>VD: {tedarikci.vergiDairesi}</div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDurumRenk(tedarikci.durum)}`}>
+                      {tedarikci.durum === 'AKTIF' && 'Aktif'}
+                      {tedarikci.durum === 'PASIF' && 'Pasif'}
+                      {tedarikci.durum === 'ENGELLI' && 'Engelli'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => openEditModal(tedarikci)}
+                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => deleteTedarikci(tedarikci.id)}
+                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {filteredTedarikciler.length === 0 && (
+          <div className="text-center py-8">
+            <Truck className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+              Tedarikçi bulunamadı
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Arama kriterlerinize uygun tedarikçi bulunmuyor.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              {editingTedarikci ? 'Tedarikçi Düzenle' : 'Yeni Tedarikçi Ekle'}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Şirket Adı *
+                </label>
+                <input
+                  type="text"
+                  value={formData.sirketAdi}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({...formData, sirketAdi: value});
+                    if (!value.trim()) {
+                      setFormErrors({...formErrors, sirketAdi: 'Şirket adı alanı zorunludur'});
+                    } else {
+                      setFormErrors({...formErrors, sirketAdi: ''});
+                    }
+                  }}
+                  className={`w-full border ${formErrors.sirketAdi ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.sirketAdi ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
+                  placeholder="Şirket adını girin"
+                />
+                {formErrors.sirketAdi && (
+                  <p className="mt-1 text-sm text-red-500">{formErrors.sirketAdi}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Yetkili Kişi
+                </label>
+                <input
+                  type="text"
+                  value={formData.yetkiliKisi}
+                  onChange={(e) => setFormData({...formData, yetkiliKisi: e.target.value})}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Yetkili kişi adı"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({...formData, email: value});
+                      if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                        setFormErrors({...formErrors, email: 'Geçersiz email formatı'});
+                      } else {
+                        setFormErrors({...formErrors, email: ''});
+                      }
+                    }}
+                    className={`w-full border ${formErrors.email ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.email ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
+                    placeholder="email@example.com"
+                  />
+                  {formErrors.email && (
+                    <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Telefon
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.telefon}
+                    onChange={(e) => setFormData({...formData, telefon: e.target.value})}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="05XX XXX XX XX"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Adres
+                </label>
+                <textarea
+                  value={formData.adres}
+                  onChange={(e) => setFormData({...formData, adres: e.target.value})}
+                  rows={2}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Tam adres bilgisi"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Şehir
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.sehir}
+                    onChange={(e) => setFormData({...formData, sehir: e.target.value})}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Şehir"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Ülke
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.ulke}
+                    onChange={(e) => setFormData({...formData, ulke: e.target.value})}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Ülke"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Vergi No
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.vergiNo}
+                    onChange={(e) => setFormData({...formData, vergiNo: e.target.value})}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Vergi numarası"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Vergi Dairesi
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.vergiDairesi}
+                    onChange={(e) => setFormData({...formData, vergiDairesi: e.target.value})}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Vergi dairesi"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Hizmet Türü
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.hizmetTuru}
+                    onChange={(e) => setFormData({...formData, hizmetTuru: e.target.value})}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Ör: Transfer Hizmeti, Araç Kiralama"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Durum
+                  </label>
+                  <select
+                    value={formData.durum}
+                    onChange={(e) => setFormData({...formData, durum: e.target.value as any})}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="AKTIF">Aktif</option>
+                    <option value="PASIF">Pasif</option>
+                    <option value="ENGELLI">Engelli</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Notlar
+                </label>
+                <textarea
+                  value={formData.notlar}
+                  onChange={(e) => setFormData({...formData, notlar: e.target.value})}
+                  rows={3}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Tedarikçi hakkında notlar..."
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                >
+                  {editingTedarikci ? 'Güncelle' : 'Ekle'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

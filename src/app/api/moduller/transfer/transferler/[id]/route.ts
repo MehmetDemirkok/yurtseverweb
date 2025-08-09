@@ -22,7 +22,8 @@ export async function GET(
             ad: true,
             soyad: true
           }
-        }
+        },
+        yolcular: true
       }
     });
 
@@ -59,7 +60,10 @@ export async function PUT(
       aracId, 
       soforId, 
       durum, 
-      notlar 
+      notlar,
+      fiyat,
+      tahsisli,
+      yolcular
     } = body;
 
     // Validasyon
@@ -111,6 +115,11 @@ export async function PUT(
       }
     }
 
+    // Önce mevcut yolcuları sil
+    await prisma.yolcu.deleteMany({
+      where: { transferId: params.id }
+    });
+
     const transfer = await prisma.transfer.update({
       where: { id: params.id },
       data: {
@@ -122,7 +131,12 @@ export async function PUT(
         aracId: aracId || null,
         soforId: soforId || null,
         durum,
-        notlar: notlar || ''
+        notlar: notlar || '',
+        fiyat: fiyat ? parseFloat(fiyat) : null,
+        tahsisli: tahsisli || false,
+        yolcular: {
+          create: yolcular || []
+        }
       },
       include: {
         arac: {
@@ -137,7 +151,8 @@ export async function PUT(
             ad: true,
             soyad: true
           }
-        }
+        },
+        yolcular: true
       }
     });
 
