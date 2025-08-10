@@ -1,25 +1,158 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getUserFromToken } from '@/lib/auth';
 
-export async function GET() {
+// GET - Tüm organizasyonları listele
+export async function GET(request: NextRequest) {
   try {
-    const accommodations = await prisma.accommodation.findMany({
-      where: {
-        organizasyonAdi: {
-          not: null,
-        },
+    const currentUser = await getUserFromToken();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search');
+    const status = searchParams.get('status');
+
+    const where: any = {
+      companyId: currentUser.companyId,
+    };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { contactPerson: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    console.log('Fetching organizations with where clause:', where);
+    
+    const organizations = await prisma.organization.findMany({
+      where,
+      orderBy: {
+        createdAt: 'desc',
       },
-      select: {
-        organizasyonAdi: true,
-      },
-      distinct: ['organizasyonAdi'],
     });
 
-    const organizationNames = accommodations.map((acc: { organizasyonAdi: string | null }) => acc.organizasyonAdi).filter((name: string | null): name is string => name !== null);
+    // Her organizasyon için konaklama sayısını al
+    const organizationsWithCounts = await Promise.all(
+      organizations.map(async (org) => {
+        const accommodationCount = await prisma.accommodation.count({
+          where: {
+            organizationId: org.id,
+            companyId: currentUser.companyId,
+          },
+        });
 
-    return NextResponse.json(organizationNames);
+        return {
+          ...org,
+          _count: {
+            accommodations: accommodationCount
+          }
+        };
+      })
+    );
+
+    console.log('Found organizations:', organizationsWithCounts.length);
+    
+    // Test için eğer hiç organizasyon yoksa bir tane oluştur
+    if (organizationsWithCounts.length === 0) {
+      console.log('No organizations found, creating a test organization...');
+      try {
+        const testOrg = await prisma.organization.create({
+          data: {
+            name: 'Test Organizasyon',
+            description: 'Test amaçlı oluşturulmuş organizasyon',
+            status: 'ACTIVE',
+            companyId: currentUser.companyId,
+          },
+        });
+        console.log('Test organization created:', testOrg);
+        organizationsWithCounts.push({
+          ...testOrg,
+          _count: {
+            accommodations: 0
+          }
+        });
+      } catch (createError) {
+        console.error('Error creating test organization:', createError);
+      }
+    }
+    
+    return NextResponse.json(organizationsWithCounts);
   } catch (error) {
-    console.error("Error fetching organizations:", error);
+    console.error('Error fetching organizations:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+  }
+}
+
+// POST - Yeni organizasyon oluştur
+export async function POST(request: NextRequest) {
+  try {
+    const currentUser = await getUserFromToken();
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { 
+      name, 
+      description, 
+      contactPerson, 
+      contactEmail, 
+      contactPhone, 
+      status,
+      baslangicTarihi,
+      bitisTarihi,
+      lokasyon,
+      sehir,
+      ulke,
+      hotelId
+    } = body;
+
+    if (!name) {
+      return NextResponse.json({ error: 'Organizasyon adı zorunludur' }, { status: 400 });
+    }
+
+    // Aynı isimde organizasyon var mı kontrol et
+    const existingOrganization = await prisma.organization.findFirst({
+      where: {
+        name,
+        companyId: currentUser.companyId,
+      },
+    });
+
+    if (existingOrganization) {
+      return NextResponse.json({ error: 'Bu isimde bir organizasyon zaten mevcut' }, { status: 400 });
+    }
+
+    const organization = await prisma.organization.create({
+      data: {
+        name,
+        description,
+        contactPerson,
+        contactEmail,
+        contactPhone,
+        status: status || 'ACTIVE',
+        baslangicTarihi: baslangicTarihi ? new Date(baslangicTarihi) : null,
+        bitisTarihi: bitisTarihi ? new Date(bitisTarihi) : null,
+        lokasyon,
+        sehir,
+        ulke,
+
+        companyId: currentUser.companyId,
+      },
+    });
+
+    return NextResponse.json(organization, { status: 201 });
+  } catch (error) {
+    console.error('Error creating organization:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 } 

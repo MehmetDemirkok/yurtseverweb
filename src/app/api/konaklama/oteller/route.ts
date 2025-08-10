@@ -28,6 +28,9 @@ export async function GET(request: NextRequest) {
     }
 
     const hotels = await prisma.hotel.findMany({
+      where: {
+        companyId: user.companyId,
+      },
       orderBy: {
         createdAt: 'desc'
       }
@@ -101,7 +104,8 @@ export async function POST(request: NextRequest) {
         yildizSayisi: yildizSayisi !== undefined ? parseInt(yildizSayisi) : 0,
         puan: puan !== undefined ? parseFloat(puan) : 0.0,
         aciklama: aciklama || null,
-        durum: durum || 'AKTIF'
+        durum: durum || 'AKTIF',
+        companyId: user.companyId
       }
     });
 

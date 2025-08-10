@@ -42,6 +42,85 @@
     --muted: #94a3b8;
     --muted-background: #1e293b;
   }
+  
+  /* Dark mode için özel stiller */
+  .input {
+    background: #1e293b;
+    color: #f8fafc;
+    border-color: #334155;
+  }
+  
+  .input::placeholder {
+    color: #94a3b8;
+  }
+  
+  .input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  }
+  
+  .table {
+    background: #1e293b;
+    color: #f8fafc;
+  }
+  
+  .table th {
+    background: #334155;
+    color: #f8fafc;
+    border-bottom-color: #475569;
+  }
+  
+  .table td {
+    color: #f8fafc;
+    border-bottom-color: #475569;
+  }
+  
+  .table tr:hover td {
+    background: #334155;
+  }
+  
+  /* Dark mode'da text renkleri */
+  .text-gray-900 {
+    color: #f8fafc !important;
+  }
+  
+  .text-gray-600 {
+    color: #cbd5e1 !important;
+  }
+  
+  .text-gray-500 {
+    color: #94a3b8 !important;
+  }
+  
+  .text-gray-700 {
+    color: #e2e8f0 !important;
+  }
+  
+  .text-gray-800 {
+    color: #f1f5f9 !important;
+  }
+  
+  /* Dark mode'da background renkleri */
+  .bg-white {
+    background-color: #1e293b !important;
+  }
+  
+  .bg-gray-50 {
+    background-color: #334155 !important;
+  }
+  
+  .bg-gray-100 {
+    background-color: #475569 !important;
+  }
+  
+  /* Dark mode'da border renkleri */
+  .border-gray-200 {
+    border-color: #475569 !important;
+  }
+  
+  .border-gray-300 {
+    border-color: #64748b !important;
+  }
 }
 
 * {

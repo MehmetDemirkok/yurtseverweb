@@ -18,6 +18,15 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     const record = await prisma.accommodation.findUnique({
       where: { id },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          },
+        },
+      },
     });
 
     if (!record) {
@@ -76,9 +85,40 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     // companyId'yi değiştirmeye izin verme
     const { companyId, ...updateData } = data;
     
+    // Organizasyon ID varsa organizasyonun mevcut olduğunu kontrol et
+    if (updateData.organizationId) {
+      const organization = await prisma.organization.findFirst({
+        where: {
+          id: updateData.organizationId,
+          companyId: user.companyId,
+        },
+      });
+      
+      if (!organization) {
+        return NextResponse.json({ error: 'Belirtilen organizasyon bulunamadı' }, { status: 400 });
+      }
+      
+      // Organizasyon aktif mi kontrol et
+      if (organization.status !== 'ACTIVE') {
+        return NextResponse.json({ error: 'Belirtilen organizasyon aktif değil' }, { status: 400 });
+      }
+      
+      // Eğer organizationId varsa isMunferit false olmalı
+      updateData.isMunferit = false;
+    }
+    
     const updated = await prisma.accommodation.update({
       where: { id },
       data: updateData,
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          },
+        },
+      },
     });
 
     // Log kaydı oluştur

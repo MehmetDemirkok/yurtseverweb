@@ -33,6 +33,7 @@ model Company {
   transferler   Transfer[]
   cariler       Cari[]
   tedarikciler  Tedarikci[]
+  organizations Organization[]
 }
 
 model User {
@@ -52,6 +53,32 @@ model User {
   @@unique([email, companyId])
 }
 
+model Organization {
+  id            Int      @id @default(autoincrement())
+  name          String
+  description   String?
+  contactPerson String?
+  contactEmail  String?
+  contactPhone  String?
+  baslangicTarihi DateTime?
+  bitisTarihi   DateTime?
+  lokasyon      String?
+  sehir         String?
+  ulke          String?
+  status        OrganizationStatus @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  companyId     Int
+  hotelId       Int?
+  
+  // Relations
+  company       Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  hotel         Hotel?  @relation(fields: [hotelId], references: [id], onDelete: SetNull)
+  accommodations Accommodation[]
+  
+  @@unique([name, companyId])
+}
+
 model Accommodation {
   id              Int     @id @default(autoincrement())
   adiSoyadi       String
@@ -65,14 +92,17 @@ model Accommodation {
   faturaEdildi    Boolean
   gecelikUcret    Float
   toplamUcret     Float
-  organizasyonAdi String?
+  organizasyonAdi String? // Eski alan - geriye uyumluluk için
   otelAdi         String?
   kurumCari       String?
   numberOfNights  Int?
   companyId       Int
+  organizationId  Int? // Yeni alan - organizasyon ilişkisi
+  isMunferit      Boolean @default(false) // Münferit konaklama kontrolü
   
   // Relations
   company         Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 }
 
 model Hotel {
@@ -94,6 +124,7 @@ model Hotel {
   
   // Relations
   company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  organizations Organization[]
 }
 
 model Log {
@@ -304,4 +335,10 @@ enum TedarikciDurum {
   AKTIF
   PASIF
   ENGELLI
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
 }

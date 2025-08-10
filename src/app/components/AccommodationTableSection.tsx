@@ -18,9 +18,16 @@ export interface AccommodationRecord {
   gecelikUcret: number;
   toplamUcret: number;
   organizasyonAdi?: string;
+  organizationId?: number;
+  organization?: {
+    id: number;
+    name: string;
+    status: string;
+  };
   otelAdi?: string;
   kurumCari?: string;
   numberOfNights?: number;
+  isMunferit?: boolean;
 }
 
 interface User {
@@ -33,9 +40,11 @@ interface User {
 
 interface AccommodationTableSectionProps {
   handlePuantajRaporu?: () => void;
+  filterType?: 'all' | 'munferit' | 'organization';
+  organizationId?: number;
 }
 
-export default function AccommodationTableSection({ handlePuantajRaporu }: AccommodationTableSectionProps) {
+export default function AccommodationTableSection({ handlePuantajRaporu, filterType = 'all', organizationId }: AccommodationTableSectionProps) {
   const [records, setRecords] = useState<AccommodationRecord[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,25 +91,30 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
     faturaEdildi: false,
     gecelikUcret: 0,
     toplamUcret: 0,
-    organizasyonAdi: '',
+    organizationId: '',
     otelAdi: '',
     kurumCari: '',
     numberOfNights: 0,
+    isMunferit: false,
   });
 
   // Filtre state'leri
   const [filterOrg, setFilterOrg] = useState('');
   const [filterName, setFilterName] = useState('');
   const [filterTitle, setFilterTitle] = useState('');
+  
+  // Organizasyon state'leri
+  const [organizations, setOrganizations] = useState<Array<{id: number, name: string, status: string}>>([]);
+  const [hotels, setHotels] = useState<Array<{id: number, adi: string, sehir: string, ulke: string}>>([]);
+  const [cariler, setCariler] = useState<Array<{id: string, ad: string, soyad?: string, sirket?: string, tip: string, durum: string}>>([]);
 
-  // Seçili kayıtların kurum, organizasyon ve otel adı aynı mı?
+  // Seçili kayıtların kurum ve otel adı aynı mı?
   const allSame = (() => {
     if (selectedRecordIds.length < 2 || !records || !Array.isArray(records)) return false;
     const selected = records.filter(r => selectedRecordIds.includes(r.id));
     const kurum = selected[0]?.kurumCari;
-    const org = selected[0]?.organizasyonAdi;
     const otel = selected[0]?.otelAdi;
-    return selected.every(r => r.kurumCari === kurum && r.organizasyonAdi === org && r.otelAdi === otel);
+    return selected.every(r => r.kurumCari === kurum && r.otelAdi === otel);
   })();
 
   // Role tabanlı yetki kontrolü fonksiyonları
@@ -115,11 +129,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   const canEdit = () => hasRole('USER');
   const canDelete = () => hasRole('MANAGER');
 
-  // --- State ekle ---
-  const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
-  const [showOrganizasyonOptions, setShowOrganizasyonOptions] = useState(false);
-  const [kurumOptions, setKurumOptions] = useState<string[]>([]);
-  const [showKurumOptions, setShowKurumOptions] = useState(false);
+
 
   // useEffect ve API çağrıları
   useEffect(() => {
@@ -137,7 +147,21 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
     fetchUser();
 
     const fetchRecords = () => {
-      fetch('/api/accommodation')
+      let url = '/api/accommodation';
+      
+      // Filtreleme parametreleri ekle
+      const params = new URLSearchParams();
+      if (filterType === 'munferit') {
+        params.append('isMunferit', 'true');
+      } else if (filterType === 'organization' && organizationId) {
+        params.append('organizationId', organizationId.toString());
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      fetch(url)
         .then(res => res.json())
         .then(data => {
           setRecords(Array.isArray(data) ? data : []);
@@ -151,8 +175,24 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
     };
     fetchRecords();
 
-    fetchOrganizasyonOptions();
-    fetchKurumOptions();
+    // Organizasyonları çek
+    fetch('/api/organizations')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setOrganizations(data);
+        } else {
+          console.error('Organizations API returned non-array data:', data);
+          setOrganizations([]);
+        }
+      })
+      .catch(err => {
+        console.error('Organizasyonlar yüklenirken hata:', err);
+        setOrganizations([]);
+      });
+
+    fetchHotels();
+    fetchCariler();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -304,7 +344,6 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
       faturaEdildi: false,
       gecelikUcret: 0,
       toplamUcret: 0,
-      organizasyonAdi: '',
       otelAdi: '',
       kurumCari: '',
       numberOfNights: 0,
@@ -326,7 +365,6 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
       faturaEdildi: false,
       gecelikUcret: 0,
       toplamUcret: 0,
-      organizasyonAdi: '',
       otelAdi: '',
       kurumCari: '',
       numberOfNights: 0,
@@ -388,8 +426,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
         // Başarılı kayıt sonrası listeyi güncelle
         const data = await response.json();
         setRecords(prev => [...prev, data]);
-        await fetchOrganizasyonOptions(); // Yeni organizasyonları güncelle
-        await fetchKurumOptions(); // Yeni kurum/cari'leri güncelle
+
         closeAddModal();
       } else {
         const errorData = await response.json();
@@ -429,7 +466,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
 
   // Filtrelenmiş kayıtlar
   const filteredRecords = records.filter((record) => {
-    const orgMatch = filterOrg ? record.organizasyonAdi?.toLowerCase().includes(filterOrg.toLowerCase()) : true;
+    const orgMatch = filterOrg ? record.organization?.name?.toLowerCase().includes(filterOrg.toLowerCase()) : true;
     const nameMatch = filterName ? record.adiSoyadi?.toLowerCase().includes(filterName.toLowerCase()) : true;
     const titleMatch = filterTitle ? record.unvani?.toLowerCase().includes(filterTitle.toLowerCase()) : true;
     return orgMatch && nameMatch && titleMatch;
@@ -593,7 +630,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
           const odaTipi = getColumnValue('Oda Tipi') || getColumnValue('OdaTipi') || row[6]?.toString() || 'Single Oda';
           const konaklamaTipi = (getColumnValue('Konaklama Tipi') || getColumnValue('KonaklamaTipi') || row[7]?.toString() || 'BB') as "BB" | "HB" | "FB" | "UHD";
           const gecelikUcret = parseFloat(getColumnValue('Gecelik Ücret') || getColumnValue('GecelikUcret') || row[8]?.toString() || '0') || 0;
-          const organizasyonAdi = getColumnValue('Organizasyon Adı') || getColumnValue('OrganizasyonAdi') || row[9]?.toString() || '';
+  
           const otelAdi = getColumnValue('Otel Adı') || getColumnValue('OtelAdi') || row[10]?.toString() || '';
           const kurumCari = getColumnValue('Kurum / Cari') || getColumnValue('Kurum Cari') || getColumnValue('KurumCari') || row[11]?.toString() || '';
 
@@ -618,7 +655,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
             gecelikUcret,
             toplamUcret,
             numberOfNights,
-            organizasyonAdi,
+  
             otelAdi,
             kurumCari,
           };
@@ -667,14 +704,14 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
       { key: 'numberOfNights', label: 'Gece Sayısı' },
       { key: 'gecelikUcret', label: 'Gecelik Ücret' },
       { key: 'toplamUcret', label: 'Toplam Ücret' },
-      { key: 'organizasyonAdi', label: 'Organizasyon Adı' },
+      
       { key: 'otelAdi', label: 'Otel Adı' },
       { key: 'kurumCari', label: 'Kurum / Cari' },
     ]);
     setSelectedColumns([
       'id', 'adiSoyadi', 'unvani', 'ulke', 'sehir', 'girisTarihi', 'cikisTarihi',
       'odaTipi', 'konaklamaTipi', 'faturaEdildi', 'numberOfNights', 'gecelikUcret',
-      'toplamUcret', 'organizasyonAdi', 'otelAdi', 'kurumCari'
+              'toplamUcret', 'otelAdi', 'kurumCari'
     ]);
     setShowExportFilterModal(true);
   };
@@ -729,8 +766,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
           filteredRecord['Gecelik Ücret'] = record.gecelikUcret;
         } else if (column === 'toplamUcret') {
           filteredRecord['Toplam Ücret'] = record.toplamUcret;
-        } else if (column === 'organizasyonAdi') {
-          filteredRecord['Organizasyon Adı'] = record.organizasyonAdi || '';
+        
         } else if (column === 'otelAdi') {
           filteredRecord['Otel Adı'] = record.otelAdi || '';
         } else if (column === 'kurumCari') {
@@ -839,28 +875,36 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
     XLSX.writeFile(workbook, 'konaklama_kayit_template.xlsx');
   };
 
-  // fetchOrganizasyonOptions fonksiyonunu component fonksiyonunun içine taşı
-  const fetchOrganizasyonOptions = async () => {
-    const res = await fetch('/api/organizations');
-    if (res.ok) {
-      const data = await res.json();
-      setOrganizasyonOptions(data);
+
+
+
+
+  // fetchHotels fonksiyonunu component fonksiyonunun içine taşı
+  const fetchHotels = async () => {
+    try {
+      const res = await fetch('/api/konaklama/oteller');
+      if (res.ok) {
+        const data = await res.json();
+        setHotels(Array.isArray(data) ? data : []);
+      }
+    } catch (error) {
+      console.error('Oteller yüklenirken hata:', error);
+      setHotels([]);
     }
   };
 
-  // fetchKurumOptions fonksiyonunu component fonksiyonunun içine taşı
-  const fetchKurumOptions = async () => {
+  // fetchCariler fonksiyonunu component fonksiyonunun içine taşı
+  const fetchCariler = async () => {
     try {
-      const res = await fetch('/api/accommodation');
+      const res = await fetch('/api/cariler');
       if (res.ok) {
         const data = await res.json();
-        const kurumSet = new Set<string>();
-        (data || []).forEach((rec: any) => {
-          if (rec.kurumCari) kurumSet.add(rec.kurumCari);
-        });
-        setKurumOptions(Array.from(kurumSet));
+        setCariler(Array.isArray(data) ? data : []);
       }
-    } catch {}
+    } catch (error) {
+      console.error('Cariler yüklenirken hata:', error);
+      setCariler([]);
+    }
   };
 
   return (
@@ -927,23 +971,8 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
               placeholder="Organizasyon ara..."
               value={filterOrg}
               onChange={e => setFilterOrg(e.target.value)}
-              onFocus={() => setShowOrganizasyonOptions(true)}
-              onBlur={() => setTimeout(() => setShowOrganizasyonOptions(false), 200)}
             />
           </div>
-          {showOrganizasyonOptions && organizasyonOptions.length > 0 && (
-            <div className="absolute z-10 bg-white border rounded shadow mt-1 max-h-40 overflow-y-auto w-full">
-              {organizasyonOptions.filter(opt => opt.toLowerCase().includes(filterOrg.toLowerCase())).map(opt => (
-                <div
-                  key={opt}
-                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer truncate text-sm"
-                  onMouseDown={() => { setFilterOrg(opt); setShowOrganizasyonOptions(false); }}
-                >
-                  {opt}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
         
         <div className="relative w-full sm:w-auto">
@@ -994,12 +1023,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                   <SortIcon column="kurumCari" />
                 </div>
               </th>
-              <th className="w-16 py-1 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('organizasyonAdi')}>
-                <div className="flex items-center justify-between">
-                  <span>Org.</span>
-                  <SortIcon column="organizasyonAdi" />
-                </div>
-              </th>
+
               <th className="w-16 py-1 hidden xl:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('otelAdi')}>
                 <div className="flex items-center justify-between">
                   <span>Otel</span>
@@ -1083,7 +1107,9 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                 </td>
                 <td className="font-medium text-blue-600 whitespace-nowrap py-1">{record.id}</td>
                 <td className="truncate hidden xl:table-cell py-1">{record.kurumCari || '-'}</td>
-                <td className="truncate hidden lg:table-cell py-1">{record.organizasyonAdi || '-'}</td>
+                <td className="truncate hidden lg:table-cell py-1">
+                  {record.organization?.name || (record.isMunferit ? 'Münferit' : '-')}
+                </td>
                 <td className="truncate hidden xl:table-cell py-1">{record.otelAdi || '-'}</td>
                 <td className="truncate py-1">
                   <span className="font-medium">{record.adiSoyadi}</span>
@@ -1259,28 +1285,39 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Organizasyon</label>
                 <select
-                  name="organizasyonAdi"
-                  value={editingRecord.organizasyonAdi || ''}
+                  name="organizationId"
+                  value={editingRecord.organizationId?.toString() || ''}
                   onChange={handleEditInputChange}
                   className="input w-full border border-gray-300 rounded-md"
-                  required
                 >
-                  <option value="">Seçiniz</option>
-                  {organizasyonOptions.map((org, idx) => (
-                    <option key={idx} value={org}>{org}</option>
-                  ))}
+                  <option value="">Münferit Konaklama</option>
+                  {organizations
+                    .filter(org => org.status === 'ACTIVE')
+                    .map((org) => (
+                      <option key={org.id} value={org.id.toString()}>
+                        {org.name}
+                      </option>
+                    ))}
                 </select>
               </div>
+
               <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Otel Adı</label>
-                <input 
-                  type="text" 
+                <label className="block text-sm font-medium text-gray-700 mb-1">Otel</label>
+                <select
                   name="otelAdi"
                   value={editingRecord.otelAdi || ''}
                   onChange={handleEditInputChange}
-                  className="input w-full border border-gray-300 rounded-md" 
-                  placeholder="Otel Adı" 
-                />
+                  className="input w-full border border-gray-300 rounded-md"
+                >
+                  <option value="">Otel Seçiniz</option>
+                  {hotels
+                    .filter(hotel => hotel.durum === 'AKTIF')
+                    .map((hotel) => (
+                      <option key={hotel.id} value={hotel.adi}>
+                        {hotel.adi} - {hotel.sehir}
+                      </option>
+                    ))}
+                </select>
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Kurum/Cari</label>
@@ -1289,12 +1326,18 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                   value={editingRecord.kurumCari || ''}
                   onChange={handleEditInputChange}
                   className="input w-full border border-gray-300 rounded-md"
-                  required
                 >
-                  <option value="">Seçiniz</option>
-                  {kurumOptions.map((kurum, idx) => (
-                    <option key={idx} value={kurum}>{kurum}</option>
-                  ))}
+                  <option value="">Cari Seçiniz</option>
+                  {cariler
+                    .filter(cari => cari.durum === 'AKTIF')
+                    .map((cari) => {
+                      const displayName = cari.sirket || `${cari.ad} ${cari.soyad || ''}`.trim();
+                      return (
+                        <option key={cari.id} value={displayName}>
+                          {displayName} - {cari.tip}
+                        </option>
+                      );
+                    })}
                 </select>
               </div>
               <div className="form-group">
@@ -1458,100 +1501,61 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Organizasyon</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="organizasyonAdi"
-                    value={formData.organizasyonAdi || ''}
-                    onChange={e => {
-                      handleInputChange(e);
-                      setShowOrganizasyonOptions(true);
-                    }}
-                    onFocus={() => setShowOrganizasyonOptions(true)}
-                    onBlur={() => setTimeout(() => setShowOrganizasyonOptions(false), 150)}
-                    className="input w-full border border-gray-300 rounded-md"
-                    autoComplete="off"
-                    placeholder="Organizasyon adı yazın"
-                  />
-                  {showOrganizasyonOptions && (formData.organizasyonAdi || '').length > 0 && (
-                    <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded shadow max-h-40 overflow-y-auto mt-1">
-                      {organizasyonOptions.filter(org =>
-                        org.toLowerCase().includes((formData.organizasyonAdi || '').toLowerCase())
-                      ).length > 0 ? (
-                        organizasyonOptions.filter(org =>
-                          org.toLowerCase().includes((formData.organizasyonAdi || '').toLowerCase())
-                        ).map((org, idx) => (
-                          <li
-                            key={idx}
-                            className="px-3 py-2 cursor-pointer hover:bg-blue-100"
-                            onMouseDown={() => {
-                              setFormData(prev => ({ ...prev, organizasyonAdi: org }));
-                              setShowOrganizasyonOptions(false);
-                            }}
-                          >
-                            {org}
-                          </li>
-                        ))
-                      ) : (
-                        <li className="px-3 py-2 text-gray-400">Eşleşen organizasyon yok</li>
-                      )}
-                    </ul>
-                  )}
-                </div>
+                <select
+                  name="organizationId"
+                  value={formData.organizationId || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md"
+                >
+                  <option value="">Münferit Konaklama</option>
+                  {organizations
+                    .filter(org => org.status === 'ACTIVE')
+                    .map((org) => (
+                      <option key={org.id} value={org.id.toString()}>
+                        {org.name}
+                      </option>
+                    ))}
+                </select>
               </div>
+
               <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Otel Adı</label>
-                <input 
-                  type="text" 
+                <label className="block text-sm font-medium text-gray-700 mb-1">Otel</label>
+                <select
                   name="otelAdi"
                   value={formData.otelAdi || ''}
                   onChange={handleInputChange}
-                  className="input w-full border border-gray-300 rounded-md" 
-                  placeholder="Otel Adı" 
-                />
+                  className="input w-full border border-gray-300 rounded-md"
+                >
+                  <option value="">Otel Seçiniz</option>
+                  {hotels
+                    .filter(hotel => hotel.durum === 'AKTIF')
+                    .map((hotel) => (
+                      <option key={hotel.id} value={hotel.adi}>
+                        {hotel.adi} - {hotel.sehir}
+                      </option>
+                    ))}
+                </select>
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Kurum/Cari</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="kurumCari"
-                    value={formData.kurumCari || ''}
-                    onChange={e => {
-                      handleInputChange(e);
-                      setShowKurumOptions(true);
-                    }}
-                    onFocus={() => setShowKurumOptions(true)}
-                    onBlur={() => setTimeout(() => setShowKurumOptions(false), 150)}
-                    className="input w-full border border-gray-300 rounded-md"
-                    autoComplete="off"
-                    placeholder="Kurum/Cari adı yazın"
-                  />
-                  {showKurumOptions && (formData.kurumCari || '').length > 0 && (
-                    <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded shadow max-h-40 overflow-y-auto mt-1">
-                      {kurumOptions.filter((kurum: string) =>
-                        kurum.toLowerCase().includes((formData.kurumCari || '').toLowerCase())
-                      ).length > 0 ? (
-                        kurumOptions.filter((kurum: string) =>
-                          kurum.toLowerCase().includes((formData.kurumCari || '').toLowerCase())
-                        ).map((kurum: string, idx: number) => (
-                          <li
-                            key={idx}
-                            className="px-3 py-2 cursor-pointer hover:bg-blue-100 text-black"
-                            onMouseDown={() => {
-                              setFormData(prev => ({ ...prev, kurumCari: kurum }));
-                              setShowKurumOptions(false);
-                            }}
-                          >
-                            {kurum}
-                          </li>
-                        ))
-                      ) : (
-                        <li className="px-3 py-2 text-gray-400">Eşleşen kurum yok</li>
-                      )}
-                    </ul>
-                  )}
-                </div>
+                <select
+                  name="kurumCari"
+                  value={formData.kurumCari || ''}
+                  onChange={handleInputChange}
+                  className="input w-full border border-gray-300 rounded-md"
+                >
+                  <option value="">Cari Seçiniz</option>
+                  {cariler
+                    .filter(cari => cari.durum === 'AKTIF')
+                    .map((cari) => {
+                      const displayName = cari.sirket || `${cari.ad} ${cari.soyad || ''}`.trim();
+                      return (
+                        <option key={cari.id} value={displayName}>
+                          {displayName} - {cari.tip}
+                        </option>
+                      );
+                    })}
+                </select>
               </div>
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Gecelik Ücret (₺)</label>

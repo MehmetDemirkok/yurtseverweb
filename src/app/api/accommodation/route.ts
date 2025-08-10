@@ -9,9 +9,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Yetkilendirme gerekli' }, { status: 401 });
     }
     
+    const { searchParams } = new URL(request.url);
+    const organizasyonAdi = searchParams.get('organizasyonAdi');
+    const organizationId = searchParams.get('organizationId');
+    const isMunferit = searchParams.get('isMunferit');
+    
+    const whereClause: any = {
+      companyId: user.companyId
+    };
+    
+    if (organizasyonAdi) {
+      whereClause.organizasyonAdi = organizasyonAdi;
+    }
+    
+    if (organizationId) {
+      whereClause.organizationId = parseInt(organizationId);
+    }
+    
+    if (isMunferit !== null) {
+      whereClause.isMunferit = isMunferit === 'true';
+    }
+    
     const accommodations = await prisma.accommodation.findMany({
-      where: {
-        companyId: user.companyId
+      where: whereClause,
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          },
+        },
       },
       orderBy: {
         id: 'desc'
@@ -38,12 +66,42 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await request.json();
+    
+    // Organizasyon ID varsa organizasyonun mevcut olduğunu kontrol et
+    if (data.organizationId) {
+      const organization = await prisma.organization.findFirst({
+        where: {
+          id: data.organizationId,
+          companyId: user.companyId,
+        },
+      });
+      
+      if (!organization) {
+        return NextResponse.json({ error: 'Belirtilen organizasyon bulunamadı' }, { status: 400 });
+      }
+      
+      // Organizasyon aktif mi kontrol et
+      if (organization.status !== 'ACTIVE') {
+        return NextResponse.json({ error: 'Belirtilen organizasyon aktif değil' }, { status: 400 });
+      }
+    }
 
     const accommodation = await prisma.accommodation.create({
       data: {
         ...data,
-        companyId: user.companyId
-      }
+        companyId: user.companyId,
+        // Eğer organizationId varsa isMunferit false olmalı
+        isMunferit: data.organizationId ? false : (data.isMunferit || false),
+      },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          },
+        },
+      },
     });
 
     // Log kaydı oluştur
