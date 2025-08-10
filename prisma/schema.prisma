@@ -9,14 +9,14 @@ datasource db {
 }
 
 model User {
-  id           Int           @id @default(autoincrement())
-  email        String        @unique
-  name         String?
-  createdAt    DateTime      @default(now())
-  password     String
-  role         Role          @default(KULLANICI)
-  permissions  String[]      @default([])
-  logs         Log[]
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  name        String?
+  createdAt   DateTime @default(now())
+  password    String
+  role        Role     @default(KULLANICI)
+  permissions String[] @default([])
+  logs        Log[]
 }
 
 model Accommodation {
@@ -39,20 +39,20 @@ model Accommodation {
 }
 
 model Hotel {
-  id          Int      @id @default(autoincrement())
-  adi         String
-  adres       String
-  sehir       String
-  ulke        String
-  telefon     String?
-  email       String?
-  website     String?
-  yildizSayisi Int     @default(0)
-  puan        Float    @default(0.0)
-  aciklama    String?
-  durum       HotelDurum @default(AKTIF)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           Int        @id @default(autoincrement())
+  adi          String
+  adres        String
+  sehir        String
+  ulke         String
+  telefon      String?
+  email        String?
+  website      String?
+  yildizSayisi Int        @default(0)
+  puan         Float      @default(0.0)
+  aciklama     String?
+  durum        HotelDurum @default(AKTIF)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model Log {
@@ -68,6 +68,108 @@ model Log {
   user       User?    @relation(fields: [userId], references: [id])
 }
 
+model Arac {
+  id              String     @id @default(cuid())
+  plaka           String     @unique
+  marka           String
+  model           String
+  yolcuKapasitesi Int
+  durum           AracDurum  @default(MUSAIT)
+  enlem           Float      @default(0)
+  boylam          Float      @default(0)
+  sonGuncelleme   DateTime   @default(now())
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  soforler        Sofor[]
+  transferler     Transfer[]
+}
+
+model Sofor {
+  id               String     @id @default(cuid())
+  ad               String
+  soyad            String
+  telefon          String     @unique
+  ehliyetSinifi    String
+  atananAracId     String?
+  durum            SoforDurum @default(MUSAIT)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  ehliyetSiniflari String[]
+  srcBelgeleri     String[]
+  atananArac       Arac?      @relation(fields: [atananAracId], references: [id])
+  transferler      Transfer[]
+}
+
+model Transfer {
+  id           String        @id @default(cuid())
+  kalkisYeri   String
+  varisYeri    String
+  kalkisSaati  String
+  kalkisTarihi DateTime
+  yolcuSayisi  Int
+  aracId       String?
+  soforId      String?
+  durum        TransferDurum @default(BEKLEMEDE)
+  notlar       String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  fiyat        Float?
+  tahsisli     Boolean       @default(false)
+  arac         Arac?         @relation(fields: [aracId], references: [id])
+  sofor        Sofor?        @relation(fields: [soforId], references: [id])
+  yolcular     Yolcu[]
+}
+
+model Yolcu {
+  id         String   @id @default(cuid())
+  ad         String
+  soyad      String
+  telefon    String?
+  ucusSaati  String?
+  ucusTkKodu String?
+  transferId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+}
+
+model Cari {
+  id           String    @id @default(cuid())
+  ad           String
+  soyad        String?
+  sirket       String?
+  email        String?
+  telefon      String?
+  adres        String?
+  sehir        String?
+  ulke         String    @default("Türkiye")
+  vergiNo      String?
+  vergiDairesi String?
+  notlar       String?
+  tip          CariTip   @default(MUSTERI)
+  durum        CariDurum @default(AKTIF)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Tedarikci {
+  id           String         @id @default(cuid())
+  sirketAdi    String
+  yetkiliKisi  String?
+  email        String?
+  telefon      String?
+  adres        String?
+  sehir        String?
+  ulke         String         @default("Türkiye")
+  vergiNo      String?
+  vergiDairesi String?
+  hizmetTuru   String?
+  notlar       String?
+  durum        TedarikciDurum @default(AKTIF)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
 enum Role {
   ADMIN
   MUDUR
@@ -80,72 +182,6 @@ enum HotelDurum {
   PASIF
   TAMAMEN_DOLU
   BAKIM
-}
-
-// Transfer Modülü Tabloları
-model Arac {
-  id              String    @id @default(cuid())
-  plaka           String    @unique
-  marka           String
-  model           String
-  yolcuKapasitesi Int
-  durum           AracDurum @default(MUSAIT)
-  enlem           Float     @default(0)
-  boylam          Float     @default(0)
-  sonGuncelleme   DateTime  @default(now())
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  soforler        Sofor[]
-  transferler     Transfer[]
-}
-
-model Sofor {
-  id            String      @id @default(cuid())
-  ad            String
-  soyad         String
-  telefon       String      @unique
-  ehliyetSinifi String      // Eski alan, geriye uyumluluk için tutuldu
-  ehliyetSiniflari String[] // Yeni çoklu ehliyet sınıfları (B, C, D, E, vb.)
-  srcBelgeleri  String[]    // SRC belgeleri (SRC1, SRC2, SRC3, SRC4, SRC5)
-  atananAracId  String?
-  durum         SoforDurum  @default(MUSAIT)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  atananArac    Arac?       @relation(fields: [atananAracId], references: [id])
-  transferler   Transfer[]
-}
-
-model Transfer {
-  id           String         @id @default(cuid())
-  kalkisYeri   String
-  varisYeri    String
-  kalkisSaati  String
-  kalkisTarihi DateTime
-  yolcuSayisi  Int
-  aracId       String?
-  soforId      String?
-  durum        TransferDurum  @default(BEKLEMEDE)
-  notlar       String?
-  fiyat        Float?         // Yeni eklenen fiyat alanı
-  tahsisli     Boolean        @default(false) // Gün boyu tahsis edilen araçlar için
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  arac         Arac?          @relation(fields: [aracId], references: [id])
-  sofor        Sofor?         @relation(fields: [soforId], references: [id])
-  yolcular     Yolcu[]        // Transferdeki yolcular
-}
-
-model Yolcu {
-  id          String   @id @default(cuid())
-  ad          String
-  soyad       String
-  telefon     String?
-  ucusSaati   String?
-  ucusTkKodu  String?
-  transferId  String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  transfer    Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
 }
 
 enum AracDurum {
@@ -167,44 +203,6 @@ enum TransferDurum {
   IPTAL
 }
 
-// Transfer Modülü - Cariler ve Tedarikçiler
-model Cari {
-  id            String     @id @default(cuid())
-  ad            String
-  soyad         String?
-  sirket        String?
-  email         String?
-  telefon       String?
-  adres         String?
-  sehir         String?
-  ulke          String     @default("Türkiye")
-  vergiNo       String?
-  vergiDairesi  String?
-  notlar        String?
-  tip           CariTip    @default(MUSTERI)
-  durum         CariDurum  @default(AKTIF)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-}
-
-model Tedarikci {
-  id            String         @id @default(cuid())
-  sirketAdi     String
-  yetkiliKisi   String?
-  email         String?
-  telefon       String?
-  adres         String?
-  sehir         String?
-  ulke          String         @default("Türkiye")
-  vergiNo       String?
-  vergiDairesi  String?
-  hizmetTuru    String?        // Hangi hizmetleri sağlıyor
-  notlar        String?
-  durum         TedarikciDurum @default(AKTIF)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-}
-
 enum CariTip {
   MUSTERI
   BAYI
@@ -222,7 +220,3 @@ enum TedarikciDurum {
   PASIF
   ENGELLI
 }
-
-
-
-
