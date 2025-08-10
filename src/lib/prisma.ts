@@ -5,8 +5,30 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 // Prisma istemcisi oluşturulurken log seviyesini ortama göre ayarlıyoruz
 const prismaClientOptions: Prisma.PrismaClientOptions = {
   log: process.env.NODE_ENV === 'production' 
-    ? ['query', 'info', 'warn', 'error']
-    : ['query', 'error', 'warn'],
+    ? ['error', 'warn']
+    : ['error', 'warn'],
+  // Bağlantı havuzu optimizasyonları
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+  // Bağlantı havuzu ayarları
+  __internal: {
+    engine: {
+      connectionLimit: 20, // Maksimum bağlantı sayısı
+      pool: {
+        min: 2, // Minimum bağlantı sayısı
+        max: 10, // Maksimum bağlantı sayısı
+        acquireTimeoutMillis: 30000, // Bağlantı alma zaman aşımı
+        createTimeoutMillis: 30000, // Bağlantı oluşturma zaman aşımı
+        destroyTimeoutMillis: 5000, // Bağlantı yok etme zaman aşımı
+        idleTimeoutMillis: 30000, // Boşta kalma zaman aşımı
+        reapIntervalMillis: 1000, // Temizleme aralığı
+        createRetryIntervalMillis: 200, // Yeniden deneme aralığı
+      },
+    },
+  },
 };
 
 // Bağlantı hatalarını yönetmek için yeniden deneme mekanizması
@@ -36,7 +58,13 @@ export const enhancedPrisma = prisma.$extends({
         try {
           const result = await query(args);
           const end = performance.now();
-          console.log(`${model}.${operation} took ${end - start}ms`);
+          
+          // Sadece yavaş sorguları logla (500ms üzeri)
+          const duration = end - start;
+          if (duration > 500) {
+            console.warn(`Slow query: ${model}.${operation} took ${duration}ms`);
+          }
+          
           return result;
         } catch (error: any) {
           lastError = error;

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import AuthGuard from "./components/AuthGuard";
+import AuthGuard from "@/components/layout/AuthGuard";
+import PermissionGuard from "@/components/layout/PermissionGuard";
 import CookieConsentBanner from "./components/CookieConsentBanner";
 
 const geistSans = Geist({
@@ -33,7 +34,11 @@ export default function RootLayout({
         <meta name="theme-color" content="#3B82F6" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthGuard>{children}</AuthGuard>
+        <AuthGuard>
+          <PermissionGuard>
+            {children}
+          </PermissionGuard>
+        </AuthGuard>
         <CookieConsentBanner />
       </body>
     </html>
