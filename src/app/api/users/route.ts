@@ -18,7 +18,7 @@ export async function GET() {
     }
     
     const decoded = jwt.verify(token, JWT_SECRET) as MyJwtPayload;
-    if (!['ADMIN', 'MANAGER'].includes(decoded.role)) {
+    if (!['ADMIN', 'MUDUR'].includes(decoded.role)) {
       return NextResponse.json({ error: 'Bu işlem için yetki gereklidir.' }, { status: 403 });
     }
     
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
         email: data.email,
         name: data.name || '',
         password: hashedPassword,
-        role: data.role || 'USER',
+        role: data.role || 'KULLANICI',
         permissions: data.permissions || []
       },
       select: {

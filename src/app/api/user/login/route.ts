@@ -36,12 +36,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Kullanıcı adı veya şifre hatalı.' }, { status: 401 });
     }
 
-    // JWT oluştur - role bilgisini de dahil et
+    // JWT oluştur - role ve permissions bilgisini de dahil et
     const token = jwt.sign({ 
       id: user.id, 
       email: user.email, 
       name: user.name,
-      role: user.role 
+      role: user.role,
+      permissions: user.permissions || []
     }, JWT_SECRET, { expiresIn: '7d' });
     
     // Cookie olarak set et

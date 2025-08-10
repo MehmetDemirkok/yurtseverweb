@@ -6,7 +6,6 @@ import {
   Plus, 
   Edit, 
   Trash2, 
-  MapPin, 
   Users,
   Search,
   Filter
@@ -17,10 +16,9 @@ interface Arac {
   plaka: string;
   marka: string;
   model: string;
+  aracTipi: 'BINEK' | 'MINIBUS' | 'MIDIBUS' | 'OTOBUS';
   yolcuKapasitesi: number;
   durum: 'MUSAIT' | 'BAKIMDA' | 'TRANSFERDE';
-  enlem: number;
-  boylam: number;
   sonGuncelleme: string;
   createdAt: string;
 }
@@ -32,16 +30,27 @@ export default function AraclarPage() {
   const [filterDurum, setFilterDurum] = useState<string>('tümü');
   const [showModal, setShowModal] = useState(false);
   const [editingArac, setEditingArac] = useState<Arac | null>(null);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [userRole, setUserRole] = useState<string>('');
+
+  // İzin kontrolü fonksiyonu
+  const hasPermission = (permission: string): boolean => {
+    return userPermissions.includes(permission) || userRole === 'ADMIN';
+  };
+
+  // Sayfa erişim kontrolü
+  const hasPageAccess = (): boolean => {
+    return hasPermission('transfer') || userRole === 'ADMIN';
+  };
 
   // Form state
   const [formData, setFormData] = useState({
     plaka: '',
     marka: '',
     model: '',
+    aracTipi: 'BINEK' as const,
     yolcuKapasitesi: 4,
-    durum: 'MUSAIT' as const,
-    enlem: 0,
-    boylam: 0
+    durum: 'MUSAIT' as const
   });
   
   // Form validation
@@ -49,6 +58,7 @@ export default function AraclarPage() {
     plaka: '',
     marka: '',
     model: '',
+    aracTipi: '',
     yolcuKapasitesi: ''
   });
   
@@ -60,6 +70,21 @@ export default function AraclarPage() {
   };
 
   useEffect(() => {
+    // Kullanıcı bilgilerini al
+    const fetchUserData = async () => {
+      try {
+        const res = await fetch('/api/user', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUserPermissions(data.user.permissions || []);
+          setUserRole(data.user.role || '');
+        }
+      } catch (error) {
+        console.error('Kullanıcı bilgileri alınamadı:', error);
+      }
+    };
+
+    fetchUserData();
     fetchAraclar();
   }, []);
 
@@ -209,15 +234,15 @@ export default function AraclarPage() {
       plaka: '',
       marka: '',
       model: '',
+      aracTipi: 'BINEK',
       yolcuKapasitesi: 4,
-      durum: 'MUSAIT',
-      enlem: 0,
-      boylam: 0
+      durum: 'MUSAIT'
     });
     setFormErrors({
       plaka: '',
       marka: '',
       model: '',
+      aracTipi: '',
       yolcuKapasitesi: ''
     });
   };
@@ -228,10 +253,9 @@ export default function AraclarPage() {
       plaka: arac.plaka,
       marka: arac.marka,
       model: arac.model,
+      aracTipi: arac.aracTipi,
       yolcuKapasitesi: arac.yolcuKapasitesi,
-      durum: arac.durum,
-      enlem: arac.enlem,
-      boylam: arac.boylam
+      durum: arac.durum
     });
     setShowModal(true);
   };
@@ -263,6 +287,29 @@ export default function AraclarPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Sayfa erişim kontrolü
+  if (!hasPageAccess()) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <div className="bg-white rounded-lg shadow-lg p-8 text-center max-w-md">
+          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Erişim Kısıtlı</h2>
+          <p className="text-gray-600 mb-4">Bu sayfaya erişim izniniz bulunmamaktadır.</p>
+          <button 
+            onClick={() => window.history.back()}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Geri Dön
+          </button>
+        </div>
       </div>
     );
   }
@@ -337,14 +384,15 @@ export default function AraclarPage() {
                   Marka/Model
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Araç Tipi
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Kapasite
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Durum
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Konum
-                </th>
+
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Son Güncelleme
                 </th>
@@ -363,6 +411,12 @@ export default function AraclarPage() {
                     {arac.marka} {arac.model}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {arac.aracTipi === 'BINEK' && 'Binek Otomobil'}
+                    {arac.aracTipi === 'MINIBUS' && 'Minibüs'}
+                    {arac.aracTipi === 'MIDIBUS' && 'Midibüs'}
+                    {arac.aracTipi === 'OTOBUS' && 'Otobüs'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     <div className="flex items-center">
                       <Users className="h-4 w-4 mr-1" />
                       {arac.yolcuKapasitesi} kişi
@@ -375,12 +429,7 @@ export default function AraclarPage() {
                        {arac.durum === 'BAKIMDA' && 'Bakımda'}
                      </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {arac.enlem.toFixed(4)}, {arac.boylam.toFixed(4)}
-                    </div>
-                  </td>
+
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {new Date(arac.sonGuncelleme).toLocaleString('tr-TR')}
                   </td>
@@ -500,6 +549,21 @@ export default function AraclarPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Araç Tipi
+                </label>
+                <select
+                  value={formData.aracTipi}
+                  onChange={(e) => setFormData({...formData, aracTipi: e.target.value as any})}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="BINEK">Binek Otomobil</option>
+                  <option value="MINIBUS">Minibüs</option>
+                  <option value="MIDIBUS">Midibüs</option>
+                  <option value="OTOBUS">Otobüs</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Yolcu Kapasitesi
                 </label>
                 <input
@@ -536,34 +600,7 @@ export default function AraclarPage() {
                    <option value="BAKIMDA">Bakımda</option>
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Enlem
-                  </label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    value={formData.enlem}
-                    onChange={(e) => setFormData({...formData, enlem: parseFloat(e.target.value)})}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enlem girin"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Boylam
-                  </label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    value={formData.boylam}
-                    onChange={(e) => setFormData({...formData, boylam: parseFloat(e.target.value)})}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Boylam girin"
-                  />
-                </div>
-              </div>
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"

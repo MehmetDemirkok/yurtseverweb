@@ -20,6 +20,9 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        // Başarılı giriş sonrası session expired alert flag'ini temizle
+        localStorage.removeItem('sessionExpiredAlertShown');
+        
         if (process.env.NODE_ENV === "development") {
           setTimeout(() => {
             const cookies = document.cookie;

@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
-type MyJwtPayload = JwtPayload & { role: string; userId: number };
+type MyJwtPayload = JwtPayload & { role: string; userId: number; permissions?: string[] };
 
 // Kullanıcı listeleme
 export async function GET() {
@@ -35,21 +35,49 @@ export async function GET() {
       return NextResponse.json({ error: 'Geçersiz oturum.' }, { status: 401 });
     }
     
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        createdAt: true,
-        permissions: true
+    // JWT'den permissions bilgisini al, yoksa veritabanından çek
+    let userPermissions = decoded.permissions || [];
+    
+    // Eğer JWT'de permissions yoksa veritabanından çek
+    if (!userPermissions || userPermissions.length === 0) {
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          createdAt: true,
+          permissions: true
+        }
+      });
+      if (!user) {
+        return NextResponse.json({ error: 'Geçersiz oturum.' }, { status: 401 });
       }
-    });
-    if (!user) {
-      return NextResponse.json({ error: 'Geçersiz oturum.' }, { status: 401 });
+      userPermissions = user.permissions || [];
+      
+      return NextResponse.json({ 
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          createdAt: user.createdAt,
+          permissions: userPermissions
+        }
+      });
+    } else {
+      // JWT'de permissions varsa kullan
+      return NextResponse.json({ 
+        user: {
+          id: decoded.id,
+          email: decoded.email,
+          name: decoded.name,
+          role: decoded.role,
+          permissions: userPermissions
+        }
+      });
     }
-    return NextResponse.json({ user });
   } catch (error) {
     console.error('Error in user GET route:', error);
     return NextResponse.json({ error: 'Sunucu hatası.' }, { status: 500 });

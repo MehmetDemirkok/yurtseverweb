@@ -42,6 +42,18 @@ export default function CarilerPage() {
   const [filterDurum, setFilterDurum] = useState<string>('tümü');
   const [showModal, setShowModal] = useState(false);
   const [editingCari, setEditingCari] = useState<Cari | null>(null);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [userRole, setUserRole] = useState<string>('');
+
+  // İzin kontrolü fonksiyonu
+  const hasPermission = (permission: string): boolean => {
+    return userPermissions.includes(permission) || userRole === 'ADMIN';
+  };
+
+  // Sayfa erişim kontrolü
+  const hasPageAccess = (): boolean => {
+    return hasPermission('cariler') || userRole === 'ADMIN';
+  };
 
   // Form state
   const [formData, setFormData] = useState({
@@ -67,13 +79,28 @@ export default function CarilerPage() {
   });
 
   useEffect(() => {
+    // Kullanıcı bilgilerini al
+    const fetchUserData = async () => {
+      try {
+        const res = await fetch('/api/user', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUserPermissions(data.user.permissions || []);
+          setUserRole(data.user.role || '');
+        }
+      } catch (error) {
+        console.error('Kullanıcı bilgileri alınamadı:', error);
+      }
+    };
+
+    fetchUserData();
     fetchCariler();
   }, []);
 
   const fetchCariler = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/moduller/transfer/cariler');
+      const response = await fetch('/api/cariler');
       if (response.ok) {
         const data = await response.json();
         setCariler(data.cariler);
@@ -134,7 +161,7 @@ export default function CarilerPage() {
   };
 
   const createCari = async (data: typeof formData) => {
-    const response = await fetch('/api/moduller/transfer/cariler', {
+    const response = await fetch('/api/cariler', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -151,7 +178,7 @@ export default function CarilerPage() {
   };
 
   const updateCari = async (id: string, data: typeof formData) => {
-    const response = await fetch(`/api/moduller/transfer/cariler/${id}`, {
+    const response = await fetch(`/api/cariler/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -170,7 +197,7 @@ export default function CarilerPage() {
   const deleteCari = async (id: string) => {
     if (window.confirm('Bu cariyi silmek istediğinizden emin misiniz?')) {
       try {
-        const response = await fetch(`/api/moduller/transfer/cariler/${id}`, {
+        const response = await fetch(`/api/cariler/${id}`, {
           method: 'DELETE',
         });
 
@@ -297,6 +324,29 @@ export default function CarilerPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Sayfa erişim kontrolü
+  if (!hasPageAccess()) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <div className="bg-white rounded-lg shadow-lg p-8 text-center max-w-md">
+          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Erişim Kısıtlı</h2>
+          <p className="text-gray-600 mb-4">Bu sayfaya erişim izniniz bulunmamaktadır.</p>
+          <button 
+            onClick={() => window.history.back()}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            Geri Dön
+          </button>
+        </div>
       </div>
     );
   }

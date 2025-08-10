@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PageHeader from "../components/PageHeader";
 
 interface User {
   id: number;
   email: string;
   name: string | null;
-  role: 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER';
+  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
   createdAt: string;
   permissions?: string[];
 }
@@ -17,14 +16,14 @@ type CurrentUser = {
   id: number;
   email: string;
   name?: string;
-  role: 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER';
+  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
 };
 
 type NewUser = {
   email: string;
   name: string;
   password: string;
-  role: 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER';
+  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
   permissions: string[];
 };
 
@@ -48,14 +47,14 @@ export default function AdminPage() {
     email: '',
     name: '',
     password: '',
-    role: 'USER',
+    role: 'KULLANICI',
     permissions: []
   });
 
   const [editUser, setEditUser] = useState({
     id: 0,
     name: '',
-    role: 'USER' as 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER',
+    role: 'KULLANICI' as 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI',
     permissions: [] as string[]
   });
 
@@ -69,20 +68,21 @@ export default function AdminPage() {
   const [stats, setStats] = useState({
     total: 0,
     admin: 0,
-    manager: 0,
-    user: 0,
-    viewer: 0
+    mudur: 0,
+    operator: 0,
+    kullanici: 0
   });
 
-  // İzinler listesi
+  // İzinler listesi - Dashboard modüllerine göre
   const PERMISSIONS = [
-    { key: 'sales', label: 'Satışlar' },
+    { key: 'home', label: 'Otel Yönetimi' },
+    { key: 'transfer', label: 'Araç Takip' },
+    { key: 'transfer-sales', label: 'Transfer Satışları' },
+    { key: 'accommodation', label: 'Konaklama Satışları' },
     { key: 'user-management', label: 'Kullanıcı Yönetimi' },
     { key: 'logs', label: 'Sistem Logları' },
-    { key: 'finance', label: 'Finans' },
-    { key: 'accommodation', label: 'Konaklama Kayıtları' },
-    { key: 'home', label: 'Ana Sayfa' },
-    // buraya yeni izinler eklenebilir
+    { key: 'cariler', label: 'Cariler' },
+    { key: 'tedarikciler', label: 'Tedarikçiler' },
   ];
 
   useEffect(() => {
@@ -94,11 +94,11 @@ export default function AdminPage() {
     // İstatistikleri hesapla
     const total = users.length;
     const admin = users.filter(u => u.role === 'ADMIN').length;
-    const manager = users.filter(u => u.role === 'MANAGER').length;
-    const user = users.filter(u => u.role === 'USER').length;
-    const viewer = users.filter(u => u.role === 'VIEWER').length;
+    const mudur = users.filter(u => u.role === 'MUDUR').length;
+    const operator = users.filter(u => u.role === 'OPERATOR').length;
+    const kullanici = users.filter(u => u.role === 'KULLANICI').length;
     
-    setStats({ total, admin, manager, user, viewer });
+    setStats({ total, admin, mudur, operator, kullanici });
   }, [users]);
 
   useEffect(() => {
@@ -199,13 +199,13 @@ export default function AdminPage() {
 
   const closeAddModal = () => {
     setShowAddModal(false);
-    setNewUser({ email: '', name: '', password: '', role: 'USER', permissions: [] });
+    setNewUser({ email: '', name: '', password: '', role: 'KULLANICI', permissions: [] });
   };
 
   const closeEditModal = () => {
     setShowEditModal(false);
     setSelectedUser(null);
-    setEditUser({ id: 0, name: '', role: 'USER', permissions: [] });
+    setEditUser({ id: 0, name: '', role: 'KULLANICI', permissions: [] });
   };
 
   const closeDeleteModal = () => {
@@ -216,6 +216,7 @@ export default function AdminPage() {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -225,6 +226,7 @@ export default function AdminPage() {
 
       if (res.ok) {
         const user = await res.json();
+
         setUsers(prev => [user, ...prev]);
         closeAddModal();
       } else {
@@ -238,6 +240,7 @@ export default function AdminPage() {
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+
       const res = await fetch(`/api/users/${editUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -247,6 +250,7 @@ export default function AdminPage() {
 
       if (res.ok) {
         const updatedUser = await res.json();
+
         setUsers(prev => prev.map(user => 
           user.id === editUser.id ? updatedUser : user
         ));
@@ -282,19 +286,19 @@ export default function AdminPage() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'ADMIN': return 'bg-red-100 text-red-800 border-red-200';
-      case 'MANAGER': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'USER': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'VIEWER': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'MUDUR': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'OPERATOR': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'KULLANICI': return 'bg-gray-100 text-gray-800 border-gray-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'ADMIN': return 'Yönetici';
-      case 'MANAGER': return 'Müdür';
-      case 'USER': return 'Kullanıcı';
-      case 'VIEWER': return 'Görüntüleyici';
+      case 'ADMIN': return 'Admin';
+      case 'MUDUR': return 'Müdür';
+      case 'OPERATOR': return 'Operatör';
+      case 'KULLANICI': return 'Kullanıcı';
       default: return role;
     }
   };
@@ -354,27 +358,9 @@ export default function AdminPage() {
 
   return (
     <>
-      <PageHeader
-        title="Kullanıcı Yönetimi"
-        description="Sistem kullanıcılarını ve yetkilerini yönetin"
-        icon={<svg className="w-12 h-12 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
-      />
-
       <main className="container mx-auto px-6 py-8">
         {/* Navigation */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              onClick={() => router.push('/')}
-              className="btn btn-secondary flex items-center gap-2 px-6 py-3 text-lg"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              Ana Sayfaya Dön
-            </button>
-          </div>
-          
+        <div className="flex justify-end mb-8">
           <button
             onClick={openAddModal}
             className="btn btn-primary text-lg px-8 py-3 flex items-center gap-2"
@@ -425,7 +411,7 @@ export default function AdminPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Müdür</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.manager}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.mudur}</p>
               </div>
             </div>
           </div>
@@ -438,8 +424,8 @@ export default function AdminPage() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Kullanıcı</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.user}</p>
+                <p className="text-sm font-medium text-gray-600">Operatör</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.operator}</p>
               </div>
             </div>
           </div>
@@ -453,8 +439,8 @@ export default function AdminPage() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Görüntüleyici</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.viewer}</p>
+                <p className="text-sm font-medium text-gray-600">Kullanıcı</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.kullanici}</p>
               </div>
             </div>
           </div>
@@ -487,10 +473,10 @@ export default function AdminPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               >
                 <option value="all">Tüm Roller</option>
-                <option value="ADMIN">Yönetici</option>
-                <option value="MANAGER">Müdür</option>
-                <option value="USER">Kullanıcı</option>
-                <option value="VIEWER">Görüntüleyici</option>
+                <option value="ADMIN">Admin</option>
+                <option value="MUDUR">Müdür</option>
+                <option value="OPERATOR">Operatör</option>
+                <option value="KULLANICI">Kullanıcı</option>
               </select>
             </div>
 
@@ -714,21 +700,21 @@ export default function AdminPage() {
                   </label>
                   <select
                     value={newUser.role}
-                    onChange={(e) => setNewUser(prev => ({ ...prev, role: e.target.value as 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER' }))}
+                    onChange={(e) => setNewUser(prev => ({ ...prev, role: e.target.value as 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI' }))}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   >
-                    <option value="VIEWER">Görüntüleyici</option>
-                    <option value="USER">Kullanıcı</option>
-                    <option value="MANAGER">Müdür</option>
-                    <option value="ADMIN">Yönetici</option>
+                    <option value="KULLANICI">Kullanıcı</option>
+                    <option value="OPERATOR">Operatör</option>
+                    <option value="MUDUR">Müdür</option>
+                    <option value="ADMIN">Admin</option>
                   </select>
                 </div>
                 
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Erişim İzinleri</label>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
                     {PERMISSIONS.map((perm) => (
-                      <label key={perm.key} className="flex items-center gap-2">
+                      <label key={perm.key} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
                         <input
                           type="checkbox"
                           checked={newUser.permissions.includes(perm.key)}
@@ -739,8 +725,9 @@ export default function AdminPage() {
                                 : { ...prev, permissions: prev.permissions.filter((p) => p !== perm.key) }
                             );
                           }}
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                         />
-                        {perm.label}
+                        <span className="text-sm font-medium text-gray-700">{perm.label}</span>
                       </label>
                     ))}
                   </div>
@@ -807,20 +794,20 @@ export default function AdminPage() {
                   <label className="block text-sm font-semibold text-gray-700">Role</label>
                   <select
                     value={editUser.role}
-                    onChange={(e) => setEditUser(prev => ({ ...prev, role: e.target.value as 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER' }))}
+                    onChange={(e) => setEditUser(prev => ({ ...prev, role: e.target.value as 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI' }))}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   >
-                    <option value="VIEWER">Görüntüleyici</option>
-                    <option value="USER">Kullanıcı</option>
-                    <option value="MANAGER">Müdür</option>
-                    <option value="ADMIN">Yönetici</option>
+                    <option value="KULLANICI">Kullanıcı</option>
+                    <option value="OPERATOR">Operatör</option>
+                    <option value="MUDUR">Müdür</option>
+                    <option value="ADMIN">Admin</option>
                   </select>
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Erişim İzinleri</label>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
                     {PERMISSIONS.map((perm) => (
-                      <label key={perm.key} className="flex items-center gap-2">
+                      <label key={perm.key} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
                         <input
                           type="checkbox"
                           checked={editUser.permissions.includes(perm.key)}
@@ -831,8 +818,9 @@ export default function AdminPage() {
                                 : { ...prev, permissions: prev.permissions.filter((p) => p !== perm.key) }
                             );
                           }}
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                         />
-                        {perm.label}
+                        <span className="text-sm font-medium text-gray-700">{perm.label}</span>
                       </label>
                     ))}
                   </div>

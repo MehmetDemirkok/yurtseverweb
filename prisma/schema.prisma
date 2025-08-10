@@ -14,10 +14,9 @@ model User {
   name         String?
   createdAt    DateTime      @default(now())
   password     String
-  role         Role          @default(USER)
+  role         Role          @default(KULLANICI)
   permissions  String[]      @default([])
   logs         Log[]
-  transactions Transaction[]
 }
 
 model Accommodation {
@@ -37,19 +36,23 @@ model Accommodation {
   otelAdi         String?
   kurumCari       String?
   numberOfNights  Int?
-  sales           Sale[]
 }
 
-model Sale {
-  id                Int            @id @default(autoincrement())
-  organizasyonAdi   String
-  fiyat             Float
-  createdAt         DateTime       @default(now())
-  status            SaleStatus     @default(AKTARILDI)
-  accommodationId   Int?
-  accommodationData String?
-  kurumCari         String?
-  accommodation     Accommodation? @relation(fields: [accommodationId], references: [id])
+model Hotel {
+  id          Int      @id @default(autoincrement())
+  adi         String
+  adres       String
+  sehir       String
+  ulke        String
+  telefon     String?
+  email       String?
+  website     String?
+  yildizSayisi Int     @default(0)
+  puan        Float    @default(0.0)
+  aciklama    String?
+  durum       HotelDurum @default(AKTIF)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Log {
@@ -65,34 +68,18 @@ model Log {
   user       User?    @relation(fields: [userId], references: [id])
 }
 
-model Transaction {
-  id          Int             @id @default(autoincrement())
-  type        TransactionType
-  description String
-  amount      Float
-  date        String
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  userId      Int?
-  user        User?           @relation(fields: [userId], references: [id])
-}
-
 enum Role {
   ADMIN
-  MANAGER
-  USER
-  VIEWER
+  MUDUR
+  OPERATOR
+  KULLANICI
 }
 
-enum SaleStatus {
-  AKTARILDI
-  FATURALANDI
-  IPTAL
-}
-
-enum TransactionType {
-  ALIS
-  SATIS
+enum HotelDurum {
+  AKTIF
+  PASIF
+  TAMAMEN_DOLU
+  BAKIM
 }
 
 // Transfer Modülü Tabloları
@@ -235,3 +222,7 @@ enum TedarikciDurum {
   PASIF
   ENGELLI
 }
+
+
+
+

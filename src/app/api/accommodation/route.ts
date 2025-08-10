@@ -8,13 +8,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 // Tüm konaklama kayıtlarını listele
 export async function GET() {
   // Tüm konaklama kayıtlarını çek
-  const records = await prisma.accommodation.findMany();
-  // Her konaklama için ilgili Sale kaydı var mı kontrol et
-  const recordsWithStatus = await Promise.all(records.map(async (record) => {
-    const sale = await prisma.sale.findFirst({ where: { accommodationId: record.id } });
-    return { ...record, faturaEdildi: !!sale };
-  }));
-  return NextResponse.json(recordsWithStatus);
+  const records = await prisma.accommodation.findMany({
+    orderBy: { id: 'desc' }
+  });
+  return NextResponse.json(records);
 }
 
 // Yeni konaklama kaydı ekle
@@ -58,24 +55,7 @@ export async function POST(request: Request) {
           const createdRecord = await tx.accommodation.create({ data: record });
           records.push(createdRecord);
           
-          // Her kayıt için finans işlemi oluştur
-          if (record.organizasyonAdi && record.kurumCari) {
-            const totalAmount = record.toplamUcret || (record.gecelikUcret * (record.numberOfNights || 1));
-            console.log('Finans işlemi oluşturuluyor:', { 
-              kurumCari: record.kurumCari, 
-              organizasyonAdi: record.organizasyonAdi,
-              amount: totalAmount 
-            });
-            await tx.transaction.create({
-              data: {
-                type: 'SATIS',
-                description: `${record.kurumCari} | ${record.organizasyonAdi} - ${record.adiSoyadi} (Konaklama)`,
-                amount: totalAmount,
-                date: new Date().toISOString().slice(0, 10),
-                userId: userId
-              }
-            });
-          }
+
         }
         return records;
       });
@@ -93,24 +73,7 @@ export async function POST(request: Request) {
         const createdRecord = await tx.accommodation.create({ data: dataWithFatura });
         console.log('Kayıt oluşturuldu, ID:', createdRecord.id);
         
-        // Finans işlemi oluştur
-        if (dataWithFatura.organizasyonAdi && dataWithFatura.kurumCari) {
-          const totalAmount = dataWithFatura.toplamUcret || (dataWithFatura.gecelikUcret * (dataWithFatura.numberOfNights || 1));
-          console.log('Finans işlemi oluşturuluyor:', { 
-            kurumCari: data.kurumCari, 
-            organizasyonAdi: data.organizasyonAdi,
-            amount: totalAmount 
-          });
-          await tx.transaction.create({
-            data: {
-              type: 'SATIS',
-              description: `${data.kurumCari} | ${data.organizasyonAdi} - ${data.adiSoyadi} (Konaklama)`,
-              amount: totalAmount,
-              date: new Date().toISOString().slice(0, 10),
-              userId: userId
-            }
-          });
-        }
+
         
         return createdRecord;
       });

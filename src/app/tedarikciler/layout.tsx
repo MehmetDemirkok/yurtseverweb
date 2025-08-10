@@ -2,16 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import UserStatus from '../../components/UserStatus';
 
-interface TransferSidebarProps {
+interface TedarikcilerSidebarProps {
   isOpen: boolean;
   toggleSidebar: () => void;
 }
 
-function TransferSidebar({ isOpen, toggleSidebar }: TransferSidebarProps) {
+function TedarikcilerSidebar({ isOpen, toggleSidebar }: TedarikcilerSidebarProps) {
   const [currentUser, setCurrentUser] = useState<{ role?: string; permissions?: string[] } | null>(null);
 
   useEffect(() => {
@@ -34,49 +32,8 @@ function TransferSidebar({ isOpen, toggleSidebar }: TransferSidebarProps) {
     return currentUser?.permissions?.includes(permission) || currentUser?.role === 'ADMIN';
   };
 
-  // Transfer modülü menü öğeleri
+  // Tedarikçiler sayfası menü öğeleri
   const menuItems = [
-    {
-      name: 'Dashboard',
-      path: '/moduller/transfer',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      ),
-      permission: 'transfer',
-    },
-    {
-      name: 'Araçlar',
-      path: '/moduller/transfer/araclar',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-        </svg>
-      ),
-      permission: 'transfer',
-    },
-    {
-      name: 'Şoförler',
-      path: '/moduller/transfer/soforler',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      ),
-      permission: 'transfer',
-    },
-    {
-      name: 'Transferler',
-      path: '/moduller/transfer/transferler',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-      ),
-      permission: 'transfer',
-    },
     {
       name: 'Cariler',
       path: '/cariler',
@@ -128,7 +85,7 @@ function TransferSidebar({ isOpen, toggleSidebar }: TransferSidebarProps) {
           <div className={`flex items-center ${!isOpen && 'md:hidden'}`}>
             <Image src="/logo.svg" alt="Logo" width={32} height={32} className="h-8 w-8" />
             <span className={`ml-2 font-semibold text-gray-800 dark:text-white transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-              Transfer Sistemi
+              Yurtsever
             </span>
           </div>
           <button 
@@ -177,29 +134,22 @@ function TransferSidebar({ isOpen, toggleSidebar }: TransferSidebarProps) {
   );
 }
 
-export default function TransferLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+export default function TedarikcilerLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   // Ekran boyutu değiştiğinde sidebar durumunu ayarla
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768) { // md breakpoint
+      if (window.innerWidth >= 768) {
         setSidebarOpen(true);
       } else {
         setSidebarOpen(false);
       }
     };
 
-    // İlk yükleme
     handleResize();
-
-    // Ekran boyutu değişikliklerini dinle
     window.addEventListener('resize', handleResize);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const toggleSidebar = () => {
@@ -208,31 +158,28 @@ export default function TransferLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="sidebar-layout">
-      {/* Transfer Sidebar */}
-      <TransferSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
+      {/* Tedarikçiler Sidebar */}
+      <TedarikcilerSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
       
       {/* Main Content */}
       <div className={`sidebar-content ${sidebarOpen ? 'md:ml-64' : 'md:ml-16'} ml-0`}>
-        <div className="relative h-full">
-          {/* User Status */}
-          <UserStatus />
-          
-          {/* Mobil menü butonu */}
-          <button 
+        {/* Mobile Header */}
+        <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+          <button
             onClick={toggleSidebar}
-            className="fixed top-4 left-4 z-20 md:hidden p-2 rounded-md bg-white dark:bg-gray-800 shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none"
+            className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          
-          {/* İçerik */}
-          <main className="p-4 md:p-6 w-full h-full overflow-auto">
-            {children}
-          </main>
         </div>
+        
+        {/* Page Content */}
+        <main className="p-6">
+          {children}
+        </main>
       </div>
     </div>
   );
-} 
+}

@@ -35,7 +35,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   // Menü öğeleri
   const menuItems = [
     {
-      name: 'Ana Sayfa',
+      name: 'Ana Dashboard',
       path: '/',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -46,7 +46,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     },
     {
       name: 'Konaklama Kayıtları',
-      path: '/accommodation',
+      path: '/konaklama',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 10V7a5 5 0 0110 0v3M5 21h14a2 2 0 002-2v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7a2 2 0 002 2z" />
@@ -55,45 +55,14 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
       permission: 'accommodation',
     },
     {
-      name: 'Satışlar',
-      path: '/sales',
+      name: 'Oteller',
+      path: '/konaklama/oteller',
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
       ),
-      permission: 'sales',
-    },
-    {
-      name: 'Finans',
-      path: '/finance',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-2.21 0-4 1.343-4 3s1.79 3 4 3 4 1.343 4 3-1.79 3-4 3m0-12c1.657 0 3 .895 3 2s-1.343 2-3 2-3 .895-3 2 1.343 2 3 2m0-8v2m0 12v2" />
-        </svg>
-      ),
-      permission: 'finance',
-    },
-
-    {
-      name: 'Kullanıcı Yönetimi',
-      path: '/admin',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      ),
-      permission: 'user-management',
-    },
-    {
-      name: 'Sistem Logları',
-      path: '/admin/logs',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
-      ),
-      permission: 'logs',
+      permission: 'accommodation',
     },
   ];
 
@@ -112,10 +81,10 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         className={`fixed top-0 left-0 h-full bg-white dark:bg-gray-800 shadow-lg z-30 transition-all duration-300 ease-in-out ${isOpen ? 'w-64' : 'w-0 md:w-16'} overflow-hidden`}
       >
         {/* Sidebar Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
           <div className={`flex items-center ${!isOpen && 'md:hidden'}`}>
-            <Image src="/logo.svg" alt="Logo" width={32} height={32} className="h-8 w-8" />
-            <span className={`ml-2 font-semibold text-gray-800 dark:text-white transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
+            <Image src="/logo.svg" alt="Logo" width={32} height={32} className="h-6 w-6 sm:h-8 sm:w-8" />
+            <span className={`ml-2 font-semibold text-gray-800 dark:text-white transition-opacity duration-300 text-sm sm:text-base ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
               Yurtsever
             </span>
           </div>
@@ -123,7 +92,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
             onClick={toggleSidebar} 
             className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               {isOpen ? (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               ) : (
@@ -134,8 +103,8 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         </div>
         
         {/* Sidebar Menu */}
-        <nav className="mt-5 px-2">
-          <ul className="space-y-2">
+        <nav className="mt-4 sm:mt-5 px-2">
+          <ul className="space-y-1 sm:space-y-2">
             {menuItems.map((item, index) => {
               // İzin kontrolü
               if (item.permission && !hasPermission(item.permission)) {
@@ -146,12 +115,12 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                 <li key={index}>
                   <Link 
                     href={item.path}
-                    className="flex items-center p-2 rounded-md transition-all duration-200 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="flex items-center p-2 sm:p-3 rounded-md transition-all duration-200 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm sm:text-base"
                   >
                     <div className="flex-shrink-0">
                       {item.icon}
                     </div>
-                    <span className={`ml-3 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 md:hidden'}`}>
+                    <span className={`ml-2 sm:ml-3 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 md:hidden'}`}>
                       {item.name}
                     </span>
                   </Link>

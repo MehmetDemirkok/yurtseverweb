@@ -27,7 +27,7 @@ interface User {
   id: number;
   email: string;
   name?: string;
-  role: 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER';
+  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
   permissions?: string[];
 }
 
@@ -79,14 +79,14 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   // Role tabanlı yetki kontrolü fonksiyonları
   const hasRole = (requiredRole: string): boolean => {
     if (!currentUser) return false;
-    const roleHierarchy: Record<string, number> = { 'ADMIN': 4, 'MANAGER': 3, 'USER': 2, 'VIEWER': 1 };
+    const roleHierarchy: Record<string, number> = { 'ADMIN': 4, 'MUDUR': 3, 'OPERATOR': 2, 'KULLANICI': 1 };
     const userRole = currentUser.role as string;
     return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
   };
 
-  const canAdd = () => hasRole('USER');
-  const canEdit = () => hasRole('USER');
-  const canDelete = () => hasRole('MANAGER');
+  const canAdd = () => hasRole('OPERATOR');
+  const canEdit = () => hasRole('OPERATOR');
+  const canDelete = () => hasRole('MUDUR');
 
   // --- State ekle ---
   const [kurumOptions, setKurumOptions] = useState<string[]>([]);
@@ -890,9 +890,9 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   };
 
   return (
-    <div className="w-full mx-auto mt-8">
+    <div className="w-full mx-auto mt-4 sm:mt-8">
         {/* Filtreleme ve arama alanları */}
-      <div className="flex flex-wrap gap-2 items-center mb-4">
+      <div className="flex flex-wrap gap-2 sm:gap-3 items-center mb-3 sm:mb-4">
           <div className="relative w-full sm:w-auto">
             <div className="flex items-center bg-white border rounded-lg overflow-hidden shadow-sm">
               <div className="p-2 text-gray-400">
@@ -967,7 +967,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
       </div>
 
       {/* Butonlar - Tablo üstü */}
-      <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mb-8">
+      <div className="flex flex-wrap justify-center md:justify-end items-center gap-2 sm:gap-3 mb-4 sm:mb-8">
         <BulkActionsMenu
           selectedCount={selectedRecordIds.length}
           onBulkDelete={handleBulkDeleteRequest}
@@ -984,129 +984,126 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
             }
           ]}
         />
-        <button onClick={handleDownloadExcelTemplate} className="btn btn-primary">
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button onClick={handleDownloadExcelTemplate} className="btn btn-primary text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+          <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          Excel Şablonu İndir
+          <span className="hidden sm:inline">Excel Şablonu İndir</span>
+          <span className="sm:hidden">Şablon</span>
           </button>
         </div>
 
-      <button onClick={handlePuantajRaporu} className="btn btn-warning">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <button onClick={handlePuantajRaporu} className="btn btn-warning text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        Puantaj Raporu
+        <span className="hidden sm:inline">Puantaj Raporu</span>
+        <span className="sm:hidden">Puantaj</span>
       </button>
 
-      <button onClick={() => setShowAddModal(true)} className="btn btn-success">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <button onClick={() => setShowAddModal(true)} className="btn btn-success text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
-        Yeni Kayıt
+        <span className="hidden sm:inline">Yeni Kayıt</span>
+        <span className="sm:hidden">Ekle</span>
       </button>
       {/* Tablo */}
       <div className="table-container overflow-x-auto bg-white rounded-lg shadow-md">
-        <table className="table table-responsive text-xs w-full border-collapse">
+        <table className="table table-responsive text-xs sm:text-sm w-full border-collapse">
           <thead>
-            <tr className="text-[10px] bg-gray-50">
-              <th className="w-8 py-2">
+            <tr className="text-[8px] sm:text-[10px] bg-gray-50">
+              <th className="w-8 py-1 sm:py-2">
                 <input type="checkbox" className="checkbox checkbox-xs" checked={selectedRecordIds.length === sortedRecords.length && sortedRecords.length > 0} onChange={handleSelectAll} />
               </th>
-              <th className="w-10 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('id')}>
+              <th className="w-10 py-1 sm:py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('id')}>
                 <div className="flex items-center justify-between">
                   <span>ID</span>
                   <SortIcon column="id" />
                 </div>
               </th>
-              <th className="w-20 py-2 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('kurumCari')}>
+              <th className="w-20 py-1 sm:py-2 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('kurumCari')}>
                 <div className="flex items-center justify-between">
                   <span>Kurum Adı</span>
                   <SortIcon column="kurumCari" />
                 </div>
               </th>
-              <th className="w-20 py-2 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('organizasyonAdi')}>
+              <th className="w-20 py-1 sm:py-2 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('organizasyonAdi')}>
                 <div className="flex items-center justify-between">
                   <span>Organizasyon</span>
                   <SortIcon column="organizasyonAdi" />
                 </div>
               </th>
-              <th className="w-20 py-2 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('otelAdi')}>
+              <th className="w-20 py-1 sm:py-2 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('otelAdi')}>
                 <div className="flex items-center justify-between">
                   <span>Otel Adı</span>
                   <SortIcon column="otelAdi" />
                 </div>
               </th>
-              <th className="w-24 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('adiSoyadi')}>
+              <th className="w-24 py-1 sm:py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('adiSoyadi')}>
                 <div className="flex items-center justify-between">
                   <span>Adı Soyadı</span>
                   <SortIcon column="adiSoyadi" />
                 </div>
               </th>
-              <th className="w-16 py-2 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('unvani')}>
+              <th className="w-16 py-1 sm:py-2 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('unvani')}>
                 <div className="flex items-center justify-between">
                   <span>Unvan</span>
                   <SortIcon column="unvani" />
                 </div>
               </th>
-              <th className="w-16 py-2 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('ulke')}>
+              <th className="w-16 py-1 sm:py-2 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('ulke')}>
                 <div className="flex items-center justify-between">
                   <span>Ülke</span>
                   <SortIcon column="ulke" />
                 </div>
               </th>
-              <th className="w-16 py-2 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('sehir')}>
+              <th className="w-16 py-1 sm:py-2 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('sehir')}>
                 <div className="flex items-center justify-between">
                   <span>Şehir</span>
                   <SortIcon column="sehir" />
                 </div>
               </th>
-              <th className="w-16 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('girisTarihi')}>
+              <th className="w-16 py-1 sm:py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('girisTarihi')}>
                 <div className="flex items-center justify-between">
                   <span>Giriş Tarihi</span>
                   <SortIcon column="girisTarihi" />
                 </div>
               </th>
-              <th className="w-16 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('cikisTarihi')}>
+              <th className="w-16 py-1 sm:py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('cikisTarihi')}>
                 <div className="flex items-center justify-between">
                   <span>Çıkış Tarihi</span>
                   <SortIcon column="cikisTarihi" />
                 </div>
               </th>
-              <th className="w-14 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('odaTipi')}>
+              <th className="w-14 py-1 sm:py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('odaTipi')}>
                 <div className="flex items-center justify-between">
                   <span>Oda Tipi</span>
                   <SortIcon column="odaTipi" />
                 </div>
               </th>
-              <th className="w-20 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('konaklamaTipi')}>
+              <th className="w-20 py-1 sm:py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('konaklamaTipi')}>
                 <div className="flex items-center justify-between">
                   <span>Konaklama</span>
                   <SortIcon column="konaklamaTipi" />
                 </div>
               </th>
-              <th className="w-12 py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('numberOfNights')}>
+              <th className="w-12 py-1 sm:py-2 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('numberOfNights')}>
                 <div className="flex items-center justify-between">
                   <span>Gece Sayısı</span>
                   <SortIcon column="numberOfNights" />
                 </div>
               </th>
-              <th className="w-16 py-2 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('gecelikUcret')}>
+              <th className="w-16 py-1 sm:py-2 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('gecelikUcret')}>
                 <div className="flex items-center justify-between">
                   <span>Gecelik Ücret</span>
                   <SortIcon column="gecelikUcret" />
                 </div>
               </th>
-              <th className="w-20 py-2 hidden sm:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('toplamUcret')}>
+              <th className="w-20 py-1 sm:py-2 hidden sm:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('toplamUcret')}>
                 <div className="flex items-center justify-between">
                   <span>Toplam Ücret</span>
                   <SortIcon column="toplamUcret" />
-                </div>
-              </th>
-              <th className="w-20 py-2 hidden md:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('faturaEdildi')}>
-                <div className="flex items-center justify-between">
-                  <span>Satış Durumu</span>
-                  <SortIcon column="faturaEdildi" />
                 </div>
               </th>
               <th className="w-14 py-2">İşlem</th>
@@ -1118,45 +1115,35 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                 <td className="py-1.5">
                   <input type="checkbox" className="checkbox checkbox-xs" checked={selectedRecordIds.includes(record.id)} onChange={() => handleSelectRecord(record.id)} disabled={record.faturaEdildi} />
                 </td>
-                <td className="font-medium text-blue-600 whitespace-nowrap py-1.5">{record.id}</td>
-                <td className="truncate hidden lg:table-cell py-1.5">{record.kurumCari || '-'}</td>
-                <td className="truncate hidden md:table-cell py-1.5">{record.organizasyonAdi || '-'}</td>
-                <td className="truncate hidden lg:table-cell py-1.5">{record.otelAdi || '-'}</td>
-                <td className="truncate py-1.5">
+                                  <td className="font-medium text-blue-600 whitespace-nowrap py-1 sm:py-1.5">{record.id}</td>
+                <td className="truncate hidden lg:table-cell py-1 sm:py-1.5">{record.kurumCari || '-'}</td>
+                <td className="truncate hidden md:table-cell py-1 sm:py-1.5">{record.organizasyonAdi || '-'}</td>
+                <td className="truncate hidden lg:table-cell py-1 sm:py-1.5">{record.otelAdi || '-'}</td>
+                                  <td className="truncate py-1 sm:py-1.5">
                   <div className="flex flex-col">
                     <span className="font-medium leading-tight">{record.adiSoyadi}</span>
                   </div>
                 </td>
-                <td className="truncate hidden md:table-cell py-1.5">
+                <td className="truncate hidden md:table-cell py-1 sm:py-1.5">
                   <span className="text-[9px] leading-tight">{record.unvani || '-'}</span>
                 </td>
-                <td className="truncate hidden lg:table-cell py-1.5">{record.ulke || '-'}</td>
-                <td className="truncate hidden lg:table-cell py-1.5">{record.sehir || '-'}</td>
-                <td className="whitespace-nowrap py-1.5 text-[10px]">{formatDate(record.girisTarihi)}</td>
-                <td className="whitespace-nowrap py-1.5 text-[10px]">{formatDate(record.cikisTarihi)}</td>
-                <td className="text-center py-1.5">
+                <td className="truncate hidden lg:table-cell py-1 sm:py-1.5">{record.ulke || '-'}</td>
+                <td className="truncate hidden lg:table-cell py-1 sm:py-1.5">{record.sehir || '-'}</td>
+                <td className="whitespace-nowrap py-1 sm:py-1.5 text-[10px]">{formatDate(record.girisTarihi)}</td>
+                <td className="whitespace-nowrap py-1 sm:py-1.5 text-[10px]">{formatDate(record.cikisTarihi)}</td>
+                <td className="text-center py-1 sm:py-1.5">
                   <span className="px-1 py-0.5 bg-blue-100 text-blue-800 rounded text-[9px] font-medium inline-block">
                     {record.odaTipi}
                   </span>
                 </td>
-                <td className="text-center py-1.5">
+                <td className="text-center py-1 sm:py-1.5">
                   <span className={`px-1 py-0.5 rounded text-[9px] font-bold inline-block ${record.konaklamaTipi === 'BB' ? 'bg-yellow-100 text-yellow-800' : record.konaklamaTipi === 'HB' ? 'bg-green-100 text-green-800' : record.konaklamaTipi === 'FB' ? 'bg-purple-100 text-purple-800' : 'bg-pink-100 text-pink-800'}`}>{record.konaklamaTipi}</span>
                 </td>
-                <td className="text-center whitespace-nowrap py-1.5">{record.numberOfNights || 0}</td>
-                <td className="font-medium text-gray-600 hidden md:table-cell whitespace-nowrap text-right py-1.5">{record.gecelikUcret?.toLocaleString('tr-TR')} ₺</td>
-                <td className="font-bold text-green-600 hidden sm:table-cell whitespace-nowrap text-right py-1.5">{record.toplamUcret.toLocaleString('tr-TR')} ₺</td>
-                <td className="hidden md:table-cell text-center py-1.5">
-                  {record.faturaEdildi ? (
-                    <span className="inline-block px-1 py-0.5 rounded bg-green-50 text-green-700 text-[9px] font-semibold border border-green-200">
-                      Satışta
-                    </span>
-                  ) : (
-                    <span className="inline-block px-1 py-0.5 rounded bg-gray-100 text-gray-600 text-[9px] font-semibold border border-gray-200">
-                      Bekliyor
-                    </span>
-                  )}
-                </td>
-                <td className="py-1.5">
+                <td className="text-center whitespace-nowrap py-1 sm:py-1.5">{record.numberOfNights || 0}</td>
+                <td className="font-medium text-gray-600 hidden md:table-cell whitespace-nowrap text-right py-1 sm:py-1.5">{record.gecelikUcret?.toLocaleString('tr-TR')} ₺</td>
+                <td className="font-bold text-green-600 hidden sm:table-cell whitespace-nowrap text-right py-1 sm:py-1.5">{record.toplamUcret.toLocaleString('tr-TR')} ₺</td>
+
+                <td className="py-1 sm:py-1.5">
                   <div className="flex justify-center gap-1">
                     {canEdit() && (
                       <button

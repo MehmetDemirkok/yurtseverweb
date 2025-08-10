@@ -1,11 +1,25 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
-import PageHeader from "../components/PageHeader";
 import AccommodationTableSection from "../components/AccommodationTableSection";
+import AuthGuard from "../components/AuthGuard";
+
+interface User {
+  id: number;
+  email: string;
+  name?: string;
+  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
+  permissions?: string[];
+}
 
 export default function AccommodationPage() {
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [showPuantajFilterModal, setShowPuantajFilterModal] = useState<boolean>(false);
   const [puantajFilters, setPuantajFilters] = useState<{
     organizasyonAdi: string;
@@ -20,6 +34,32 @@ export default function AccommodationPage() {
   const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
   const [showOrganizasyonOptions, setShowOrganizasyonOptions] = useState(false);
   
+  // Kullanıcı bilgilerini yükle
+  useEffect(() => {
+    // Kullanıcı bilgisini al
+    fetch('/api/user', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        setCurrentUser(data.user);
+        setUserPermissions((data.user && data.user.permissions) ? data.user.permissions : []);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Kullanıcı bilgisi alınamadı:', err);
+        setIsLoading(false);
+      });
+  }, []);
+
+  // İzin kontrolü fonksiyonları
+  const hasPermission = (permission: string): boolean => {
+    return userPermissions.includes(permission) || currentUser?.role === 'ADMIN';
+  };
+
+  // Sayfa erişim kontrolü
+  const hasPageAccess = (): boolean => {
+    return hasPermission('accommodation') || currentUser?.role === 'ADMIN';
+  };
+
   // Organizasyon seçeneklerini kapatmak için referans
   const organizasyonRef = useRef<HTMLDivElement>(null);
   
@@ -227,20 +267,64 @@ export default function AccommodationPage() {
     XLSX.writeFile(wb, fileName);
   };
 
+  // Loading durumu
+  if (isLoading) {
+    return (
+      <AuthGuard>
+        <main className="w-full px-2 sm:px-4 py-4 sm:py-8 max-w-full overflow-hidden">
+          <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+            <div className="bg-white rounded-lg shadow-lg p-4 sm:p-8 text-center max-w-sm sm:max-w-md mx-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 bg-blue-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">Yükleniyor...</h2>
+              <p className="text-sm sm:text-base text-gray-600">Kullanıcı bilgileri kontrol ediliyor.</p>
+            </div>
+          </div>
+        </main>
+      </AuthGuard>
+    );
+  }
+
+  // Sayfa erişim kontrolü - sadece loading tamamlandıktan sonra kontrol et
+  if (!isLoading && !hasPageAccess()) {
+    return (
+      <AuthGuard>
+        <main className="w-full px-2 sm:px-4 py-4 sm:py-8 max-w-full overflow-hidden">
+          <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+            <div className="bg-white rounded-lg shadow-lg p-4 sm:p-8 text-center max-w-sm sm:max-w-md mx-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">Erişim Kısıtlı</h2>
+              <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Bu sayfaya erişim izniniz bulunmamaktadır.</p>
+              <button 
+                onClick={() => window.history.back()}
+                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm sm:text-base"
+              >
+                Geri Dön
+              </button>
+            </div>
+          </div>
+        </main>
+      </AuthGuard>
+    );
+  }
+
   return (
-    <div className="w-full mx-auto px-4 py-8 animate-fade-in">
-      <PageHeader
-        title="Konaklama Kayıtları"
-        description="Tüm konaklama kayıtlarını ve işlemlerini yönetin"
-        icon={<svg className="w-12 h-12 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 10V7a5 5 0 0110 0v3M5 21h14a2 2 0 002-2v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7a2 2 0 002 2z" /></svg>}
-      />
-      <AccommodationTableSection handlePuantajRaporu={handlePuantajRaporu} />
+    <AuthGuard>
+      <div className="w-full mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        <AccommodationTableSection handlePuantajRaporu={handlePuantajRaporu} />
 
       {/* Puantaj Filtre Modalı */}
       {showPuantajFilterModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Puantaj Raporu Filtrele</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-sm sm:max-w-md">
+            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Puantaj Raporu Filtrele</h2>
             <div className="space-y-4">
               <div className="relative" ref={organizasyonRef}>
                 <label htmlFor="organizasyonAdi" className="block text-sm font-medium text-gray-700 mb-1">Organizasyon Adı</label>
@@ -297,15 +381,15 @@ export default function AccommodationPage() {
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-6">
+            <div className="flex justify-end gap-2 mt-4 sm:mt-6">
               <button
-                className="btn btn-outline"
+                className="btn btn-outline text-sm sm:text-base px-3 sm:px-4 py-2"
                 onClick={() => setShowPuantajFilterModal(false)}
               >
                 İptal
               </button>
               <button
-                className="btn btn-primary"
+                className="btn btn-primary text-sm sm:text-base px-3 sm:px-4 py-2"
                 onClick={() => {
                   generatePuantajRaporu();
                   setShowPuantajFilterModal(false);
@@ -317,6 +401,7 @@ export default function AccommodationPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AuthGuard>
   );
 }

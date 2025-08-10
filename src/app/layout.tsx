@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import AuthGuard from "./components/AuthGuard";
-import UserStatus from "./components/UserStatus";
-import SidebarLayout from "./components/SidebarLayout";
 import CookieConsentBanner from "./components/CookieConsentBanner";
 
 const geistSans = Geist({
@@ -35,10 +33,8 @@ export default function RootLayout({
         <meta name="theme-color" content="#3B82F6" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <SidebarLayout>
-          <AuthGuard>{children}</AuthGuard>
-          <CookieConsentBanner />
-        </SidebarLayout>
+        <AuthGuard>{children}</AuthGuard>
+        <CookieConsentBanner />
       </body>
     </html>
   );
