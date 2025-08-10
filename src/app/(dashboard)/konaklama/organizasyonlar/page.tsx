@@ -432,9 +432,15 @@ export default function OrganizasyonlarPage() {
                         </svg>
                       </button>
                       <button
-                        onClick={() => handleDeleteClick(org)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log('Silme butonuna tıklandı, org:', org);
+                          handleDeleteClick(org);
+                        }}
                         className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
                         title="Sil"
+                        type="button"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -614,8 +620,7 @@ export default function OrganizasyonlarPage() {
 
         {/* Silme Modal */}
         {console.log('Modal render kontrolü - showDeleteModal:', showDeleteModal, 'deletingOrganization:', deletingOrganization)}
-        {/* Test için modal'ı her zaman göster */}
-        {(showDeleteModal || true) && (deletingOrganization || { id: 999, name: 'Test Organizasyon', _count: { accommodations: 0 } }) && (
+        {showDeleteModal && deletingOrganization && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) closeDeleteModal(); }}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8 relative animate-fade-in border border-red-100">
               <button
@@ -637,7 +642,6 @@ export default function OrganizasyonlarPage() {
                 <p className="text-gray-700 mb-4">
                   <strong>{deletingOrganization.name}</strong> organizasyonunu silmek istediğinize emin misiniz?
                 </p>
-                <p className="text-sm text-gray-500 mb-2">Debug: Modal açıldı - ID: {deletingOrganization.id}</p>
                 {deletingOrganization._count?.accommodations > 0 && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                     <div className="flex items-center">
