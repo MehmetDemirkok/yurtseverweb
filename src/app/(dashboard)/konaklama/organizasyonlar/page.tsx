@@ -614,7 +614,8 @@ export default function OrganizasyonlarPage() {
 
         {/* Silme Modal */}
         {console.log('Modal render kontrolü - showDeleteModal:', showDeleteModal, 'deletingOrganization:', deletingOrganization)}
-        {showDeleteModal && deletingOrganization && (
+        {/* Test için modal'ı her zaman göster */}
+        {(showDeleteModal || true) && (deletingOrganization || { id: 999, name: 'Test Organizasyon', _count: { accommodations: 0 } }) && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) closeDeleteModal(); }}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8 relative animate-fade-in border border-red-100">
               <button
