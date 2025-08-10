@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import UserHeader from '../components/UserHeader';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -65,27 +66,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/user/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
 
-      if (response.ok) {
-        // Başarılı logout sonrası login sayfasına yönlendir
-        router.push('/login');
-      } else {
-        console.error('Logout başarısız');
-        // Hata durumunda da login sayfasına yönlendir
-        router.push('/login');
-      }
-    } catch (error) {
-      console.error('Logout hatası:', error);
-      // Hata durumunda da login sayfasına yönlendir
-      router.push('/login');
-    }
-  };
 
   return (
     <div className="fixed inset-0 w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-700 via-purple-700 to-cyan-700 p-4 sm:p-6">
@@ -97,24 +78,8 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* Sağ üst köşe - Kullanıcı bilgileri ve çıkış yap butonu */}
-          <div className="absolute top-4 sm:top-6 right-4 sm:right-6 flex items-center space-x-2 sm:space-x-4 z-10">
-            <div className="flex items-center space-x-2 sm:space-x-3 bg-white/10 backdrop-blur-sm rounded-lg px-3 sm:px-4 py-2">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-white/20 rounded-full flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <span className="text-white font-medium text-xs sm:text-sm hidden sm:block">{userName}</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-1 sm:space-x-2 bg-red-500 hover:bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg transition-colors duration-200 shadow-lg"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              <span className="text-xs sm:text-sm font-medium hidden sm:block">Çıkış Yap</span>
-            </button>
+          <div className="absolute top-4 sm:top-6 right-4 sm:right-6 z-10">
+            <UserHeader />
           </div>
 
           <div className="text-center mb-8 lg:mb-16">
@@ -134,7 +99,7 @@ export default function DashboardPage() {
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Erişim Kısıtlı</h2>
                 <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">Henüz size herhangi bir modül için izin verilmemiş. Lütfen sistem yöneticinizle iletişime geçin.</p>
                 <button 
-                  onClick={handleLogout}
+                  onClick={() => router.push('/login')}
                   className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
                 >
                   Çıkış Yap

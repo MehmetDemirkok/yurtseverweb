@@ -41,7 +41,12 @@ export default function OtellerPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null);
+  
+  // Toplu seçim state'leri
+  const [selectedHotelIds, setSelectedHotelIds] = useState<number[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Form data
   const [newHotel, setNewHotel] = useState({
@@ -83,6 +88,14 @@ export default function OtellerPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [starFilter, setStarFilter] = useState<string>('all');
+  const [cityFilter, setCityFilter] = useState<string>('all');
+  const [countryFilter, setCountryFilter] = useState<string>('all');
+  const [ratingFilter, setRatingFilter] = useState<string>('all');
+  const [isFetchingHotels, setIsFetchingHotels] = useState(false);
+  
+  // Sıralama state'leri
+  const [sortField, setSortField] = useState<string>('id');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     checkCurrentUser();
@@ -301,6 +314,90 @@ export default function OtellerPage() {
     }
   };
 
+  const handleFetchTurkeyHotels = async () => {
+    if (!confirm('Türkiye\'deki otelleri çekmek istediğinizden emin misiniz? Bu işlem biraz zaman alabilir.')) {
+      return;
+    }
+
+    setIsFetchingHotels(true);
+    try {
+      const response = await fetch('/api/konaklama/oteller/fetch-turkey-hotels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ ${result.count} otel başarıyla eklendi!`);
+        fetchHotels(); // Otelleri yeniden yükle
+      } else {
+        const error = await response.json();
+        alert('❌ Hata: ' + error.message);
+      }
+    } catch (error) {
+      console.error('Otel çekme hatası:', error);
+      alert('❌ Otel çekme işlemi başarısız oldu!');
+    } finally {
+      setIsFetchingHotels(false);
+    }
+  };
+
+  // Toplu seçim fonksiyonları
+  const handleSelectHotel = (hotelId: number) => {
+    setSelectedHotelIds(prev => {
+      if (prev.includes(hotelId)) {
+        return prev.filter(id => id !== hotelId);
+      } else {
+        return [...prev, hotelId];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedHotelIds.length === sortedHotels.length) {
+      setSelectedHotelIds([]);
+    } else {
+      setSelectedHotelIds(sortedHotels.map(hotel => hotel.id));
+    }
+  };
+
+  const handleBulkDeleteRequest = () => {
+    if (selectedHotelIds.length === 0) {
+      alert('Lütfen silinecek otelleri seçin!');
+      return;
+    }
+    setShowBulkDeleteModal(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedHotelIds.length === 0) return;
+
+    setIsBulkDeleting(true);
+    try {
+      const response = await fetch('/api/konaklama/oteller/bulk-delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hotelIds: selectedHotelIds }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ ${result.count} otel başarıyla silindi!`);
+        setSelectedHotelIds([]);
+        setShowBulkDeleteModal(false);
+        fetchHotels(); // Otelleri yeniden yükle
+      } else {
+        const error = await response.json();
+        alert('❌ Hata: ' + error.message);
+      }
+    } catch (error) {
+      console.error('Toplu silme hatası:', error);
+      alert('❌ Toplu silme işlemi başarısız oldu!');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'AKTIF': return 'bg-green-100 text-green-800';
@@ -339,15 +436,108 @@ export default function OtellerPage() {
     );
   };
 
+  // Benzersiz şehir ve ülke listelerini oluştur
+  const uniqueCities = [...new Set(hotels.map(hotel => hotel.sehir))].sort();
+  const uniqueCountries = [...new Set(hotels.map(hotel => hotel.ulke))].sort();
+
   const filteredHotels = hotels.filter(hotel => {
-    const matchesSearch = hotel.adi.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         hotel.sehir.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         hotel.ulke.toLowerCase().includes(searchTerm.toLowerCase());
+    // Arama terimi kontrolü (otel adı, şehir, ülke, adres, açıklama)
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = searchTerm === '' || 
+                         hotel.adi.toLowerCase().includes(searchLower) ||
+                         hotel.sehir.toLowerCase().includes(searchLower) ||
+                         hotel.ulke.toLowerCase().includes(searchLower) ||
+                         hotel.adres.toLowerCase().includes(searchLower) ||
+                         (hotel.aciklama && hotel.aciklama.toLowerCase().includes(searchLower));
+    
+    // Durum filtresi
     const matchesStatus = statusFilter === 'all' || hotel.durum === statusFilter;
+    
+    // Yıldız filtresi
     const matchesStars = starFilter === 'all' || hotel.yildizSayisi.toString() === starFilter;
     
-    return matchesSearch && matchesStatus && matchesStars;
+    // Şehir filtresi
+    const matchesCity = cityFilter === 'all' || hotel.sehir === cityFilter;
+    
+    // Ülke filtresi
+    const matchesCountry = countryFilter === 'all' || hotel.ulke === countryFilter;
+    
+    // Puan filtresi
+    let matchesRating = true;
+    if (ratingFilter !== 'all') {
+      const rating = parseFloat(ratingFilter);
+      switch (ratingFilter) {
+        case '9+':
+          matchesRating = hotel.puan >= 9;
+          break;
+        case '8+':
+          matchesRating = hotel.puan >= 8;
+          break;
+        case '7+':
+          matchesRating = hotel.puan >= 7;
+          break;
+        case '6+':
+          matchesRating = hotel.puan >= 6;
+          break;
+        case '5+':
+          matchesRating = hotel.puan >= 5;
+          break;
+        default:
+          matchesRating = hotel.puan >= rating;
+      }
+    }
+    
+    return matchesSearch && matchesStatus && matchesStars && matchesCity && matchesCountry && matchesRating;
   });
+
+  // Sıralama fonksiyonu
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sıralanmış oteller
+  const sortedHotels = [...filteredHotels].sort((a, b) => {
+    let aValue: any = a[sortField as keyof Hotel];
+    let bValue: any = b[sortField as keyof Hotel];
+
+    // String değerler için
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      aValue = aValue.toLowerCase();
+      bValue = bValue.toLowerCase();
+    }
+
+    if (sortDirection === 'asc') {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
+  });
+
+  // Sıralama ikonu bileşeni
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortField !== field) {
+      return (
+        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+      );
+    }
+    
+    return sortDirection === 'asc' ? (
+      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+      </svg>
+    ) : (
+      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -384,32 +574,98 @@ export default function OtellerPage() {
             <h1 className="text-2xl font-bold text-gray-800 mb-2">Otel Yönetimi</h1>
             <p className="text-gray-600">Sistemdeki otelleri yönetin</p>
           </div>
-          {canAdd() && (
+          <div className="flex gap-2">
+            {canAdd() && (
+              <button
+                onClick={openAddModal}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Yeni Otel Ekle
+              </button>
+            )}
             <button
-              onClick={openAddModal}
-              className="btn btn-primary flex items-center gap-2"
+              onClick={handleFetchTurkeyHotels}
+              className="btn btn-success flex items-center gap-2"
+              disabled={isFetchingHotels}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Yeni Otel Ekle
+              {isFetchingHotels ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+              )}
+              {isFetchingHotels ? 'Çekiliyor...' : 'Türkiye Otellerini Çek'}
             </button>
-          )}
+            {canDelete() && selectedHotelIds.length > 0 && (
+              <button
+                onClick={handleBulkDeleteRequest}
+                className="btn btn-error flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Seçili Otelleri Sil ({selectedHotelIds.length})
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filtreler */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">Filtreler ve Arama</h3>
+            <p className="text-sm text-gray-600">Otelleri şehir, ülke, yıldız, puan ve duruma göre filtreleyin</p>
+          </div>
+          
+          {/* Ana Arama */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Genel Arama</label>
+            <input
+              type="text"
+              placeholder="Otel adı, şehir, ülke, adres, açıklama..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input w-full text-base"
+            />
+          </div>
+
+          {/* Filtre Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-4">
+            {/* Şehir Filtresi */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Arama</label>
-              <input
-                type="text"
-                placeholder="Otel adı, şehir, ülke..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Şehir</label>
+              <select
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
                 className="input w-full"
-              />
+              >
+                <option value="all">Tüm Şehirler</option>
+                {uniqueCities.map(city => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </select>
             </div>
+
+            {/* Ülke Filtresi */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ülke</label>
+              <select
+                value={countryFilter}
+                onChange={(e) => setCountryFilter(e.target.value)}
+                className="input w-full"
+              >
+                <option value="all">Tüm Ülkeler</option>
+                {uniqueCountries.map(country => (
+                  <option key={country} value={country}>{country}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Durum Filtresi */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
               <select
@@ -417,13 +673,15 @@ export default function OtellerPage() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="input w-full"
               >
-                <option value="all">Tümü</option>
+                <option value="all">Tüm Durumlar</option>
                 <option value="AKTIF">Aktif</option>
                 <option value="PASIF">Pasif</option>
                 <option value="TAMAMEN_DOLU">Tamamen Dolu</option>
                 <option value="BAKIM">Bakım</option>
               </select>
             </div>
+
+            {/* Yıldız Filtresi */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Yıldız</label>
               <select
@@ -431,7 +689,7 @@ export default function OtellerPage() {
                 onChange={(e) => setStarFilter(e.target.value)}
                 className="input w-full"
               >
-                <option value="all">Tümü</option>
+                <option value="all">Tüm Yıldızlar</option>
                 <option value="5">5 Yıldız</option>
                 <option value="4">4 Yıldız</option>
                 <option value="3">3 Yıldız</option>
@@ -440,17 +698,57 @@ export default function OtellerPage() {
                 <option value="0">Yıldızsız</option>
               </select>
             </div>
+
+            {/* Puan Filtresi */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Puan</label>
+              <select
+                value={ratingFilter}
+                onChange={(e) => setRatingFilter(e.target.value)}
+                className="input w-full"
+              >
+                <option value="all">Tüm Puanlar</option>
+                <option value="9+">9+ Puan</option>
+                <option value="8+">8+ Puan</option>
+                <option value="7+">7+ Puan</option>
+                <option value="6+">6+ Puan</option>
+                <option value="5+">5+ Puan</option>
+              </select>
+            </div>
+
+            {/* Filtreleri Temizle */}
             <div className="flex items-end">
               <button
                 onClick={() => {
                   setSearchTerm('');
                   setStatusFilter('all');
                   setStarFilter('all');
+                  setCityFilter('all');
+                  setCountryFilter('all');
+                  setRatingFilter('all');
+                  setSortField('id');
+                  setSortDirection('desc');
                 }}
                 className="btn btn-secondary w-full"
               >
-                Filtreleri Temizle
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Temizle
               </button>
+            </div>
+          </div>
+
+          {/* Sonuç Bilgisi */}
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <div>
+              <span className="font-medium">{sortedHotels.length}</span> otel bulundu
+              {searchTerm || statusFilter !== 'all' || starFilter !== 'all' || cityFilter !== 'all' || countryFilter !== 'all' || ratingFilter !== 'all' ? (
+                <span className="ml-2">(filtrelenmiş)</span>
+              ) : null}
+            </div>
+            <div>
+              Toplam: <span className="font-medium">{hotels.length}</span> otel
             </div>
           </div>
         </div>
@@ -466,27 +764,83 @@ export default function OtellerPage() {
               <table className="table w-full">
                 <thead>
                   <tr>
-                    <th>Otel Adı</th>
-                    <th>Şehir/Ülke</th>
-                    <th>Yıldız</th>
-                    <th>Puan</th>
-                    <th>Durum</th>
+                    <th className="w-12">
+                      <input 
+                        type="checkbox" 
+                        className="checkbox checkbox-sm" 
+                        checked={selectedHotelIds.length === sortedHotels.length && sortedHotels.length > 0} 
+                        onChange={handleSelectAll} 
+                      />
+                    </th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => handleSort('adi')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Otel Adı</span>
+                        <SortIcon field="adi" />
+                      </div>
+                    </th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => handleSort('sehir')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Şehir/Ülke</span>
+                        <SortIcon field="sehir" />
+                      </div>
+                    </th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => handleSort('yildizSayisi')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Yıldız</span>
+                        <SortIcon field="yildizSayisi" />
+                      </div>
+                    </th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => handleSort('puan')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Puan</span>
+                        <SortIcon field="puan" />
+                      </div>
+                    </th>
+                    <th 
+                      className="cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => handleSort('durum')}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>Durum</span>
+                        <SortIcon field="durum" />
+                      </div>
+                    </th>
                     <th>İletişim</th>
                     <th>İşlemler</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredHotels.length === 0 ? (
+                  {sortedHotels.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-8 text-gray-500">
-                        {searchTerm || statusFilter !== 'all' || starFilter !== 'all' 
+                      <td colSpan={8} className="text-center py-8 text-gray-500">
+                        {searchTerm || statusFilter !== 'all' || starFilter !== 'all' || cityFilter !== 'all' || countryFilter !== 'all' || ratingFilter !== 'all'
                           ? 'Filtrelere uygun otel bulunamadı' 
                           : 'Henüz otel eklenmemiş'}
                       </td>
                     </tr>
                   ) : (
-                    filteredHotels.map((hotel) => (
+                    sortedHotels.map((hotel) => (
                       <tr key={hotel.id} className="hover:bg-gray-50">
+                        <td className="w-12">
+                          <input 
+                            type="checkbox" 
+                            className="checkbox checkbox-sm" 
+                            checked={selectedHotelIds.includes(hotel.id)} 
+                            onChange={() => handleSelectHotel(hotel.id)} 
+                          />
+                        </td>
                         <td>
                           <div>
                             <div className="font-medium text-gray-900">{hotel.adi}</div>
@@ -841,6 +1195,48 @@ export default function OtellerPage() {
                   </button>
                   <button onClick={handleDeleteHotel} className="btn btn-error">
                     Sil
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Toplu Silme Modal */}
+        {showBulkDeleteModal && (
+          <div className="modal-overlay">
+            <div className="modal-content max-w-md">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Toplu Otel Silme</h3>
+                <p className="text-gray-600 mb-6">
+                  <strong>{selectedHotelIds.length} otel</strong> seçtiniz. Bu otelleri kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+                </p>
+                <div className="flex justify-center space-x-3">
+                  <button 
+                    onClick={() => setShowBulkDeleteModal(false)} 
+                    className="btn btn-secondary"
+                    disabled={isBulkDeleting}
+                  >
+                    İptal
+                  </button>
+                  <button 
+                    onClick={handleBulkDeleteConfirm} 
+                    className="btn btn-error"
+                    disabled={isBulkDeleting}
+                  >
+                    {isBulkDeleting ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Siliniyor...
+                      </div>
+                    ) : (
+                      'Sil'
+                    )}
                   </button>
                 </div>
               </div>

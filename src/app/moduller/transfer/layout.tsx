@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
-import UserStatus from '../../components/UserStatus';
+import UserHeader from '../../components/UserHeader';
 
 interface TransferSidebarProps {
   isOpen: boolean;
@@ -214,8 +214,11 @@ export default function TransferLayout({ children }: { children: React.ReactNode
       {/* Main Content */}
       <div className={`sidebar-content ${sidebarOpen ? 'md:ml-64' : 'md:ml-16'} ml-0`}>
         <div className="relative h-full">
-          {/* User Status */}
-          <UserStatus />
+          {/* User Header */}
+          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+            <h1 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white">Transfer Yönetim Sistemi</h1>
+            <UserHeader />
+          </div>
           
           {/* Mobil menü butonu */}
           <button 

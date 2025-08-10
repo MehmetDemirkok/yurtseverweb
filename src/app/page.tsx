@@ -16,7 +16,7 @@ export default function HomePage() {
       <div className="flex flex-col items-center justify-center">
         <div className="w-20 h-20 border-4 border-white border-t-transparent rounded-full animate-spin mb-6"></div>
         <p className="text-white text-xl font-medium">Dashboard'a yönlendiriliyor...</p>
-      </div>
-    </div>
+            </div>
+          </div>
   );
 }
