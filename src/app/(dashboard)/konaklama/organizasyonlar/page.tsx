@@ -42,6 +42,13 @@ export default function OrganizasyonlarPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
   
+  // Modal state'leri
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null);
+  const [deletingOrganization, setDeletingOrganization] = useState<Organization | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   // Kullanıcı bilgilerini yükle
   useEffect(() => {
     fetch('/api/user', { credentials: 'include' })
@@ -118,6 +125,100 @@ export default function OrganizasyonlarPage() {
       case 'INACTIVE': return 'Pasif';
       case 'SUSPENDED': return 'Askıya Alınmış';
       default: return status;
+    }
+  };
+
+  // Düzenleme modal'ını aç
+  const handleEditClick = (org: Organization) => {
+    setEditingOrganization(org);
+    setShowEditModal(true);
+  };
+
+  // Silme modal'ını aç
+  const handleDeleteClick = (org: Organization) => {
+    setDeletingOrganization(org);
+    setShowDeleteModal(true);
+  };
+
+  // Düzenleme modal'ını kapat
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setEditingOrganization(null);
+  };
+
+  // Silme modal'ını kapat
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeletingOrganization(null);
+  };
+
+  // Organizasyon düzenleme
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOrganization) return;
+
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData(e.target as HTMLFormElement);
+      const updateData = {
+        name: formData.get('name') as string,
+        description: formData.get('description') as string,
+        contactPerson: formData.get('contactPerson') as string,
+        contactEmail: formData.get('contactEmail') as string,
+        contactPhone: formData.get('contactPhone') as string,
+        status: formData.get('status') as string,
+        baslangicTarihi: formData.get('baslangicTarihi') as string,
+        bitisTarihi: formData.get('bitisTarihi') as string,
+        lokasyon: formData.get('lokasyon') as string,
+        sehir: formData.get('sehir') as string,
+        ulke: formData.get('ulke') as string,
+      };
+
+      const response = await fetch(`/api/organizations/${editingOrganization.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (response.ok) {
+        await fetchOrganizations();
+        closeEditModal();
+      } else {
+        const error = await response.json();
+        alert(`Güncelleme hatası: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Güncelleme hatası:', error);
+      alert('Güncelleme sırasında bir hata oluştu.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Organizasyon silme
+  const handleDeleteConfirm = async () => {
+    if (!deletingOrganization) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/organizations/${deletingOrganization.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        await fetchOrganizations();
+        closeDeleteModal();
+      } else {
+        const error = await response.json();
+        alert(`Silme hatası: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Silme hatası:', error);
+      alert('Silme sırasında bir hata oluştu.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -301,15 +402,37 @@ export default function OrganizasyonlarPage() {
                   <div className="text-sm text-gray-600">
                     <span className="font-medium">{org._count?.accommodations || 0}</span> konaklama kaydı
                   </div>
-                  <button
-                    onClick={() => router.push(`/konaklama/organizasyonlar/${org.id}`)}
-                    className="text-purple-600 hover:text-purple-700 font-medium text-sm flex items-center"
-                  >
-                    Konaklamaları Gör
-                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => router.push(`/konaklama/organizasyonlar/${org.id}`)}
+                      className="text-purple-600 hover:text-purple-700 font-medium text-sm flex items-center"
+                    >
+                      Konaklamaları Gör
+                      <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleEditClick(org)}
+                        className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                        title="Düzenle"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(org)}
+                        className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                        title="Sil"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -335,6 +458,204 @@ export default function OrganizasyonlarPage() {
             >
               İlk Organizasyonu Oluştur
             </button>
+          </div>
+        )}
+
+        {/* Düzenleme Modal */}
+        {showEditModal && editingOrganization && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) closeEditModal(); }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 p-8 relative animate-fade-in border border-blue-100">
+              <button
+                onClick={closeEditModal}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                aria-label="Kapat"
+              >
+                ×
+              </button>
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800">Organizasyonu Düzenle</h2>
+              </div>
+              <form onSubmit={handleEditSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Organizasyon Adı <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    name="name"
+                    defaultValue={editingOrganization.name}
+                    className="input w-full border border-gray-300 rounded-md"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
+                  <select
+                    name="status"
+                    defaultValue={editingOrganization.status}
+                    className="input w-full border border-gray-300 rounded-md"
+                  >
+                    <option value="ACTIVE">Aktif</option>
+                    <option value="INACTIVE">Pasif</option>
+                    <option value="SUSPENDED">Askıya Alınmış</option>
+                  </select>
+                </div>
+                <div className="form-group md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Açıklama</label>
+                  <textarea
+                    name="description"
+                    defaultValue={editingOrganization.description || ''}
+                    rows={3}
+                    className="input w-full border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Başlangıç Tarihi</label>
+                  <input
+                    type="date"
+                    name="baslangicTarihi"
+                    defaultValue={editingOrganization.baslangicTarihi || ''}
+                    className="input w-full border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Bitiş Tarihi</label>
+                  <input
+                    type="date"
+                    name="bitisTarihi"
+                    defaultValue={editingOrganization.bitisTarihi || ''}
+                    className="input w-full border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Lokasyon</label>
+                  <input
+                    type="text"
+                    name="lokasyon"
+                    defaultValue={editingOrganization.lokasyon || ''}
+                    className="input w-full border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Şehir</label>
+                  <input
+                    type="text"
+                    name="sehir"
+                    defaultValue={editingOrganization.sehir || ''}
+                    className="input w-full border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ülke</label>
+                  <input
+                    type="text"
+                    name="ulke"
+                    defaultValue={editingOrganization.ulke || 'Türkiye'}
+                    className="input w-full border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">İletişim Kişisi</label>
+                  <input
+                    type="text"
+                    name="contactPerson"
+                    defaultValue={editingOrganization.contactPerson || ''}
+                    className="input w-full border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">E-posta</label>
+                  <input
+                    type="email"
+                    name="contactEmail"
+                    defaultValue={editingOrganization.contactEmail || ''}
+                    className="input w-full border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+                  <input
+                    type="tel"
+                    name="contactPhone"
+                    defaultValue={editingOrganization.contactPhone || ''}
+                    className="input w-full border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div className="col-span-2 flex justify-end space-x-2 mt-6">
+                  <button type="button" className="btn btn-secondary" onClick={closeEditModal} disabled={isSubmitting}>İptal</button>
+                  <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Kaydediliyor...
+                      </>
+                    ) : 'Kaydet'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Silme Modal */}
+        {showDeleteModal && deletingOrganization && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) closeDeleteModal(); }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8 relative animate-fade-in border border-red-100">
+              <button
+                onClick={closeDeleteModal}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                aria-label="Kapat"
+              >
+                ×
+              </button>
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-xl flex items-center justify-center mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-red-700">Organizasyonu Sil</h2>
+              </div>
+              <div className="mb-6">
+                <p className="text-gray-700 mb-4">
+                  <strong>{deletingOrganization.name}</strong> organizasyonunu silmek istediğinize emin misiniz?
+                </p>
+                {deletingOrganization._count?.accommodations > 0 && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      <span className="text-yellow-800 font-medium">Dikkat!</span>
+                    </div>
+                    <p className="text-yellow-700 text-sm mt-1">
+                      Bu organizasyona bağlı <strong>{deletingOrganization._count.accommodations}</strong> konaklama kaydı bulunmaktadır. 
+                      Organizasyon silinirse bu kayıtlar münferit konaklama olarak işaretlenecektir.
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end space-x-2">
+                <button type="button" className="btn btn-secondary" onClick={closeDeleteModal} disabled={isSubmitting}>İptal</button>
+                <button type="button" className="btn btn-error bg-red-600 hover:bg-red-700 text-white font-bold" onClick={handleDeleteConfirm} disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Siliniyor...
+                    </>
+                  ) : 'Evet, Sil'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -60,7 +60,7 @@ export default function DashboardPage() {
       description: 'Konaklama ve otel yönetim sistemine erişin',
       icon: '🏨',
       color: 'blue',
-      path: '/konaklama/oteller'
+      path: '/konaklama'
     },
     {
       key: 'vehicles',
