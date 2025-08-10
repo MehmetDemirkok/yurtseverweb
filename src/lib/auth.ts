@@ -35,8 +35,26 @@ export async function getUserFromToken(): Promise<UserToken | null> {
     
     if (!token) return null;
     
-    const decoded = jwt.verify(token, JWT_SECRET) as UserToken;
-    return decoded;
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    
+    // Eğer JWT'de companyId yoksa, veritabanından al
+    if (!decoded.companyId) {
+      const { PrismaClient } = await import('@prisma/client');
+      const prisma = new PrismaClient();
+      
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: { companyId: true }
+      });
+      
+      await prisma.$disconnect();
+      
+      if (user) {
+        decoded.companyId = user.companyId;
+      }
+    }
+    
+    return decoded as UserToken;
   } catch {
     return null;
   }
