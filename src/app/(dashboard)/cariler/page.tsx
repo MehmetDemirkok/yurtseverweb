@@ -52,7 +52,12 @@ export default function CarilerPage() {
 
   // Sayfa erişim kontrolü
   const hasPageAccess = (): boolean => {
-    return hasPermission('cariler') || userRole === 'ADMIN';
+    // Admin her zaman erişebilir
+    if (userRole === 'ADMIN') {
+      return true;
+    }
+    // Diğer roller için cariler permission kontrolü
+    return hasPermission('cariler');
   };
 
   // Form state
@@ -103,12 +108,14 @@ export default function CarilerPage() {
       const response = await fetch('/api/cariler');
       if (response.ok) {
         const data = await response.json();
-        setCariler(data.cariler);
+        setCariler(Array.isArray(data) ? data : []);
       } else {
         console.error('Cariler alınamadı');
+        setCariler([]);
       }
     } catch (error) {
       console.error('Cariler alınamadı:', error);
+      setCariler([]);
     } finally {
       setLoading(false);
     }
@@ -310,7 +317,7 @@ export default function CarilerPage() {
     XLSX.writeFile(workbook, `Cariler_${today}.xlsx`);
   };
 
-  const filteredCariler = cariler.filter(cari => {
+  const filteredCariler = cariler?.filter(cari => {
     const matchesSearch = cari.ad.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (cari.soyad && cari.soyad.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          (cari.sirket && cari.sirket.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -318,7 +325,7 @@ export default function CarilerPage() {
     const matchesTip = filterTip === 'tümü' || cari.tip === filterTip;
     const matchesDurum = filterDurum === 'tümü' || cari.durum === filterDurum;
     return matchesSearch && matchesTip && matchesDurum;
-  });
+  }) || [];
 
   if (loading) {
     return (

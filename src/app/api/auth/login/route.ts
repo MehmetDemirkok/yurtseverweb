@@ -1,72 +1,100 @@
-import { NextResponse } from 'next/server';
-import { prisma, enhancedPrisma } from '@/lib/prisma';
-import jwt from 'jsonwebtoken';
-import { serialize } from 'cookie';
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();
+
     if (!email || !password) {
-      return NextResponse.json({ success: false, error: 'Kullanıcı adı ve şifre zorunlu.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Email ve şifre gerekli' },
+        { status: 400 }
+      );
     }
-    
-    // Geliştirilmiş Prisma istemcisi ile veritabanı sorgusunu yap
-    // Bu istemci otomatik olarak bağlantı hatalarını yeniden deneyecek
-    let user;
-    try {
-      user = await enhancedPrisma.user.findFirst({
-        where: {
-          OR: [
-            { email },
-            { name: email }
-          ]
+
+    // Kullanıcıyı email ile bul (şirket bilgisiyle birlikte)
+    const user = await prisma.user.findFirst({
+      where: { email },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            status: true
+          }
         }
-      });
-    } catch (dbError: any) {
-      console.error('Veritabanı bağlantı hatası (tüm yeniden denemeler başarısız):', dbError);
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Veritabanına bağlanırken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' 
-      }, { status: 503 });
-    }
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return NextResponse.json({ success: false, error: 'Kullanıcı adı veya şifre hatalı.' }, { status: 401 });
-    }
-
-    // JWT oluştur - role ve permissions bilgisini de dahil et
-    const token = jwt.sign({ 
-      id: user.id, 
-      email: user.email, 
-      name: user.name,
-      role: user.role,
-      permissions: user.permissions || []
-    }, JWT_SECRET, { expiresIn: '7d' });
-    
-    // Cookie olarak set et
-    const cookie = serialize('token', token, {
-      httpOnly: true,
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 gün
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      }
     });
 
-    const response = NextResponse.json({ 
-      success: true, 
-      user: { 
-        id: user.id, 
-        email: user.email, 
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Geçersiz email veya şifre' },
+        { status: 401 }
+      );
+    }
+
+    // Şirket durumunu kontrol et
+    if (user.company.status !== 'ACTIVE') {
+      return NextResponse.json(
+        { error: 'Şirket hesabınız aktif değil' },
+        { status: 403 }
+      );
+    }
+
+    // Şifreyi kontrol et
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return NextResponse.json(
+        { error: 'Geçersiz email veya şifre' },
+        { status: 401 }
+      );
+    }
+
+    // JWT token oluştur (şirket bilgisiyle)
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
         name: user.name,
-        role: user.role 
-      } 
+        role: user.role,
+        companyId: user.company.id,
+        companyName: user.company.name
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Cookie ayarla
+    const response = NextResponse.json({
+      message: 'Giriş başarılı',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        companyId: user.company.id,
+        companyName: user.company.name
+      }
     });
-    response.headers.set('Set-Cookie', cookie);
+
+    response.cookies.set('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 // 24 saat
+    });
+
     return response;
+
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    console.error('Login error:', error);
+    return NextResponse.json(
+      { error: 'Sunucu hatası' },
+      { status: 500 }
+    );
   }
 }

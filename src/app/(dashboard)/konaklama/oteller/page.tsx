@@ -123,10 +123,13 @@ export default function OtellerPage() {
       const response = await fetch('/api/konaklama/oteller');
       if (response.ok) {
         const data = await response.json();
-        setHotels(data);
+        setHotels(Array.isArray(data) ? data : []);
+      } else {
+        setHotels([]);
       }
     } catch (error) {
       console.error('Oteller yüklenirken hata:', error);
+      setHotels([]);
     } finally {
       setLoading(false);
     }
@@ -137,6 +140,11 @@ export default function OtellerPage() {
   };
 
   const hasPageAccess = () => {
+    // Admin her zaman erişebilir
+    if (currentUser?.role === 'ADMIN') {
+      return true;
+    }
+    // Diğer roller için accommodation permission kontrolü
     return hasPermission('accommodation');
   };
 
@@ -437,10 +445,10 @@ export default function OtellerPage() {
   };
 
   // Benzersiz şehir ve ülke listelerini oluştur
-  const uniqueCities = [...new Set(hotels.map(hotel => hotel.sehir))].sort();
-  const uniqueCountries = [...new Set(hotels.map(hotel => hotel.ulke))].sort();
+  const uniqueCities = [...new Set(hotels?.map(hotel => hotel.sehir) || [])].sort();
+  const uniqueCountries = [...new Set(hotels?.map(hotel => hotel.ulke) || [])].sort();
 
-  const filteredHotels = hotels.filter(hotel => {
+  const filteredHotels = hotels?.filter(hotel => {
     // Arama terimi kontrolü (otel adı, şehir, ülke, adres, açıklama)
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch = searchTerm === '' || 
@@ -488,7 +496,7 @@ export default function OtellerPage() {
     }
     
     return matchesSearch && matchesStatus && matchesStars && matchesCity && matchesCountry && matchesRating;
-  });
+  }) || [];
 
   // Sıralama fonksiyonu
   const handleSort = (field: string) => {

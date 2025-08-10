@@ -8,6 +8,33 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model Company {
+  id            Int      @id @default(autoincrement())
+  name          String
+  email         String   @unique
+  phone         String?
+  address       String?
+  city          String?
+  country       String   @default("Türkiye")
+  taxNumber     String?
+  taxOffice     String?
+  logo          String?
+  status        CompanyStatus @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  users         User[]
+  accommodations Accommodation[]
+  hotels        Hotel[]
+  logs          Log[]
+  araclar       Arac[]
+  soforler      Sofor[]
+  transferler   Transfer[]
+  cariler       Cari[]
+  tedarikciler  Tedarikci[]
+}
+
 model User {
   id          Int      @id @default(autoincrement())
   email       String   @unique
@@ -16,7 +43,13 @@ model User {
   password    String
   role        Role     @default(KULLANICI)
   permissions String[] @default([])
+  companyId   Int
   logs        Log[]
+  
+  // Relations
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@unique([email, companyId])
 }
 
 model Accommodation {
@@ -36,6 +69,10 @@ model Accommodation {
   otelAdi         String?
   kurumCari       String?
   numberOfNights  Int?
+  companyId       Int
+  
+  // Relations
+  company         Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
 model Hotel {
@@ -53,6 +90,10 @@ model Hotel {
   durum        HotelDurum @default(AKTIF)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  companyId    Int
+  
+  // Relations
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
 model Log {
@@ -62,15 +103,19 @@ model Log {
   recordId   Int
   recordData String
   userId     Int?
+  companyId  Int
   createdAt  DateTime @default(now())
   ipAddress  String?
   userAgent  String?
+  
+  // Relations
   user       User?    @relation(fields: [userId], references: [id])
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
 model Arac {
   id              String     @id @default(cuid())
-  plaka           String     @unique
+  plaka           String
   marka           String
   model           String
   yolcuKapasitesi Int
@@ -80,15 +125,21 @@ model Arac {
   sonGuncelleme   DateTime   @default(now())
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
+  companyId       Int
+  
+  // Relations
+  company         Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   soforler        Sofor[]
   transferler     Transfer[]
+  
+  @@unique([plaka, companyId])
 }
 
 model Sofor {
   id               String     @id @default(cuid())
   ad               String
   soyad            String
-  telefon          String     @unique
+  telefon          String
   ehliyetSinifi    String
   atananAracId     String?
   durum            SoforDurum @default(MUSAIT)
@@ -96,8 +147,14 @@ model Sofor {
   updatedAt        DateTime   @updatedAt
   ehliyetSiniflari String[]
   srcBelgeleri     String[]
+  companyId        Int
+  
+  // Relations
+  company          Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   atananArac       Arac?      @relation(fields: [atananAracId], references: [id])
   transferler      Transfer[]
+  
+  @@unique([telefon, companyId])
 }
 
 model Transfer {
@@ -115,6 +172,10 @@ model Transfer {
   updatedAt    DateTime      @updatedAt
   fiyat        Float?
   tahsisli     Boolean       @default(false)
+  companyId    Int
+  
+  // Relations
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   arac         Arac?         @relation(fields: [aracId], references: [id])
   sofor        Sofor?        @relation(fields: [soforId], references: [id])
   yolcular     Yolcu[]
@@ -130,6 +191,8 @@ model Yolcu {
   transferId String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  
+  // Relations
   transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
 }
 
@@ -150,6 +213,10 @@ model Cari {
   durum        CariDurum @default(AKTIF)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  companyId    Int
+  
+  // Relations
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
 model Tedarikci {
@@ -168,6 +235,16 @@ model Tedarikci {
   durum        TedarikciDurum @default(AKTIF)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  companyId    Int
+  
+  // Relations
+  company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
 }
 
 enum Role {

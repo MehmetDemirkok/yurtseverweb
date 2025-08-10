@@ -55,7 +55,12 @@ export default function TransferDashboard() {
 
   // Sayfa erişim kontrolü
   const hasPageAccess = (): boolean => {
-    return hasPermission('transfer') || userRole === 'ADMIN';
+    // Admin her zaman erişebilir
+    if (userRole === 'ADMIN') {
+      return true;
+    }
+    // Diğer roller için transfer permission kontrolü
+    return hasPermission('transfer');
   };
 
   useEffect(() => {
@@ -88,30 +93,30 @@ export default function TransferDashboard() {
         fetch('/api/moduller/transfer/transferler')
       ]);
 
-      const araclar = araclarRes.ok ? (await araclarRes.json()).araclar : [];
-      const soforler = soforlerRes.ok ? (await soforlerRes.json()).soforler : [];
-      const transferler = transferlerRes.ok ? (await transferlerRes.json()).transferler : [];
+      const araclar = araclarRes.ok ? (await araclarRes.json()) : [];
+      const soforler = soforlerRes.ok ? (await soforlerRes.json()) : [];
+      const transferler = transferlerRes.ok ? (await transferlerRes.json()) : [];
 
       // İstatistikleri hesapla
       const bugun = new Date().toISOString().split('T')[0];
       const buHafta = new Date();
       buHafta.setDate(buHafta.getDate() + 7);
 
-      const bugunTransferler = transferler.filter((t: any) => 
+      const bugunTransferler = transferler?.filter((t: any) => 
         new Date(t.kalkisTarihi).toISOString().split('T')[0] === bugun
-      );
+      ) || [];
 
-      const buHaftaTransferler = transferler.filter((t: any) => 
+      const buHaftaTransferler = transferler?.filter((t: any) => 
         new Date(t.kalkisTarihi) <= buHafta
-      );
+      ) || [];
 
       setStats({
-        toplamArac: araclar.length,
-        müsaitArac: araclar.filter((a: any) => a.durum === 'MUSAIT').length,
-        toplamSofor: soforler.length,
+        toplamArac: araclar?.length || 0,
+        müsaitArac: araclar?.filter((a: any) => a.durum === 'MUSAIT').length || 0,
+        toplamSofor: soforler?.length || 0,
         bugunTransfer: bugunTransferler.length,
         buHaftaTransfer: buHaftaTransferler.length,
-        toplamTransfer: transferler.length
+        toplamTransfer: transferler?.length || 0
       });
 
       // Yaklaşan transferleri al (bugün ve yarın)
@@ -120,7 +125,7 @@ export default function TransferDashboard() {
       const yarinStr = yarin.toISOString().split('T')[0];
 
       const yaklasanTransferler = transferler
-        .filter((t: any) => {
+        ?.filter((t: any) => {
           const transferTarihi = new Date(t.kalkisTarihi).toISOString().split('T')[0];
           return (transferTarihi === bugun || transferTarihi === yarinStr) && 
                  t.durum !== 'TAMAMLANDI' && t.durum !== 'IPTAL';
@@ -135,7 +140,7 @@ export default function TransferDashboard() {
           aracPlaka: t.arac?.plaka || 'Atanmamış',
           soforAdi: t.sofor ? `${t.sofor.ad} ${t.sofor.soyad}` : 'Atanmamış',
           durum: t.durum.toLowerCase()
-        }));
+        })) || [];
 
       setYaklasanTransferler(yaklasanTransferler);
     } catch (error) {

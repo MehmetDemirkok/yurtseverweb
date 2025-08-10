@@ -26,8 +26,9 @@ export default function PermissionGuard({ children, requiredPermission }: Permis
           const data = await res.json();
           const user = data.user;
 
-          // Admin rolü için özel kontrol - sadece belirli sayfalar için
-          if (user.role === 'ADMIN' && (pathname === '/admin' || pathname === '/admin/logs')) {
+          // Admin rolü için özel kontrol - admin her sayfaya erişebilir
+          if (user.role === 'ADMIN') {
+            console.log('Admin access granted for:', pathname);
             setHasAccess(true);
             setLoading(false);
             return;

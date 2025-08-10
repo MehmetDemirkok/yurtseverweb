@@ -48,7 +48,12 @@ export default function SoforlerPage() {
 
   // Sayfa erişim kontrolü
   const hasPageAccess = (): boolean => {
-    return hasPermission('transfer') || userRole === 'ADMIN';
+    // Admin her zaman erişebilir
+    if (userRole === 'ADMIN') {
+      return true;
+    }
+    // Diğer roller için transfer permission kontrolü
+    return hasPermission('transfer');
   };
 
   // Form state
@@ -103,12 +108,14 @@ export default function SoforlerPage() {
       const response = await fetch('/api/moduller/transfer/soforler');
       if (response.ok) {
         const data = await response.json();
-        setSoforler(data.soforler);
+        setSoforler(Array.isArray(data) ? data : []);
       } else {
         console.error('Şoförler alınamadı');
+        setSoforler([]);
       }
     } catch (error) {
       console.error('Şoförler alınamadı:', error);
+      setSoforler([]);
     } finally {
       setLoading(false);
     }
@@ -119,10 +126,13 @@ export default function SoforlerPage() {
       const response = await fetch('/api/moduller/transfer/araclar');
       if (response.ok) {
         const data = await response.json();
-        setAraclar(data.araclar);
+        setAraclar(Array.isArray(data) ? data : []);
+      } else {
+        setAraclar([]);
       }
     } catch (error) {
       console.error('Araçlar alınamadı:', error);
+      setAraclar([]);
     }
   };
 
@@ -289,13 +299,13 @@ export default function SoforlerPage() {
     }
   };
 
-  const filteredSoforler = soforler.filter(sofor => {
+  const filteredSoforler = soforler?.filter(sofor => {
     const matchesSearch = sofor.ad.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          sofor.soyad.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          sofor.telefon.includes(searchTerm);
     const matchesFilter = filterDurum === 'tümü' || sofor.durum === filterDurum;
     return matchesSearch && matchesFilter;
-  });
+  }) || [];
 
   if (loading) {
     return (

@@ -1,70 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireCompanyAccess } from '@/lib/auth';
 
-// GET - Tüm araçları listele
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const user = await requireCompanyAccess();
+    
     const araclar = await prisma.arac.findMany({
+      where: {
+        companyId: user.companyId
+      },
+      include: {
+        soforler: true,
+        transferler: {
+          where: {
+            durum: {
+              in: ['BEKLEMEDE', 'YOLDA']
+            }
+          }
+        }
+      },
       orderBy: {
         createdAt: 'desc'
       }
     });
 
-    return NextResponse.json({ araclar });
-  } catch (error) {
-    console.error('Araçlar alınamadı:', error);
-    return NextResponse.json(
-      { error: 'Araçlar alınamadı' },
-      { status: 500 }
-    );
+    return NextResponse.json(araclar);
+  } catch (error: any) {
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Yetkilendirme gerekli' }, { status: 401 });
+    }
+    if (error.message === 'Company access denied') {
+      return NextResponse.json({ error: 'Şirket erişimi reddedildi' }, { status: 403 });
+    }
+    
+    console.error('Araç fetch error:', error);
+    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
   }
 }
 
-// POST - Yeni araç ekle
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { plaka, marka, model, yolcuKapasitesi, durum, enlem, boylam } = body;
-
-    // Validasyon
-    if (!plaka || !marka || !model || !yolcuKapasitesi) {
-      return NextResponse.json(
-        { error: 'Gerekli alanlar eksik' },
-        { status: 400 }
-      );
-    }
-
-    // Plaka benzersizlik kontrolü
-    const existingArac = await prisma.arac.findUnique({
-      where: { plaka }
-    });
-
-    if (existingArac) {
-      return NextResponse.json(
-        { error: 'Bu plaka zaten kayıtlı' },
-        { status: 400 }
-      );
-    }
+    const user = await requireCompanyAccess();
+    const data = await request.json();
 
     const arac = await prisma.arac.create({
       data: {
-        plaka,
-        marka,
-        model,
-        yolcuKapasitesi: parseInt(yolcuKapasitesi),
-        durum,
-        enlem: parseFloat(enlem) || 0,
-        boylam: parseFloat(boylam) || 0,
-        sonGuncelleme: new Date()
+        ...data,
+        companyId: user.companyId
       }
     });
 
-    return NextResponse.json({ arac }, { status: 201 });
-  } catch (error) {
-    console.error('Araç oluşturulamadı:', error);
-    return NextResponse.json(
-      { error: 'Araç oluşturulamadı' },
-      { status: 500 }
-    );
+    return NextResponse.json(arac);
+  } catch (error: any) {
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Yetkilendirme gerekli' }, { status: 401 });
+    }
+    if (error.message === 'Company access denied') {
+      return NextResponse.json({ error: 'Şirket erişimi reddedildi' }, { status: 403 });
+    }
+    
+    console.error('Araç create error:', error);
+    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
   }
 } 

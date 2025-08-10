@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireCompanyAccess } from '@/lib/auth';
 
-// GET - Tüm şoförleri listele
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const user = await requireCompanyAccess();
+    
     const soforler = await prisma.sofor.findMany({
+      where: {
+        companyId: user.companyId
+      },
       include: {
-        atananArac: {
-          select: {
-            id: true,
-            plaka: true
+        atananArac: true,
+        transferler: {
+          where: {
+            durum: {
+              in: ['BEKLEMEDE', 'YOLDA']
+            }
           }
         }
       },
@@ -18,69 +25,42 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json({ soforler });
-  } catch (error) {
-    console.error('Şoförler alınamadı:', error);
-    return NextResponse.json(
-      { error: 'Şoförler alınamadı' },
-      { status: 500 }
-    );
+    return NextResponse.json(soforler);
+  } catch (error: any) {
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Yetkilendirme gerekli' }, { status: 401 });
+    }
+    if (error.message === 'Company access denied') {
+      return NextResponse.json({ error: 'Şirket erişimi reddedildi' }, { status: 403 });
+    }
+    
+    console.error('Şoför fetch error:', error);
+    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
   }
 }
 
-// POST - Yeni şoför ekle
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { ad, soyad, telefon, ehliyetSinifi, ehliyetSiniflari, srcBelgeleri, atananAracId, durum } = body;
-
-    // Validasyon
-    if (!ad || !soyad || !telefon || !ehliyetSiniflari || ehliyetSiniflari.length === 0) {
-      return NextResponse.json(
-        { error: 'Gerekli alanlar eksik' },
-        { status: 400 }
-      );
-    }
-
-    // Telefon benzersizlik kontrolü
-    const existingSofor = await prisma.sofor.findUnique({
-      where: { telefon }
-    });
-
-    if (existingSofor) {
-      return NextResponse.json(
-        { error: 'Bu telefon numarası zaten kayıtlı' },
-        { status: 400 }
-      );
-    }
+    const user = await requireCompanyAccess();
+    const data = await request.json();
 
     const sofor = await prisma.sofor.create({
       data: {
-        ad,
-        soyad,
-        telefon,
-        ehliyetSinifi: ehliyetSiniflari[0], // Geriye uyumluluk için ilk ehliyet sınıfını kullan
-        ehliyetSiniflari,
-        srcBelgeleri: srcBelgeleri || [],
-        atananAracId: atananAracId || null,
-        durum
-      },
-      include: {
-        atananArac: {
-          select: {
-            id: true,
-            plaka: true
-          }
-        }
+        ...data,
+        companyId: user.companyId
       }
     });
 
-    return NextResponse.json({ sofor }, { status: 201 });
-  } catch (error) {
-    console.error('Şoför oluşturulamadı:', error);
-    return NextResponse.json(
-      { error: 'Şoför oluşturulamadı' },
-      { status: 500 }
-    );
+    return NextResponse.json(sofor);
+  } catch (error: any) {
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Yetkilendirme gerekli' }, { status: 401 });
+    }
+    if (error.message === 'Company access denied') {
+      return NextResponse.json({ error: 'Şirket erişimi reddedildi' }, { status: 403 });
+    }
+    
+    console.error('Şoför create error:', error);
+    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
   }
 }

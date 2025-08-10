@@ -57,7 +57,12 @@ export default function AccommodationPage() {
 
   // Sayfa erişim kontrolü
   const hasPageAccess = (): boolean => {
-    return hasPermission('accommodation') || currentUser?.role === 'ADMIN';
+    // Admin her zaman erişebilir
+    if (currentUser?.role === 'ADMIN') {
+      return true;
+    }
+    // Diğer roller için accommodation permission kontrolü
+    return hasPermission('accommodation');
   };
 
   // Organizasyon seçeneklerini kapatmak için referans

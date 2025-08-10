@@ -51,7 +51,12 @@ export default function TedarikcilerPage() {
 
   // Sayfa erişim kontrolü
   const hasPageAccess = (): boolean => {
-    return hasPermission('tedarikciler') || userRole === 'ADMIN';
+    // Admin her zaman erişebilir
+    if (userRole === 'ADMIN') {
+      return true;
+    }
+    // Diğer roller için tedarikciler permission kontrolü
+    return hasPermission('tedarikciler');
   };
 
   // Form state
@@ -101,12 +106,14 @@ export default function TedarikcilerPage() {
       const response = await fetch('/api/tedarikciler');
       if (response.ok) {
         const data = await response.json();
-        setTedarikciler(data.tedarikciler);
+        setTedarikciler(Array.isArray(data) ? data : []);
       } else {
         console.error('Tedarikçiler alınamadı');
+        setTedarikciler([]);
       }
     } catch (error) {
       console.error('Tedarikçiler alınamadı:', error);
+      setTedarikciler([]);
     } finally {
       setLoading(false);
     }
@@ -295,14 +302,14 @@ export default function TedarikcilerPage() {
     XLSX.writeFile(workbook, `Tedarikciler_${today}.xlsx`);
   };
 
-  const filteredTedarikciler = tedarikciler.filter(tedarikci => {
+  const filteredTedarikciler = tedarikciler?.filter(tedarikci => {
     const matchesSearch = tedarikci.sirketAdi.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (tedarikci.yetkiliKisi && tedarikci.yetkiliKisi.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          (tedarikci.email && tedarikci.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
                          (tedarikci.hizmetTuru && tedarikci.hizmetTuru.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesDurum = filterDurum === 'tümü' || tedarikci.durum === filterDurum;
     return matchesSearch && matchesDurum;
-  });
+  }) || [];
 
   if (loading) {
     return (

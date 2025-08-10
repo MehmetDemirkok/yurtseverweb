@@ -8,6 +8,8 @@ export interface UserToken {
   email: string;
   name?: string;
   role: 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER';
+  companyId: number;
+  companyName?: string;
 }
 
 export enum Role {
@@ -50,6 +52,11 @@ export function hasAnyRole(userRole: Role, requiredRoles: Role[]): boolean {
   return requiredRoles.some(role => hasRole(userRole, role));
 }
 
+// Şirket bazlı yetkilendirme - kullanıcının kendi şirketinin verilerine erişim kontrolü
+export function hasCompanyAccess(userCompanyId: number, targetCompanyId: number): boolean {
+  return userCompanyId === targetCompanyId;
+}
+
 // API route'ları için yetkilendirme middleware'i
 export async function requireAuth(requiredRole: Role = Role.USER) {
   const user = await getUserFromToken();
@@ -60,6 +67,22 @@ export async function requireAuth(requiredRole: Role = Role.USER) {
   
   if (!hasRole(user.role as Role, requiredRole)) {
     throw new Error('Insufficient permissions');
+  }
+  
+  return user;
+}
+
+// Şirket bazlı yetkilendirme middleware'i
+export async function requireCompanyAccess(targetCompanyId?: number) {
+  const user = await getUserFromToken();
+  
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+  
+  // Eğer targetCompanyId belirtilmişse, kullanıcının o şirkete erişim yetkisi olup olmadığını kontrol et
+  if (targetCompanyId && !hasCompanyAccess(user.companyId, targetCompanyId)) {
+    throw new Error('Company access denied');
   }
   
   return user;

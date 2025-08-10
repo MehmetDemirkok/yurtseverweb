@@ -36,9 +36,10 @@ function LogsPageContent() {
         throw new Error("Loglar alınamadı");
       }
       const data = await response.json();
-      setLogs(data);
+      setLogs(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu");
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -49,15 +50,15 @@ function LogsPageContent() {
     setDetailModalOpen(true);
   };
 
-  const filteredLogs = logs.filter(log => {
+  const filteredLogs = logs?.filter(log => {
     return (
       (filterAction === "" || log.action === filterAction) &&
       (filterModel === "" || log.modelName === filterModel)
     );
-  });
+  }) || [];
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Sistem Logları</h1>
       
       {error && <div className="bg-red-100 p-3 mb-4 rounded text-red-700">{error}</div>}
@@ -219,9 +220,5 @@ function LogsPageContent() {
 }
 
 export default function LogsPage() {
-  return (
-    <AuthGuard requiredPermissions={["logs"]}>
-      <LogsPageContent />
-    </AuthGuard>
-  );
+  return <LogsPageContent />;
 }

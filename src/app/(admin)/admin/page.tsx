@@ -92,18 +92,18 @@ export default function AdminPage() {
 
   useEffect(() => {
     // İstatistikleri hesapla
-    const total = users.length;
-    const admin = users.filter(u => u.role === 'ADMIN').length;
-    const mudur = users.filter(u => u.role === 'MUDUR').length;
-    const operator = users.filter(u => u.role === 'OPERATOR').length;
-    const kullanici = users.filter(u => u.role === 'KULLANICI').length;
+    const total = users?.length || 0;
+    const admin = users?.filter(u => u.role === 'ADMIN').length || 0;
+    const mudur = users?.filter(u => u.role === 'MUDUR').length || 0;
+    const operator = users?.filter(u => u.role === 'OPERATOR').length || 0;
+    const kullanici = users?.filter(u => u.role === 'KULLANICI').length || 0;
     
     setStats({ total, admin, mudur, operator, kullanici });
   }, [users]);
 
   useEffect(() => {
     // Filtreleme ve sıralama
-    let filtered = users;
+    let filtered = users || [];
 
     // Arama filtresi
     if (searchTerm) {
@@ -169,12 +169,14 @@ export default function AdminPage() {
       const res = await fetch('/api/users', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
-        setUsers(data);
+        setUsers(Array.isArray(data) ? data : []);
       } else {
         console.error('Kullanıcılar yüklenemedi');
+        setUsers([]);
       }
     } catch {
       console.error('Bir hata oluştu');
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -355,20 +357,11 @@ export default function AdminPage() {
     </div>
   );
   
-  if (!currentUser || currentUser.role !== 'ADMIN') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-600 text-xl mb-2">🚫</div>
-          <p className="text-red-600">Bu sayfaya erişim yetkiniz yok.</p>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <>
-      <main className="container mx-auto px-6 py-8">
+      <main className="p-6">
         {/* Navigation */}
         <div className="flex justify-end mb-8">
           <button

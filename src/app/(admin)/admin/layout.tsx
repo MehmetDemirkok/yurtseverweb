@@ -1,133 +1,207 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import UserHeader from '@/components/layout/UserHeader';
+import { usePathname } from 'next/navigation';
+import { 
+  Users, 
+  Building2, 
+  FileText, 
+  Settings, 
+  Menu, 
+  X,
+  BarChart3,
+  Shield,
+  Home
+} from 'lucide-react';
+import UserHeader from '@/app/components/UserHeader';
+import AuthGuard from '@/app/components/AuthGuard';
 
-interface AdminSidebarProps {
-  isOpen: boolean;
-  toggleSidebar: () => void;
+interface AdminLayoutProps {
+  children: ReactNode;
 }
 
-function AdminSidebar({ isOpen, toggleSidebar }: AdminSidebarProps) {
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const pathname = usePathname();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const menuItems = [
+  // Kullanıcı bilgilerini kontrol et
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const res = await fetch('/api/user', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUser(data.user);
+        }
+      } catch (error) {
+        console.error('Kullanıcı bilgisi alınamadı:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkUser();
+  }, []);
+
+  // Admin yetkisi kontrolü
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="text-red-600 text-6xl mb-4">🚫</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Erişim Kısıtlı</h1>
+          <p className="text-gray-600 mb-4">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <Link 
+            href="/dashboard"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Dashboard'a Dön
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const navigation = [
     {
-      name: 'Ana Dashboard',
-      path: '/dashboard',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
-        </svg>
-      ),
+      name: 'Dashboard\'a Dönüş',
+      href: '/dashboard',
+      icon: Home,
+      current: false
+    },
+    {
+      name: 'Kullanıcı Yönetimi',
+      href: '/admin',
+      icon: Users,
+      current: pathname === '/admin'
+    },
+    {
+      name: 'Şirket Yönetimi',
+      href: '/admin/companies',
+      icon: Building2,
+      current: pathname === '/admin/companies'
     },
     {
       name: 'Sistem Logları',
-      path: '/admin/logs',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
-      ),
-    },
+      href: '/admin/logs',
+      icon: FileText,
+      current: pathname === '/admin/logs'
+    }
   ];
 
   return (
-    <>
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden" 
-          onClick={toggleSidebar}
-        />
-      )}
-      
-      <div 
-        className={`fixed top-0 left-0 h-full bg-white dark:bg-gray-800 shadow-lg z-30 transition-all duration-300 ease-in-out ${isOpen ? 'w-64' : 'w-0 md:w-16'} overflow-hidden`}
-      >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className={`flex items-center ${!isOpen && 'md:hidden'}`}>
-            <Image src="/logo.svg" alt="Logo" width={32} height={32} className="h-8 w-8" />
-            <span className={`ml-2 font-semibold text-gray-800 dark:text-white transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-              Yurtsever
-            </span>
+    <AuthGuard>
+      <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+        {/* Sidebar */}
+        <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
+          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center">
+              <Shield className="h-8 w-8 text-blue-600" />
+              <span className="ml-2 text-xl font-semibold text-gray-900 dark:text-white">
+                Admin Panel
+              </span>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <X className="h-6 w-6" />
+            </button>
           </div>
-          <button 
-            onClick={toggleSidebar} 
-            className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              {isOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
-        </div>
-        <nav className="mt-5 px-2">
-          <ul className="space-y-2">
-            {menuItems.map((item, index) => (
-              <li key={index}>
-                <Link 
-                  href={item.path}
-                  className="flex items-center p-2 rounded-md transition-all duration-200 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <div className="flex-shrink-0">
-                    {item.icon}
-                  </div>
-                  <span className={`ml-3 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 md:hidden'}`}>
+          
+          <nav className="mt-6 px-3">
+            {/* Dashboard'a Dönüş Linki */}
+            <div className="mb-6">
+              <Link
+                href="/dashboard"
+                className="group flex items-center px-3 py-2 text-sm font-medium rounded-md text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors border border-gray-200 dark:border-gray-600"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <Home className="text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300 mr-3 flex-shrink-0 h-5 w-5" />
+                Dashboard'a Dönüş
+              </Link>
+            </div>
+
+            {/* Admin Menü Başlığı */}
+            <div className="mb-4">
+              <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Admin İşlemleri
+              </h3>
+            </div>
+
+            {/* Admin Navigation */}
+            <div className="space-y-1">
+              {navigation.slice(1).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`${
+                      item.current
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
+                        : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                    } group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors`}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <Icon
+                      className={`${
+                        item.current
+                          ? 'text-blue-500 dark:text-blue-400'
+                          : 'text-gray-400 group-hover:text-gray-500 dark:group-hover:text-gray-300'
+                      } mr-3 flex-shrink-0 h-5 w-5`}
+                    />
                     {item.name}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </div>
-    </>
-  );
-}
-
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setSidebarOpen(true);
-      } else {
-        setSidebarOpen(false);
-      }
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  return (
-    <div className="sidebar-layout">
-      <AdminSidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
-      <div className={`sidebar-content ${sidebarOpen ? 'md:ml-64' : 'md:ml-16'} ml-0`}>
-        <div className="md:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
-          <button
-            onClick={toggleSidebar}
-            className="p-2 rounded-md text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <UserHeader />
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
         </div>
-        <main className="p-6">
-          {children}
-        </main>
+
+        {/* Main content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Top bar */}
+          <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between px-6 py-4">
+              <div className="flex items-center">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <Menu className="h-6 w-6" />
+                </button>
+                <h1 className="ml-2 lg:ml-0 text-xl font-semibold text-gray-900 dark:text-white">
+                  Admin Paneli
+                </h1>
+              </div>
+              <UserHeader />
+            </div>
+          </header>
+          
+          {/* Main content area */}
+          <main className="flex-1 overflow-y-auto">
+            {children}
+          </main>
+        </div>
+
+        {/* Overlay for mobile */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
       </div>
-    </div>
+    </AuthGuard>
   );
 }

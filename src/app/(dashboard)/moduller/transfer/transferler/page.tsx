@@ -76,7 +76,12 @@ export default function TransferlerPage() {
 
   // Sayfa erişim kontrolü
   const hasPageAccess = (): boolean => {
-    return hasPermission('transfer') || userRole === 'ADMIN';
+    // Admin her zaman erişebilir
+    if (userRole === 'ADMIN') {
+      return true;
+    }
+    // Diğer roller için transfer permission kontrolü
+    return hasPermission('transfer');
   };
 
   // Form state
@@ -144,12 +149,14 @@ export default function TransferlerPage() {
       const response = await fetch('/api/moduller/transfer/transferler');
       if (response.ok) {
         const data = await response.json();
-        setTransferler(data.transferler);
+        setTransferler(Array.isArray(data) ? data : []);
       } else {
         console.error('Transferler alınamadı');
+        setTransferler([]);
       }
     } catch (error) {
       console.error('Transferler alınamadı:', error);
+      setTransferler([]);
     } finally {
       setLoading(false);
     }
@@ -160,10 +167,13 @@ export default function TransferlerPage() {
       const response = await fetch('/api/moduller/transfer/araclar');
       if (response.ok) {
         const data = await response.json();
-        setAraclar(data.araclar);
+        setAraclar(Array.isArray(data) ? data : []);
+      } else {
+        setAraclar([]);
       }
     } catch (error) {
       console.error('Araçlar alınamadı:', error);
+      setAraclar([]);
     }
   };
 
@@ -172,10 +182,13 @@ export default function TransferlerPage() {
       const response = await fetch('/api/moduller/transfer/soforler');
       if (response.ok) {
         const data = await response.json();
-        setSoforler(data.soforler);
+        setSoforler(Array.isArray(data) ? data : []);
+      } else {
+        setSoforler([]);
       }
     } catch (error) {
       console.error('Şoförler alınamadı:', error);
+      setSoforler([]);
     }
   };
 
@@ -445,7 +458,7 @@ export default function TransferlerPage() {
     XLSX.writeFile(workbook, `Transferler_${today}.xlsx`);
   };
 
-  const filteredTransferler = transferler.filter(transfer => {
+  const filteredTransferler = transferler?.filter(transfer => {
     const matchesSearch = transfer.kalkisYeri.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          transfer.varisYeri.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (transfer.sofor && `${transfer.sofor.ad} ${transfer.sofor.soyad}`.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -455,7 +468,7 @@ export default function TransferlerPage() {
                            (filterTahsisli === 'tahsisli' && transfer.tahsisli) || 
                            (filterTahsisli === 'normal' && !transfer.tahsisli);
     return matchesSearch && matchesFilter && matchesDate && matchesTahsisli;
-  });
+  }) || [];
 
   if (loading) {
     return (

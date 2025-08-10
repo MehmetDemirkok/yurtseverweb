@@ -1,94 +1,121 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from 'react';
+import { User, LogOut, Settings, Building } from 'lucide-react';
 
-interface User {
+interface UserData {
   id: number;
   email: string;
   name?: string;
-  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
-  permissions?: string[];
+  role: string;
+  companyId: number;
+  companyName?: string;
 }
 
 export default function UserHeader() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [user, setUser] = useState<UserData | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   useEffect(() => {
-    async function fetchUser() {
+    const fetchUser = async () => {
       try {
-        const res = await fetch("/api/user", { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
+        const response = await fetch('/api/user', { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
           setUser(data.user);
-        } else {
-          setUser(null);
         }
       } catch (error) {
-        console.error('Kullanıcı bilgisi alınamadı:', error);
-        setUser(null);
-      } finally {
-        setLoading(false);
+        console.error('Kullanıcı bilgileri alınamadı:', error);
       }
-    }
+    };
+
     fetchUser();
   }, []);
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/user/logout', {
+      const response = await fetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'include'
       });
-
+      
       if (response.ok) {
-        router.push('/login');
-      } else {
-        console.error('Logout başarısız');
-        router.push('/login');
+        window.location.href = '/login';
       }
     } catch (error) {
-      console.error('Logout hatası:', error);
-      router.push('/login');
+      console.error('Çıkış yapılırken hata oluştu:', error);
     }
   };
 
-  if (loading) {
+  if (!user) {
     return (
-      <div className="flex items-center space-x-2 sm:space-x-4">
-        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-300 rounded-full animate-pulse"></div>
-        <div className="h-4 w-20 bg-gray-300 rounded animate-pulse"></div>
+      <div className="flex items-center space-x-4">
+        <div className="animate-pulse bg-gray-200 h-8 w-8 rounded-full"></div>
+        <div className="animate-pulse bg-gray-200 h-4 w-24 rounded"></div>
       </div>
     );
   }
 
-  if (!user) {
-    return null;
-  }
-
-  const displayName = user.name || user.email || 'Kullanıcı';
-
   return (
-    <div className="flex items-center space-x-2 sm:space-x-4">
-      <div className="flex items-center space-x-1 sm:space-x-2 bg-blue-50 rounded-lg px-2 sm:px-3 py-1 sm:py-2">
-        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-500 rounded-full flex items-center justify-center">
-          <svg className="w-3 h-3 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        </div>
-        <span className="text-xs sm:text-sm font-medium text-gray-700 hidden sm:block">{displayName}</span>
-      </div>
+    <div className="relative">
       <button
-        onClick={handleLogout}
-        className="flex items-center space-x-1 sm:space-x-2 bg-red-500 hover:bg-red-600 text-white px-2 sm:px-3 py-1 sm:py-2 rounded-lg transition-colors duration-200 text-xs sm:text-sm font-medium"
+        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-        </svg>
-        <span className="hidden sm:block">Çıkış Yap</span>
+        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+          <User className="w-4 h-4 text-white" />
+        </div>
+        <div className="text-left">
+          <div className="text-sm font-medium text-gray-900 dark:text-white">
+            {user.name || user.email}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+            <Building className="w-3 h-3 mr-1" />
+            {user.companyName || 'Şirket Adı Yok'}
+          </div>
+        </div>
       </button>
+
+      {isDropdownOpen && (
+        <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="text-sm font-medium text-gray-900 dark:text-white">
+              {user.name || 'İsimsiz Kullanıcı'}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {user.email}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center">
+              <Building className="w-3 h-3 mr-1" />
+              {user.companyName || 'Şirket Adı Yok'}
+            </div>
+            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+              {user.role}
+            </div>
+          </div>
+          
+          <div className="p-2">
+            <button
+              onClick={() => {
+                setIsDropdownOpen(false);
+                // Ayarlar sayfasına yönlendir
+              }}
+              className="w-full flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            >
+              <Settings className="w-4 h-4 mr-3" />
+              Ayarlar
+            </button>
+            
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+            >
+              <LogOut className="w-4 h-4 mr-3" />
+              Çıkış Yap
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

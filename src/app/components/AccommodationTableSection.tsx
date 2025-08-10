@@ -36,36 +36,66 @@ interface AccommodationTableSectionProps {
 }
 
 export default function AccommodationTableSection({ handlePuantajRaporu }: AccommodationTableSectionProps) {
-  // --- State ve fonksiyonlar ---
   const [records, setRecords] = useState<AccommodationRecord[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newRecord, setNewRecord] = useState<Partial<AccommodationRecord>>({});
-  const [editingRecord, setEditingRecord] = useState<Partial<AccommodationRecord>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showExportFilterModal, setShowExportFilterModal] = useState<boolean>(false);
-  const [availableColumnsda, setAvailableColumns] = useState<{ key: keyof AccommodationRecord | 'id' | 'numberOfNights' | 'toplamUcret'; label: string }[]>([]);
-  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-  const [sortColumn, setSortColumn] = useState<keyof AccommodationRecord | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<AccommodationRecord | null>(null);
   const [selectedRecordIds, setSelectedRecordIds] = useState<number[]>([]);
-
+  const [sortColumn, setSortColumn] = useState<keyof AccommodationRecord | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>('desc');
+  const [showExportFilterModal, setShowExportFilterModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
-  
-  // Eksik state tanımlamaları
-  const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
-  const [showOrganizasyonOptions, setShowOrganizasyonOptions] = useState(false);
+  const [availableColumns, setAvailableColumns] = useState<Array<{key: string, label: string}>>([]);
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [exportColumns, setExportColumns] = useState<Record<string, boolean>>({
+    adiSoyadi: true,
+    unvani: true,
+    ulke: true,
+    sehir: true,
+    girisTarihi: true,
+    cikisTarihi: true,
+    odaTipi: true,
+    konaklamaTipi: true,
+    faturaEdildi: true,
+    gecelikUcret: true,
+    toplamUcret: true,
+    organizasyonAdi: true,
+    otelAdi: true,
+    kurumCari: true,
+    numberOfNights: true,
+  });
+
+  // Form state'leri
+  const [formData, setFormData] = useState({
+    adiSoyadi: '',
+    unvani: '',
+    ulke: 'Türkiye',
+    sehir: '',
+    girisTarihi: '',
+    cikisTarihi: '',
+    odaTipi: 'Single Oda',
+    konaklamaTipi: 'BB' as const,
+    faturaEdildi: false,
+    gecelikUcret: 0,
+    toplamUcret: 0,
+    organizasyonAdi: '',
+    otelAdi: '',
+    kurumCari: '',
+    numberOfNights: 0,
+  });
+
+  // Filtre state'leri
   const [filterOrg, setFilterOrg] = useState('');
   const [filterName, setFilterName] = useState('');
   const [filterTitle, setFilterTitle] = useState('');
 
-
-
   // Seçili kayıtların kurum, organizasyon ve otel adı aynı mı?
   const allSame = (() => {
-    if (selectedRecordIds.length < 2) return false;
+    if (selectedRecordIds.length < 2 || !records || !Array.isArray(records)) return false;
     const selected = records.filter(r => selectedRecordIds.includes(r.id));
     const kurum = selected[0]?.kurumCari;
     const org = selected[0]?.organizasyonAdi;
@@ -86,6 +116,8 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   const canDelete = () => hasRole('MUDUR');
 
   // --- State ekle ---
+  const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
+  const [showOrganizasyonOptions, setShowOrganizasyonOptions] = useState(false);
   const [kurumOptions, setKurumOptions] = useState<string[]>([]);
   const [showKurumOptions, setShowKurumOptions] = useState(false);
 
@@ -107,7 +139,15 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
     const fetchRecords = () => {
       fetch('/api/accommodation')
         .then(res => res.json())
-        .then(data => setRecords(data));
+        .then(data => {
+          setRecords(Array.isArray(data) ? data : []);
+          setLoading(false);
+        })
+        .catch(error => {
+          console.error('Records fetch error:', error);
+          setRecords([]);
+          setLoading(false);
+        });
     };
     fetchRecords();
 
@@ -136,6 +176,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   }
 
   const handleEditClick = (id: number) => {
+    if (!records || !Array.isArray(records)) return;
     const recordToEdit = records.find((record) => record.id === id);
     if (recordToEdit) {
       setEditingRecord(recordToEdit);
@@ -164,47 +205,57 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
 
   const closeEditModal = () => {
     setShowEditModal(false);
-    setEditingRecord({});
+    setEditingRecord(null);
   };
   
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     
     if (type === 'number') {
-      setEditingRecord(prev => ({
-        ...prev,
-        [name]: parseFloat(value) || 0
-      }));
+      setEditingRecord(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          [name]: parseFloat(value) || 0
+        };
+      });
     } else {
-      setEditingRecord(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      setEditingRecord(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          [name]: value
+        };
+      });
     }
     
     // Toplam ücret hesaplama
     if (name === 'girisTarihi' || name === 'cikisTarihi' || name === 'gecelikUcret') {
-      const girisTarihi = name === 'girisTarihi' ? value : editingRecord.girisTarihi;
-      const cikisTarihi = name === 'cikisTarihi' ? value : editingRecord.cikisTarihi;
-      const gecelikUcret = name === 'gecelikUcret' ? parseFloat(value) || 0 : editingRecord.gecelikUcret || 0;
-      
-      if (girisTarihi && cikisTarihi) {
-        const nights = calculateNumberOfNights(girisTarihi as string, cikisTarihi as string);
-        const toplamUcret = nights * gecelikUcret;
+      setEditingRecord(prev => {
+        if (!prev) return prev;
+        const girisTarihi = name === 'girisTarihi' ? value : prev.girisTarihi;
+        const cikisTarihi = name === 'cikisTarihi' ? value : prev.cikisTarihi;
+        const gecelikUcret = name === 'gecelikUcret' ? parseFloat(value) || 0 : prev.gecelikUcret || 0;
         
-        setEditingRecord(prev => ({
-          ...prev,
-          numberOfNights: nights,
-          toplamUcret: toplamUcret
-        }));
-      }
+        if (girisTarihi && cikisTarihi) {
+          const nights = calculateNumberOfNights(girisTarihi, cikisTarihi);
+          const toplamUcret = nights * gecelikUcret;
+          
+          return {
+            ...prev,
+            numberOfNights: nights,
+            toplamUcret: toplamUcret
+          };
+        }
+        return prev;
+      });
     }
   };
   
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!editingRecord.adiSoyadi || !editingRecord.girisTarihi || !editingRecord.cikisTarihi || !editingRecord.odaTipi || !editingRecord.konaklamaTipi) {
+    if (!editingRecord || !editingRecord.adiSoyadi || !editingRecord.girisTarihi || !editingRecord.cikisTarihi || !editingRecord.odaTipi || !editingRecord.konaklamaTipi) {
       alert('Lütfen zorunlu alanları doldurunuz.');
       return;
     }
@@ -240,48 +291,66 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   };
 
   const openAddModal = () => {
-    setNewRecord({
+    setFormData({
       adiSoyadi: '',
       unvani: '',
-      ulke: '',
+      ulke: 'Türkiye',
       sehir: '',
       girisTarihi: '',
       cikisTarihi: '',
-      odaTipi: '',
+      odaTipi: 'Single Oda',
       konaklamaTipi: 'BB',
+      faturaEdildi: false,
       gecelikUcret: 0,
       toplamUcret: 0,
       organizasyonAdi: '',
       otelAdi: '',
-      kurumCari: ''
+      kurumCari: '',
+      numberOfNights: 0,
     });
     setShowAddModal(true);
   };
 
   const closeAddModal = () => {
     setShowAddModal(false);
-    setNewRecord({});
+    setFormData({
+      adiSoyadi: '',
+      unvani: '',
+      ulke: 'Türkiye',
+      sehir: '',
+      girisTarihi: '',
+      cikisTarihi: '',
+      odaTipi: 'Single Oda',
+      konaklamaTipi: 'BB',
+      faturaEdildi: false,
+      gecelikUcret: 0,
+      toplamUcret: 0,
+      organizasyonAdi: '',
+      otelAdi: '',
+      kurumCari: '',
+      numberOfNights: 0,
+    });
   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
-    setNewRecord(prev => ({
+    setFormData(prev => ({
       ...prev,
       [name]: value === '' ? null : (type === 'number' ? parseFloat(value) || 0 : value)
     }));
 
     // Toplam ücret hesaplama
     if (name === 'girisTarihi' || name === 'cikisTarihi' || name === 'gecelikUcret') {
-      const girisTarihi = name === 'girisTarihi' ? value : newRecord.girisTarihi;
-      const cikisTarihi = name === 'cikisTarihi' ? value : newRecord.cikisTarihi;
-      const gecelikUcret = name === 'gecelikUcret' ? parseFloat(value) || 0 : newRecord.gecelikUcret || 0;
+      const girisTarihi = name === 'girisTarihi' ? value : formData.girisTarihi;
+      const cikisTarihi = name === 'cikisTarihi' ? value : formData.cikisTarihi;
+      const gecelikUcret = name === 'gecelikUcret' ? parseFloat(value) || 0 : formData.gecelikUcret || 0;
 
       if (girisTarihi && cikisTarihi) {
         const nights = calculateNumberOfNights(girisTarihi, cikisTarihi);
         const toplamUcret = nights * gecelikUcret;
 
-        setNewRecord(prev => ({
+        setFormData(prev => ({
           ...prev,
           numberOfNights: nights,
           toplamUcret: toplamUcret
@@ -294,11 +363,11 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
     e.preventDefault();
 
     // Konaklama tipi boşsa otomatik olarak 'BB' yap
-    if (!newRecord.konaklamaTipi) {
-      newRecord.konaklamaTipi = 'BB';
+    if (!formData.konaklamaTipi) {
+      formData.konaklamaTipi = 'BB';
     }
 
-    if (!newRecord.adiSoyadi || !newRecord.girisTarihi || !newRecord.cikisTarihi || !newRecord.odaTipi || !newRecord.konaklamaTipi) {
+    if (!formData.adiSoyadi || !formData.girisTarihi || !formData.cikisTarihi || !formData.odaTipi || !formData.konaklamaTipi) {
       alert('Lütfen zorunlu alanları doldurunuz.');
       return;
     }
@@ -311,7 +380,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newRecord),
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
@@ -1070,7 +1139,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
 
 
       {/* Edit Modal */}
-      {showEditModal && (
+      {showEditModal && editingRecord && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) closeEditModal(); }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 p-8 relative animate-fade-in border border-blue-100">
             <button
@@ -1294,7 +1363,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                 <input 
                   type="text" 
                   name="adiSoyadi"
-                  value={newRecord.adiSoyadi || ''}
+                  value={formData.adiSoyadi || ''}
                   onChange={handleInputChange}
                   className="input w-full border border-gray-300 rounded-md" 
                   placeholder="Ad Soyad" 
@@ -1306,7 +1375,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                 <input 
                   type="text" 
                   name="unvani"
-                  value={newRecord.unvani || ''}
+                  value={formData.unvani || ''}
                   onChange={handleInputChange}
                   className="input w-full border border-gray-300 rounded-md" 
                   placeholder="Ünvan" 
@@ -1317,7 +1386,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                 <input 
                   type="text" 
                   name="ulke"
-                  value={newRecord.ulke || ''}
+                  value={formData.ulke || ''}
                   onChange={handleInputChange}
                   className="input w-full border border-gray-300 rounded-md" 
                   placeholder="Ülke" 
@@ -1328,7 +1397,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                 <input 
                   type="text" 
                   name="sehir"
-                  value={newRecord.sehir || ''}
+                  value={formData.sehir || ''}
                   onChange={handleInputChange}
                   className="input w-full border border-gray-300 rounded-md" 
                   placeholder="Şehir" 
@@ -1339,7 +1408,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                 <input 
                   type="date" 
                   name="girisTarihi"
-                  value={newRecord.girisTarihi || ''}
+                  value={formData.girisTarihi || ''}
                   onChange={handleInputChange}
                   className="input w-full border border-gray-300 rounded-md" 
                   required
@@ -1350,7 +1419,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                 <input 
                   type="date" 
                   name="cikisTarihi"
-                  value={newRecord.cikisTarihi || ''}
+                  value={formData.cikisTarihi || ''}
                   onChange={handleInputChange}
                   className="input w-full border border-gray-300 rounded-md" 
                   required
@@ -1360,7 +1429,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                 <label className="block text-sm font-medium text-gray-700 mb-1">Oda Tipi <span className="text-red-500">*</span></label>
                 <select 
                   name="odaTipi"
-                  value={newRecord.odaTipi || ''}
+                  value={formData.odaTipi || ''}
                   onChange={handleInputChange}
                   className="input w-full border border-gray-300 rounded-md"
                   required
@@ -1375,7 +1444,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                 <label className="block text-sm font-medium text-gray-700 mb-1">Konaklama Tipi <span className="text-red-500">*</span></label>
                 <select 
                   name="konaklamaTipi"
-                  value={newRecord.konaklamaTipi || 'BB'}
+                  value={formData.konaklamaTipi || 'BB'}
                   onChange={handleInputChange}
                   className="input w-full border border-gray-300 rounded-md"
                   required
@@ -1392,7 +1461,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                   <input
                     type="text"
                     name="organizasyonAdi"
-                    value={newRecord.organizasyonAdi || ''}
+                    value={formData.organizasyonAdi || ''}
                     onChange={e => {
                       handleInputChange(e);
                       setShowOrganizasyonOptions(true);
@@ -1403,19 +1472,19 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                     autoComplete="off"
                     placeholder="Organizasyon adı yazın"
                   />
-                  {showOrganizasyonOptions && (newRecord.organizasyonAdi || '').length > 0 && (
+                  {showOrganizasyonOptions && (formData.organizasyonAdi || '').length > 0 && (
                     <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded shadow max-h-40 overflow-y-auto mt-1">
                       {organizasyonOptions.filter(org =>
-                        org.toLowerCase().includes((newRecord.organizasyonAdi || '').toLowerCase())
+                        org.toLowerCase().includes((formData.organizasyonAdi || '').toLowerCase())
                       ).length > 0 ? (
                         organizasyonOptions.filter(org =>
-                          org.toLowerCase().includes((newRecord.organizasyonAdi || '').toLowerCase())
+                          org.toLowerCase().includes((formData.organizasyonAdi || '').toLowerCase())
                         ).map((org, idx) => (
                           <li
                             key={idx}
                             className="px-3 py-2 cursor-pointer hover:bg-blue-100"
                             onMouseDown={() => {
-                              setNewRecord(prev => ({ ...prev, organizasyonAdi: org }));
+                              setFormData(prev => ({ ...prev, organizasyonAdi: org }));
                               setShowOrganizasyonOptions(false);
                             }}
                           >
@@ -1434,7 +1503,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                 <input 
                   type="text" 
                   name="otelAdi"
-                  value={newRecord.otelAdi || ''}
+                  value={formData.otelAdi || ''}
                   onChange={handleInputChange}
                   className="input w-full border border-gray-300 rounded-md" 
                   placeholder="Otel Adı" 
@@ -1446,7 +1515,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                   <input
                     type="text"
                     name="kurumCari"
-                    value={newRecord.kurumCari || ''}
+                    value={formData.kurumCari || ''}
                     onChange={e => {
                       handleInputChange(e);
                       setShowKurumOptions(true);
@@ -1457,19 +1526,19 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                     autoComplete="off"
                     placeholder="Kurum/Cari adı yazın"
                   />
-                  {showKurumOptions && (newRecord.kurumCari || '').length > 0 && (
+                  {showKurumOptions && (formData.kurumCari || '').length > 0 && (
                     <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded shadow max-h-40 overflow-y-auto mt-1">
                       {kurumOptions.filter((kurum: string) =>
-                        kurum.toLowerCase().includes((newRecord.kurumCari || '').toLowerCase())
+                        kurum.toLowerCase().includes((formData.kurumCari || '').toLowerCase())
                       ).length > 0 ? (
                         kurumOptions.filter((kurum: string) =>
-                          kurum.toLowerCase().includes((newRecord.kurumCari || '').toLowerCase())
+                          kurum.toLowerCase().includes((formData.kurumCari || '').toLowerCase())
                         ).map((kurum: string, idx: number) => (
                           <li
                             key={idx}
                             className="px-3 py-2 cursor-pointer hover:bg-blue-100 text-black"
                             onMouseDown={() => {
-                              setNewRecord(prev => ({ ...prev, kurumCari: kurum }));
+                              setFormData(prev => ({ ...prev, kurumCari: kurum }));
                               setShowKurumOptions(false);
                             }}
                           >
@@ -1488,19 +1557,19 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
                 <input 
                   type="number" 
                   name="gecelikUcret"
-                  value={newRecord.gecelikUcret || ''}
+                  value={formData.gecelikUcret || ''}
                   onChange={handleInputChange}
                   className="input w-full border border-gray-300 rounded-md" 
                   placeholder="0" 
                   min="0" 
                 />
               </div>
-              {newRecord.girisTarihi && newRecord.cikisTarihi && newRecord.gecelikUcret ? (
+              {formData.girisTarihi && formData.cikisTarihi && formData.gecelikUcret ? (
                 <div className="form-group">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Toplam Ücret (₺)</label>
                   <div className="input w-full border border-gray-300 rounded-md bg-gray-50 py-2 px-3 flex items-center">
-                    <span className="font-bold text-green-600">{newRecord.toplamUcret?.toLocaleString('tr-TR')} ₺</span>
-                    <span className="text-xs text-gray-500 ml-2">({newRecord.numberOfNights || 0} gece)</span>
+                    <span className="font-bold text-green-600">{formData.toplamUcret?.toLocaleString('tr-TR')} ₺</span>
+                    <span className="text-xs text-gray-500 ml-2">({formData.numberOfNights || 0} gece)</span>
                   </div>
                 </div>
               ) : null}
@@ -1539,7 +1608,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
             </button>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Excel'e Aktarılacak Sütunlar</h2>
             <div className="grid grid-cols-2 gap-2 mb-6">
-              {availableColumnsda.map(col => (
+              {availableColumns.map(col => (
                 <label key={col.key} className="flex items-center gap-2">
                   <input
                     type="checkbox"
