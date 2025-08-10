@@ -27,7 +27,7 @@ interface User {
   id: number;
   email: string;
   name?: string;
-  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
+  role: 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER';
   permissions?: string[];
 }
 
@@ -106,14 +106,14 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
   // Role tabanlı yetki kontrolü fonksiyonları
   const hasRole = (requiredRole: string): boolean => {
     if (!currentUser) return false;
-    const roleHierarchy: Record<string, number> = { 'ADMIN': 4, 'MUDUR': 3, 'OPERATOR': 2, 'KULLANICI': 1 };
+    const roleHierarchy: Record<string, number> = { 'ADMIN': 4, 'MANAGER': 3, 'USER': 2, 'VIEWER': 1 };
     const userRole = currentUser.role as string;
     return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
   };
 
-  const canAdd = () => hasRole('OPERATOR');
-  const canEdit = () => hasRole('OPERATOR');
-  const canDelete = () => hasRole('MUDUR');
+  const canAdd = () => hasRole('USER');
+  const canEdit = () => hasRole('USER');
+  const canDelete = () => hasRole('MANAGER');
 
   // --- State ekle ---
   const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
@@ -184,23 +184,24 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
     }
   };
 
-  const handleDeleteClick = (id: number) => {
+  const handleDeleteClick = async (id: number) => {
     if (!confirm('Bu kaydı silmek istediğinize emin misiniz?')) return;
     
-    fetch(`/api/accommodation/${id}`, {
-      method: 'DELETE',
-    })
-      .then(res => {
-        if (res.ok) {
-          setRecords(prev => prev.filter(record => record.id !== id));
-        } else {
-          alert('Kayıt silinemedi!');
-        }
-      })
-      .catch(error => {
-        console.error('Delete error:', error);
-        alert('Kayıt silinemedi!');
+    try {
+      const response = await fetch(`/api/accommodation/${id}`, {
+        method: 'DELETE',
       });
+      
+      if (response.ok) {
+        setRecords(prev => prev.filter(record => record.id !== id));
+      } else {
+        const errorData = await response.json();
+        alert(`Kayıt silinemedi: ${errorData.error || 'Bir hata oluştu'}`);
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Kayıt silinemedi!');
+    }
   };
 
   const closeEditModal = () => {
@@ -280,7 +281,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
         closeEditModal();
       } else {
         const errorData = await response.json();
-        alert(`Hata: ${errorData.message || 'Bir hata oluştu'}`);
+        alert(`Hata: ${errorData.error || errorData.message || 'Bir hata oluştu'}`);
       }
     } catch (error) {
       console.error('Kayıt güncellenirken hata oluştu:', error);
@@ -392,7 +393,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu }: Accom
         closeAddModal();
       } else {
         const errorData = await response.json();
-        alert(`Hata: ${errorData.message || 'Bir hata oluştu'}`);
+        alert(`Hata: ${errorData.error || errorData.message || 'Bir hata oluştu'}`);
       }
     } catch (error) {
       console.error('Kayıt eklenirken hata oluştu:', error);
