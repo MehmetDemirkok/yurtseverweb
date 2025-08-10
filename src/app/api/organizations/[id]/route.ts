@@ -213,14 +213,25 @@ export async function DELETE(
       return NextResponse.json({ error: 'Organizasyon bulunamadı' }, { status: 404 });
     }
 
-    // Organizasyona bağlı konaklama kayıtları varsa uyarı ver
+    // Organizasyona bağlı konaklama kayıtları varsa münferit konaklama olarak işaretle
     console.log('Accommodation count:', existingOrganization._count.accommodations);
     
     if (existingOrganization._count.accommodations > 0) {
-      console.log('Organization has accommodations, cannot delete');
-      return NextResponse.json({ 
-        error: 'Bu organizasyona bağlı konaklama kayıtları bulunmaktadır. Önce konaklama kayıtlarını başka bir organizasyona taşıyın veya münferit konaklama olarak işaretleyin.' 
-      }, { status: 400 });
+      console.log('Organization has accommodations, updating them to münferit');
+      
+      // Konaklama kayıtlarını münferit olarak işaretle
+      await prisma.accommodation.updateMany({
+        where: {
+          organizationId: organizationId,
+          companyId: currentUser.companyId,
+        },
+        data: {
+          organizationId: null,
+          isMunferit: true,
+        },
+      });
+      
+      console.log('Accommodations updated to münferit');
     }
 
     console.log('Deleting organization...');
