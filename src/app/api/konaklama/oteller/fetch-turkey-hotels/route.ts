@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { cookies } from 'next/headers';
+import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 // Türkiye'nin büyük şehirleri
 const TURKEY_CITIES = [
@@ -143,6 +146,26 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🚀 Türkiye otelleri çekiliyor...');
     
+    // Kullanıcının company ID'sini al
+    const cookieStore = await cookies();
+    const token = cookieStore.get('token')?.value;
+    
+    if (!token) {
+      return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 });
+    }
+    
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: number; role: string };
+    
+    // Kullanıcının company ID'sini al
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: { companyId: true }
+    });
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Kullanıcı bulunamadı.' }, { status: 404 });
+    }
+    
     // Şehir bazlı otel isimleri oluştur (daha tutarlı)
     function generateCityBasedHotels(city: string) {
       const hotels = [];
@@ -183,6 +206,7 @@ export async function POST(request: NextRequest) {
           puan: generateRating(stars),
           aciklama: `${city} şehrinde konforlu konaklama imkanı sunan ${baseName}. Modern olanaklar ve kaliteli hizmet anlayışı ile misafirlerimizi ağırlıyoruz.`,
           durum: generateStatus(),
+          companyId: user.companyId,
           createdAt: new Date(),
           updatedAt: new Date()
         };
