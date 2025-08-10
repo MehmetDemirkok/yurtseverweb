@@ -118,6 +118,7 @@ model Arac {
   plaka           String
   marka           String
   model           String
+  aracTipi        AracTipi   @default(BINEK)
   yolcuKapasitesi Int
   durum           AracDurum  @default(MUSAIT)
   enlem           Float      @default(0)
@@ -265,6 +266,13 @@ enum AracDurum {
   MUSAIT
   TRANSFERDE
   BAKIMDA
+}
+
+enum AracTipi {
+  BINEK
+  MINIBUS
+  MIDIBUS
+  OTOBUS
 }
 
 enum SoforDurum {

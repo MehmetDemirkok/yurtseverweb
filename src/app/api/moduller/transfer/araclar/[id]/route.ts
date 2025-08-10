@@ -35,10 +35,10 @@ export async function PUT(
 ) {
   try {
     const body = await request.json();
-    const { plaka, marka, model, yolcuKapasitesi, durum, enlem, boylam } = body;
+    const { plaka, marka, model, aracTipi, yolcuKapasitesi, durum, enlem, boylam } = body;
 
     // Validasyon
-    if (!plaka || !marka || !model || !yolcuKapasitesi) {
+    if (!plaka || !marka || !model || !aracTipi || !yolcuKapasitesi) {
       return NextResponse.json(
         { error: 'Gerekli alanlar eksik' },
         { status: 400 }
@@ -66,6 +66,7 @@ export async function PUT(
         plaka,
         marka,
         model,
+        aracTipi,
         yolcuKapasitesi: parseInt(yolcuKapasitesi),
         durum,
         enlem: parseFloat(enlem) || 0,

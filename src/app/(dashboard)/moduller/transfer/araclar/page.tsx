@@ -16,6 +16,7 @@ interface Arac {
   plaka: string;
   marka: string;
   model: string;
+  aracTipi: 'BINEK' | 'MINIBUS' | 'MIDIBUS' | 'OTOBUS';
   yolcuKapasitesi: number;
   durum: 'MUSAIT' | 'BAKIMDA' | 'TRANSFERDE';
   sonGuncelleme: string;
@@ -57,8 +58,9 @@ export default function AraclarPage() {
     plaka: '',
     marka: '',
     model: '',
+    aracTipi: 'BINEK' as 'BINEK' | 'MINIBUS' | 'MIDIBUS' | 'OTOBUS',
     yolcuKapasitesi: 4,
-    durum: 'MUSAIT' as const
+    durum: 'MUSAIT' as 'MUSAIT' | 'TRANSFERDE' | 'BAKIMDA'
   });
   
   // Form validation
@@ -66,6 +68,7 @@ export default function AraclarPage() {
     plaka: '',
     marka: '',
     model: '',
+    aracTipi: '',
     yolcuKapasitesi: ''
   });
   
@@ -244,6 +247,7 @@ export default function AraclarPage() {
       plaka: '',
       marka: '',
       model: '',
+      aracTipi: 'BINEK',
       yolcuKapasitesi: 4,
       durum: 'MUSAIT'
     });
@@ -251,6 +255,7 @@ export default function AraclarPage() {
       plaka: '',
       marka: '',
       model: '',
+      aracTipi: '',
       yolcuKapasitesi: ''
     });
   };
@@ -261,6 +266,7 @@ export default function AraclarPage() {
       plaka: arac.plaka,
       marka: arac.marka,
       model: arac.model,
+      aracTipi: arac.aracTipi || 'BINEK',
       yolcuKapasitesi: arac.yolcuKapasitesi,
       durum: arac.durum
     });
@@ -279,6 +285,21 @@ export default function AraclarPage() {
       case 'TRANSFERDE': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
       case 'BAKIMDA': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    }
+  };
+
+  const getAracTipiText = (aracTipi: string) => {
+    switch (aracTipi) {
+      case 'BINEK':
+        return 'Binek / Otomobil';
+      case 'MINIBUS':
+        return 'Minibüs';
+      case 'MIDIBUS':
+        return 'Midibüs';
+      case 'OTOBUS':
+        return 'Otobüs';
+      default:
+        return aracTipi;
     }
   };
 
@@ -390,7 +411,9 @@ export default function AraclarPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Marka/Model
                 </th>
-
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Araç Tipi
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Kapasite
                 </th>
@@ -415,7 +438,9 @@ export default function AraclarPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {arac.marka} {arac.model}
                   </td>
-
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {getAracTipiText(arac.aracTipi)}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     <div className="flex items-center">
                       <Users className="h-4 w-4 mr-1" />
@@ -546,6 +571,22 @@ export default function AraclarPage() {
                     <p className="mt-1 text-sm text-red-500">{formErrors.model}</p>
                   )}
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Araç Tipi
+                </label>
+                <select
+                  value={formData.aracTipi}
+                  onChange={(e) => setFormData({...formData, aracTipi: e.target.value as any})}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="BINEK">Binek / Otomobil</option>
+                  <option value="MINIBUS">Minibüs</option>
+                  <option value="MIDIBUS">Midibüs</option>
+                  <option value="OTOBUS">Otobüs</option>
+                </select>
               </div>
 
               <div>
