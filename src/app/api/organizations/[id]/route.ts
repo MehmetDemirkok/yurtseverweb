@@ -5,10 +5,11 @@ import { getUserFromToken } from '@/lib/auth';
 // GET - Organizasyon detayını getir
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log('GET request for organization ID:', params.id);
+    const { id } = await params;
+    console.log('GET request for organization ID:', id);
     
     const currentUser = await getUserFromToken();
     if (!currentUser) {
@@ -18,7 +19,7 @@ export async function GET(
 
     console.log('User authenticated:', currentUser.email, 'Company ID:', currentUser.companyId);
 
-    const organizationId = parseInt(params.id);
+    const organizationId = parseInt(id);
     if (isNaN(organizationId)) {
       console.log('Invalid organization ID:', params.id);
       return NextResponse.json({ error: 'Geçersiz organizasyon ID' }, { status: 400 });
@@ -76,15 +77,16 @@ export async function GET(
 // PUT - Organizasyonu güncelle
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const currentUser = await getUserFromToken();
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const organizationId = parseInt(params.id);
+    const organizationId = parseInt(id);
     if (isNaN(organizationId)) {
       return NextResponse.json({ error: 'Geçersiz organizasyon ID' }, { status: 400 });
     }
@@ -164,15 +166,16 @@ export async function PUT(
 // DELETE - Organizasyonu sil
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const currentUser = await getUserFromToken();
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const organizationId = parseInt(params.id);
+    const organizationId = parseInt(id);
     if (isNaN(organizationId)) {
       return NextResponse.json({ error: 'Geçersiz organizasyon ID' }, { status: 400 });
     }
