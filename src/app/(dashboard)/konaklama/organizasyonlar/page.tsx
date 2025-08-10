@@ -73,13 +73,10 @@ export default function OrganizasyonlarPage() {
 
   const fetchOrganizations = async () => {
     try {
-      console.log('Fetching organizations...');
       const response = await fetch('/api/organizations');
-      console.log('Organizations response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Organizations data:', data);
         setOrganizations(Array.isArray(data) ? data : []);
       } else {
         const errorData = await response.json();
@@ -136,10 +133,8 @@ export default function OrganizasyonlarPage() {
 
   // Silme modal'ını aç
   const handleDeleteClick = (org: Organization) => {
-    console.log('Silme butonuna tıklandı:', org);
     setDeletingOrganization(org);
     setShowDeleteModal(true);
-    console.log('Modal state güncellendi - showDeleteModal:', true, 'deletingOrganization:', org);
   };
 
   // Düzenleme modal'ını kapat
@@ -203,7 +198,6 @@ export default function OrganizasyonlarPage() {
   const handleDeleteConfirm = async () => {
     if (!deletingOrganization) return;
 
-    console.log('Silme işlemi başlatılıyor:', deletingOrganization.id);
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/organizations/${deletingOrganization.id}`, {
@@ -211,11 +205,7 @@ export default function OrganizasyonlarPage() {
         credentials: 'include', // Cookie'leri dahil et
       });
 
-      console.log('Silme response status:', response.status);
-      console.log('Silme response headers:', response.headers);
-
       if (response.ok) {
-        console.log('Organizasyon başarıyla silindi');
         await fetchOrganizations();
         closeDeleteModal();
       } else {
@@ -435,7 +425,6 @@ export default function OrganizasyonlarPage() {
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          console.log('Silme butonuna tıklandı, org:', org);
                           handleDeleteClick(org);
                         }}
                         className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
@@ -502,7 +491,7 @@ export default function OrganizasyonlarPage() {
                     type="text"
                     name="name"
                     defaultValue={editingOrganization.name}
-                    className="input w-full border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                     required
                   />
                 </div>
@@ -511,7 +500,7 @@ export default function OrganizasyonlarPage() {
                   <select
                     name="status"
                     defaultValue={editingOrganization.status}
-                    className="input w-full border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="ACTIVE">Aktif</option>
                     <option value="INACTIVE">Pasif</option>
@@ -524,7 +513,7 @@ export default function OrganizasyonlarPage() {
                     name="description"
                     defaultValue={editingOrganization.description || ''}
                     rows={3}
-                    className="input w-full border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div className="form-group">
@@ -533,7 +522,7 @@ export default function OrganizasyonlarPage() {
                     type="date"
                     name="baslangicTarihi"
                     defaultValue={editingOrganization.baslangicTarihi || ''}
-                    className="input w-full border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div className="form-group">
@@ -542,7 +531,7 @@ export default function OrganizasyonlarPage() {
                     type="date"
                     name="bitisTarihi"
                     defaultValue={editingOrganization.bitisTarihi || ''}
-                    className="input w-full border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div className="form-group">
@@ -551,7 +540,7 @@ export default function OrganizasyonlarPage() {
                     type="text"
                     name="lokasyon"
                     defaultValue={editingOrganization.lokasyon || ''}
-                    className="input w-full border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div className="form-group">
@@ -560,7 +549,7 @@ export default function OrganizasyonlarPage() {
                     type="text"
                     name="sehir"
                     defaultValue={editingOrganization.sehir || ''}
-                    className="input w-full border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div className="form-group">
@@ -569,7 +558,7 @@ export default function OrganizasyonlarPage() {
                     type="text"
                     name="ulke"
                     defaultValue={editingOrganization.ulke || 'Türkiye'}
-                    className="input w-full border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div className="form-group">
@@ -578,7 +567,7 @@ export default function OrganizasyonlarPage() {
                     type="text"
                     name="contactPerson"
                     defaultValue={editingOrganization.contactPerson || ''}
-                    className="input w-full border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div className="form-group">
@@ -587,7 +576,7 @@ export default function OrganizasyonlarPage() {
                     type="email"
                     name="contactEmail"
                     defaultValue={editingOrganization.contactEmail || ''}
-                    className="input w-full border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div className="form-group">
@@ -596,15 +585,26 @@ export default function OrganizasyonlarPage() {
                     type="tel"
                     name="contactPhone"
                     defaultValue={editingOrganization.contactPhone || ''}
-                    className="input w-full border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div className="col-span-2 flex justify-end space-x-2 mt-6">
-                  <button type="button" className="btn btn-secondary" onClick={closeEditModal} disabled={isSubmitting}>İptal</button>
-                  <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                  <button 
+                    type="button" 
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors disabled:opacity-50" 
+                    onClick={closeEditModal} 
+                    disabled={isSubmitting}
+                  >
+                    İptal
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50" 
+                    disabled={isSubmitting}
+                  >
                     {isSubmitting ? (
                       <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -619,9 +619,8 @@ export default function OrganizasyonlarPage() {
         )}
 
         {/* Silme Modal */}
-        {console.log('Modal render kontrolü - showDeleteModal:', showDeleteModal, 'deletingOrganization:', deletingOrganization)}
         {showDeleteModal && deletingOrganization && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) closeDeleteModal(); }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) closeDeleteModal(); }}>
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8 relative animate-fade-in border border-red-100">
               <button
                 onClick={closeDeleteModal}
@@ -658,11 +657,23 @@ export default function OrganizasyonlarPage() {
                 )}
               </div>
               <div className="flex justify-end space-x-2">
-                <button type="button" className="btn btn-secondary" onClick={closeDeleteModal} disabled={isSubmitting}>İptal</button>
-                <button type="button" className="btn btn-error bg-red-600 hover:bg-red-700 text-white font-bold" onClick={handleDeleteConfirm} disabled={isSubmitting}>
+                <button 
+                  type="button" 
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors disabled:opacity-50" 
+                  onClick={closeDeleteModal} 
+                  disabled={isSubmitting}
+                >
+                  İptal
+                </button>
+                <button 
+                  type="button" 
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-colors disabled:opacity-50" 
+                  onClick={handleDeleteConfirm} 
+                  disabled={isSubmitting}
+                >
                   {isSubmitting ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>

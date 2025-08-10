@@ -30,8 +30,6 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
-    console.log('Fetching organizations with where clause:', where);
-    
     const organizations = await prisma.organization.findMany({
       where,
       orderBy: {
@@ -57,37 +55,10 @@ export async function GET(request: NextRequest) {
         };
       })
     );
-
-    console.log('Found organizations:', organizationsWithCounts.length);
-    
-    // Test için eğer hiç organizasyon yoksa bir tane oluştur
-    if (organizationsWithCounts.length === 0) {
-      console.log('No organizations found, creating a test organization...');
-      try {
-        const testOrg = await prisma.organization.create({
-          data: {
-            name: 'Test Organizasyon',
-            description: 'Test amaçlı oluşturulmuş organizasyon',
-            status: 'ACTIVE',
-            companyId: currentUser.companyId,
-          },
-        });
-        console.log('Test organization created:', testOrg);
-        organizationsWithCounts.push({
-          ...testOrg,
-          _count: {
-            accommodations: 0
-          }
-        });
-      } catch (createError) {
-        console.error('Error creating test organization:', createError);
-      }
-    }
     
     return NextResponse.json(organizationsWithCounts);
   } catch (error) {
     console.error('Error fetching organizations:', error);
-    console.error('Error details:', JSON.stringify(error, null, 2));
     return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }

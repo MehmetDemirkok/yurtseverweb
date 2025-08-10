@@ -9,23 +9,16 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    console.log('GET request for organization ID:', id);
     
     const currentUser = await getUserFromToken();
     if (!currentUser) {
-      console.log('User not authenticated');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('User authenticated:', currentUser.email, 'Company ID:', currentUser.companyId);
-
     const organizationId = parseInt(id);
     if (isNaN(organizationId)) {
-      console.log('Invalid organization ID:', params.id);
       return NextResponse.json({ error: 'Geçersiz organizasyon ID' }, { status: 400 });
     }
-
-    console.log('Looking for organization with ID:', organizationId);
 
     // Önce organizasyonu bul
     const organization = await prisma.organization.findFirst({
@@ -35,10 +28,7 @@ export async function GET(
       },
     });
 
-    console.log('Organization found:', organization);
-
     if (!organization) {
-      console.log('Organization not found');
       return NextResponse.json({ error: 'Organizasyon bulunamadı' }, { status: 404 });
     }
 
@@ -50,8 +40,6 @@ export async function GET(
       },
     });
 
-    console.log('Accommodation count:', accommodationCount);
-
     // Organizasyon verisine konaklama sayısını ekle
     const organizationWithCount = {
       ...organization,
@@ -60,16 +48,12 @@ export async function GET(
       }
     };
 
-    console.log('Returning organization with count:', organizationWithCount);
-
     return NextResponse.json(organizationWithCount);
   } catch (error) {
     console.error('Error fetching organization:', error);
-    console.error('Error details:', JSON.stringify(error, null, 2));
     return NextResponse.json({ 
       error: 'Internal Server Error', 
-      details: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }
@@ -169,29 +153,21 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log('DELETE request received for organization');
     const { id } = await params;
-    console.log('Organization ID from params:', id);
     
     const currentUser = await getUserFromToken();
-    console.log('Current user:', currentUser ? currentUser.email : 'No user');
     
     if (!currentUser) {
-      console.log('User not authenticated');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const organizationId = parseInt(id);
-    console.log('Parsed organization ID:', organizationId);
     
     if (isNaN(organizationId)) {
-      console.log('Invalid organization ID');
       return NextResponse.json({ error: 'Geçersiz organizasyon ID' }, { status: 400 });
     }
 
     // Organizasyonun mevcut olup olmadığını kontrol et
-    console.log('Looking for organization with ID:', organizationId, 'and companyId:', currentUser.companyId);
-    
     const existingOrganization = await prisma.organization.findFirst({
       where: {
         id: organizationId,
@@ -206,19 +182,12 @@ export async function DELETE(
       },
     });
 
-    console.log('Existing organization found:', existingOrganization);
-
     if (!existingOrganization) {
-      console.log('Organization not found');
       return NextResponse.json({ error: 'Organizasyon bulunamadı' }, { status: 404 });
     }
 
     // Organizasyona bağlı konaklama kayıtları varsa münferit konaklama olarak işaretle
-    console.log('Accommodation count:', existingOrganization._count.accommodations);
-    
     if (existingOrganization._count.accommodations > 0) {
-      console.log('Organization has accommodations, updating them to münferit');
-      
       // Konaklama kayıtlarını münferit olarak işaretle
       await prisma.accommodation.updateMany({
         where: {
@@ -230,18 +199,14 @@ export async function DELETE(
           isMunferit: true,
         },
       });
-      
-      console.log('Accommodations updated to münferit');
     }
 
-    console.log('Deleting organization...');
     await prisma.organization.delete({
       where: {
         id: organizationId,
       },
     });
 
-    console.log('Organization deleted successfully');
     return NextResponse.json({ message: 'Organizasyon başarıyla silindi' });
   } catch (error) {
     console.error('Error deleting organization:', error);
