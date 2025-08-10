@@ -201,17 +201,24 @@ export default function OrganizasyonlarPage() {
   const handleDeleteConfirm = async () => {
     if (!deletingOrganization) return;
 
+    console.log('Silme işlemi başlatılıyor:', deletingOrganization.id);
     setIsSubmitting(true);
     try {
       const response = await fetch(`/api/organizations/${deletingOrganization.id}`, {
         method: 'DELETE',
+        credentials: 'include', // Cookie'leri dahil et
       });
 
+      console.log('Silme response status:', response.status);
+      console.log('Silme response headers:', response.headers);
+
       if (response.ok) {
+        console.log('Organizasyon başarıyla silindi');
         await fetchOrganizations();
         closeDeleteModal();
       } else {
         const error = await response.json();
+        console.error('Silme API hatası:', error);
         alert(`Silme hatası: ${error.error}`);
       }
     } catch (error) {

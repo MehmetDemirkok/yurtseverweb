@@ -169,18 +169,29 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('DELETE request received for organization');
     const { id } = await params;
+    console.log('Organization ID from params:', id);
+    
     const currentUser = await getUserFromToken();
+    console.log('Current user:', currentUser ? currentUser.email : 'No user');
+    
     if (!currentUser) {
+      console.log('User not authenticated');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const organizationId = parseInt(id);
+    console.log('Parsed organization ID:', organizationId);
+    
     if (isNaN(organizationId)) {
+      console.log('Invalid organization ID');
       return NextResponse.json({ error: 'Geçersiz organizasyon ID' }, { status: 400 });
     }
 
     // Organizasyonun mevcut olup olmadığını kontrol et
+    console.log('Looking for organization with ID:', organizationId, 'and companyId:', currentUser.companyId);
+    
     const existingOrganization = await prisma.organization.findFirst({
       where: {
         id: organizationId,
@@ -195,23 +206,31 @@ export async function DELETE(
       },
     });
 
+    console.log('Existing organization found:', existingOrganization);
+
     if (!existingOrganization) {
+      console.log('Organization not found');
       return NextResponse.json({ error: 'Organizasyon bulunamadı' }, { status: 404 });
     }
 
     // Organizasyona bağlı konaklama kayıtları varsa uyarı ver
+    console.log('Accommodation count:', existingOrganization._count.accommodations);
+    
     if (existingOrganization._count.accommodations > 0) {
+      console.log('Organization has accommodations, cannot delete');
       return NextResponse.json({ 
         error: 'Bu organizasyona bağlı konaklama kayıtları bulunmaktadır. Önce konaklama kayıtlarını başka bir organizasyona taşıyın veya münferit konaklama olarak işaretleyin.' 
       }, { status: 400 });
     }
 
+    console.log('Deleting organization...');
     await prisma.organization.delete({
       where: {
         id: organizationId,
       },
     });
 
+    console.log('Organization deleted successfully');
     return NextResponse.json({ message: 'Organizasyon başarıyla silindi' });
   } catch (error) {
     console.error('Error deleting organization:', error);
