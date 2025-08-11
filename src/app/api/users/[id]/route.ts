@@ -50,6 +50,10 @@ export async function PUT(request: Request, context: any) {
       updateData.permissions = data.permissions;
     }
     
+    if (data.companyId !== undefined) {
+      updateData.companyId = data.companyId;
+    }
+    
     const user = await prisma.user.update({
       where: { id: userId },
       data: updateData,

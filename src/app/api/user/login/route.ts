@@ -36,13 +36,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Kullanıcı adı veya şifre hatalı.' }, { status: 401 });
     }
 
-    // JWT oluştur - role ve permissions bilgisini de dahil et
+    // Kullanıcının şirket bilgisini al
+    const userWithCompany = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        permissions: true,
+        companyId: true,
+        company: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    // JWT oluştur - role, permissions ve şirket bilgisini dahil et
     const token = jwt.sign({ 
       id: user.id, 
       email: user.email, 
       name: user.name,
       role: user.role,
-      permissions: user.permissions || []
+      permissions: user.permissions || [],
+      companyId: userWithCompany?.companyId,
+      companyName: userWithCompany?.company?.name
     }, JWT_SECRET, { expiresIn: '7d' });
     
     // Cookie olarak set et

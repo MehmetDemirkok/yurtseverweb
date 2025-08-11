@@ -29,7 +29,8 @@ export async function GET() {
         name: true,
         role: true,
         createdAt: true,
-        permissions: true
+        permissions: true,
+        companyId: true
       },
       orderBy: {
         createdAt: 'desc'
@@ -80,7 +81,8 @@ export async function POST(request: Request) {
         name: data.name || '',
         password: hashedPassword,
         role: data.role || 'KULLANICI',
-        permissions: data.permissions || []
+        permissions: data.permissions || [],
+        companyId: data.companyId || null
       },
       select: {
         id: true,
@@ -88,7 +90,8 @@ export async function POST(request: Request) {
         name: true,
         role: true,
         createdAt: true,
-        permissions: true
+        permissions: true,
+        companyId: true
       }
     });
     

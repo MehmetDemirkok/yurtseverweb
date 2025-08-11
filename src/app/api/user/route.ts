@@ -48,7 +48,14 @@ export async function GET() {
           name: true,
           role: true,
           createdAt: true,
-          permissions: true
+          permissions: true,
+          companyId: true,
+          company: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
         }
       });
       if (!user) {
@@ -63,18 +70,35 @@ export async function GET() {
           name: user.name,
           role: user.role,
           createdAt: user.createdAt,
-          permissions: userPermissions
+          permissions: userPermissions,
+          companyId: user.companyId,
+          companyName: user.company?.name
         }
       });
     } else {
-      // JWT'de permissions varsa kullan
+      // JWT'de permissions varsa, şirket bilgisini veritabanından al
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        select: {
+          companyId: true,
+          company: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      });
+      
       return NextResponse.json({ 
         user: {
           id: decoded.id,
           email: decoded.email,
           name: decoded.name,
           role: decoded.role,
-          permissions: userPermissions
+          permissions: userPermissions,
+          companyId: user?.companyId,
+          companyName: user?.company?.name
         }
       });
     }

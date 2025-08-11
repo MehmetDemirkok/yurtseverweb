@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface User {
   id: number;
@@ -10,6 +11,14 @@ interface User {
   role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
   createdAt: string;
   permissions?: string[];
+  companyId?: number;
+}
+
+interface Company {
+  id: number;
+  name: string;
+  email: string;
+  status: string;
 }
 
 type CurrentUser = {
@@ -25,11 +34,13 @@ type NewUser = {
   password: string;
   role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
   permissions: string[];
+  companyId: number;
 };
 
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const router = useRouter();
@@ -48,19 +59,22 @@ export default function AdminPage() {
     name: '',
     password: '',
     role: 'KULLANICI',
-    permissions: []
+    permissions: [],
+    companyId: 0
   });
 
   const [editUser, setEditUser] = useState({
     id: 0,
     name: '',
     role: 'KULLANICI' as 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI',
-    permissions: [] as string[]
+    permissions: [] as string[],
+    companyId: 0
   });
 
   // Arama ve filtreleme
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [companyFilter, setCompanyFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'email' | 'role' | 'createdAt'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -88,6 +102,7 @@ export default function AdminPage() {
   useEffect(() => {
     checkCurrentUser();
     fetchUsers();
+    fetchCompanies();
   }, []);
 
   useEffect(() => {
@@ -116,6 +131,11 @@ export default function AdminPage() {
     // Role filtresi
     if (roleFilter !== 'all') {
       filtered = filtered.filter(user => user.role === roleFilter);
+    }
+
+    // Şirket filtresi
+    if (companyFilter !== 'all') {
+      filtered = filtered.filter(user => user.companyId === parseInt(companyFilter));
     }
 
     // Sıralama
@@ -150,7 +170,7 @@ export default function AdminPage() {
     });
 
     setFilteredUsers(filtered);
-  }, [users, searchTerm, roleFilter, sortBy, sortOrder]);
+  }, [users, searchTerm, roleFilter, companyFilter, sortBy, sortOrder]);
 
   const checkCurrentUser = async () => {
     try {
@@ -158,9 +178,13 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json();
         setCurrentUser(data.user);
+      } else {
+        console.error('Kullanıcı bilgisi alınamadı:', res.status);
+        setCurrentUser(null);
       }
-    } catch {
-      console.error('Kullanıcı bilgisi alınamadı');
+    } catch (error) {
+      console.error('Kullanıcı bilgisi alınamadı:', error);
+      setCurrentUser(null);
     }
   };
 
@@ -182,9 +206,25 @@ export default function AdminPage() {
     }
   };
 
+  const fetchCompanies = async () => {
+    try {
+      const res = await fetch('/api/companies', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setCompanies(Array.isArray(data) ? data : []);
+      } else {
+        console.error('Şirketler yüklenemedi');
+        setCompanies([]);
+      }
+    } catch {
+      console.error('Şirketler yüklenirken hata oluştu');
+      setCompanies([]);
+    }
+  };
+
   // Modal handlers
   const openAddModal = () => {
-    setNewUser({ email: '', name: '', password: '', role: 'USER', permissions: [] });
+    setNewUser({ email: '', name: '', password: '', role: 'KULLANICI', permissions: [], companyId: 0 });
     setShowAddModal(true);
   };
 
@@ -195,7 +235,13 @@ export default function AdminPage() {
     if (user.role === 'ADMIN') {
       permissions = PERMISSIONS.map(p => p.key);
     }
-    setEditUser({ id: user.id, name: user.name || '', role: user.role, permissions: permissions });
+    setEditUser({ 
+      id: user.id, 
+      name: user.name || '', 
+      role: user.role, 
+      permissions: permissions,
+      companyId: user.companyId || 0
+    });
     setShowEditModal(true);
   };
 
@@ -206,13 +252,13 @@ export default function AdminPage() {
 
   const closeAddModal = () => {
     setShowAddModal(false);
-    setNewUser({ email: '', name: '', password: '', role: 'KULLANICI', permissions: [] });
+    setNewUser({ email: '', name: '', password: '', role: 'KULLANICI', permissions: [], companyId: 0 });
   };
 
   const closeEditModal = () => {
     setShowEditModal(false);
     setSelectedUser(null);
-    setEditUser({ id: 0, name: '', role: 'KULLANICI', permissions: [] });
+    setEditUser({ id: 0, name: '', role: 'KULLANICI', permissions: [], companyId: 0 });
   };
 
   const closeDeleteModal = () => {
@@ -228,7 +274,10 @@ export default function AdminPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(newUser)
+        body: JSON.stringify({
+          ...newUser,
+          companyId: newUser.companyId === 0 ? null : newUser.companyId
+        })
       });
 
       if (res.ok) {
@@ -252,7 +301,12 @@ export default function AdminPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name: editUser.name, role: editUser.role, permissions: editUser.permissions })
+        body: JSON.stringify({ 
+          name: editUser.name, 
+          role: editUser.role, 
+          permissions: editUser.permissions,
+          companyId: editUser.companyId === 0 ? null : editUser.companyId
+        })
       });
 
       if (res.ok) {
@@ -356,6 +410,44 @@ export default function AdminPage() {
       </div>
     </div>
   );
+
+  // Eğer currentUser yüklenmediyse ve loading false ise, hata durumu
+  if (!loading && !currentUser) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 text-6xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Kullanıcı Bilgisi Alınamadı</h1>
+          <p className="text-gray-600 mb-4">Lütfen sayfayı yenileyin veya tekrar giriş yapın.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Sayfayı Yenile
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Admin yetkisi kontrolü
+  if (currentUser && currentUser.role !== 'ADMIN') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-600 text-6xl mb-4">🚫</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Erişim Kısıtlı</h1>
+          <p className="text-gray-600 mb-4">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
+          <Link 
+            href="/dashboard"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Dashboard'a Dön
+          </Link>
+        </div>
+      </div>
+    );
+  }
   
 
 
@@ -451,7 +543,7 @@ export default function AdminPage() {
 
         {/* Search and Filter Section */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Search */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -480,6 +572,22 @@ export default function AdminPage() {
                 <option value="MUDUR">Müdür</option>
                 <option value="OPERATOR">Operatör</option>
                 <option value="KULLANICI">Kullanıcı</option>
+              </select>
+            </div>
+
+            {/* Company Filter */}
+            <div>
+              <select
+                value={companyFilter}
+                onChange={(e) => setCompanyFilter(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              >
+                <option value="all">Tüm Şirketler</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -539,6 +647,9 @@ export default function AdminPage() {
                       <SortIcon column="role" />
                     </div>
                   </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <span>Şirket</span>
+                  </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('createdAt')}>
                     <div className="flex items-center justify-between">
                       <span>Kayıt Tarihi</span>
@@ -574,6 +685,23 @@ export default function AdminPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {user.companyId ? (
+                        <div className="flex items-center">
+                          <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                          {companies.find(c => c.id === user.companyId)?.name || 'Bilinmeyen Şirket'}
+                        </div>
+                      ) : (
+                        <span className="text-orange-600 font-medium flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Şirket Atanmamış
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center">
                         <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -605,7 +733,7 @@ export default function AdminPage() {
                           </svg>
                           Sil
                         </button>
-                        {user.id === currentUser.id && (
+                        {currentUser && user.id === currentUser.id && (
                           <span className="text-gray-400 text-xs">Mevcut Kullanıcı</span>
                         )}
                       </div>
@@ -722,6 +850,28 @@ export default function AdminPage() {
                     <option value="ADMIN">Admin</option>
                   </select>
                 </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
+                    Şirket
+                  </label>
+                  <select
+                    value={newUser.companyId}
+                    onChange={(e) => setNewUser(prev => ({ ...prev, companyId: parseInt(e.target.value) }))}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  >
+                    <option value="0">Şirket Seçin</option>
+                    {companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name} ({company.email})
+                      </option>
+                    ))}
+                  </select>
+                  {newUser.companyId === 0 && (
+                    <p className="text-sm text-orange-600 mt-1">
+                      ⚠️ Kullanıcının bir şirkete atanması gerekiyor
+                    </p>
+                  )}
+                </div>
                 
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Erişim İzinleri</label>
@@ -827,6 +977,26 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">Şirket</label>
+                  <select
+                    value={editUser.companyId}
+                    onChange={(e) => setEditUser(prev => ({ ...prev, companyId: parseInt(e.target.value) }))}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  >
+                    <option value="0">Şirket Seçin</option>
+                    {companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name} ({company.email})
+                      </option>
+                    ))}
+                  </select>
+                  {editUser.companyId === 0 && (
+                    <p className="text-sm text-orange-600 mt-1">
+                      ⚠️ Kullanıcının bir şirkete atanması gerekiyor
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Erişim İzinleri</label>
                   <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
                     {PERMISSIONS.map((perm) => (
@@ -905,7 +1075,7 @@ export default function AdminPage() {
                   <p className="text-sm text-gray-500 mb-6">
                     <strong>{selectedUser.name || selectedUser.email}</strong> kullanıcısını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
                   </p>
-                  {selectedUser.id === currentUser.id && (
+                  {currentUser && selectedUser.id === currentUser.id && (
                     <div className="bg-red-100 text-red-700 font-bold text-sm mb-2 rounded-lg px-3 py-2 inline-block">Dikkat: Kendi hesabınızı silmek üzeresiniz! Bu işlemden sonra sistemden çıkış yapacaksınız.</div>
                   )}
                 </div>
@@ -918,7 +1088,7 @@ export default function AdminPage() {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
-                    {selectedUser.id === currentUser.id ? 'Evet, KENDİMİ SİL' : 'Evet, Sil'}
+                    {currentUser && selectedUser.id === currentUser.id ? 'Evet, KENDİMİ SİL' : 'Evet, Sil'}
                   </button>
                   <button
                     onClick={closeDeleteModal}
