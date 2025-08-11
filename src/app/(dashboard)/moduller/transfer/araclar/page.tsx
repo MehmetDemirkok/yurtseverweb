@@ -8,8 +8,14 @@ import {
   Trash2, 
   Users,
   Search,
-  Filter
+  Filter,
+  MapPin,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  Settings
 } from 'lucide-react';
+import { ArventoVehicle } from '@/lib/arvento';
 
 interface Arac {
   id: string;
@@ -23,6 +29,8 @@ interface Arac {
   createdAt: string;
   updatedAt: string;
   companyId: number;
+  arventoId?: string; // Arvento entegrasyonu için
+  arventoData?: ArventoVehicle; // Arvento verileri
 }
 
 export default function AraclarPage() {
@@ -34,6 +42,13 @@ export default function AraclarPage() {
   const [editingArac, setEditingArac] = useState<Arac | null>(null);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [userRole, setUserRole] = useState<string>('');
+  
+  // Arvento entegrasyonu için state'ler
+  const [arventoVehicles, setArventoVehicles] = useState<ArventoVehicle[]>([]);
+  const [arventoLoading, setArventoLoading] = useState(false);
+  const [showArventoModal, setShowArventoModal] = useState(false);
+  const [selectedArventoVehicle, setSelectedArventoVehicle] = useState<ArventoVehicle | null>(null);
+  const [liveTrackingEnabled, setLiveTrackingEnabled] = useState(false);
 
   // İzin kontrolü fonksiyonu
   const hasPermission = (permission: string): boolean => {
@@ -96,7 +111,46 @@ export default function AraclarPage() {
 
     fetchUserData();
     fetchAraclar();
+    fetchArventoVehicles();
   }, []);
+
+  // Canlı takip için interval
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (liveTrackingEnabled) {
+      interval = setInterval(() => {
+        const arventoIds = araclar
+          .filter(a => a.arventoId)
+          .map(a => a.arventoId!);
+        
+        if (arventoIds.length > 0) {
+          fetchLiveTracking(arventoIds).then(vehicles => {
+            if (vehicles && vehicles.length > 0) {
+              setAraclar(prev => 
+                prev.map(arac => {
+                  const arventoVehicle = vehicles.find(v => v.id === arac.arventoId);
+                  if (arventoVehicle) {
+                    return {
+                      ...arac,
+                      arventoData: arventoVehicle
+                    };
+                  }
+                  return arac;
+                })
+              );
+            }
+          });
+        }
+      }, 30000); // 30 saniyede bir güncelle
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [liveTrackingEnabled, araclar]);
 
   const fetchAraclar = async () => {
     try {
@@ -116,6 +170,74 @@ export default function AraclarPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Arvento araçlarını getir
+  const fetchArventoVehicles = async () => {
+    try {
+      setArventoLoading(true);
+      const response = await fetch('/api/arvento/vehicles');
+      if (response.ok) {
+        const data = await response.json();
+        setArventoVehicles(Array.isArray(data) ? data : []);
+      } else {
+        console.error('Arvento araçları alınamadı');
+        setArventoVehicles([]);
+      }
+    } catch (error) {
+      console.error('Arvento araçları alınamadı:', error);
+      setArventoVehicles([]);
+    } finally {
+      setArventoLoading(false);
+    }
+  };
+
+  // Arvento araç detaylarını getir
+  const fetchArventoVehicleDetails = async (arventoId: string) => {
+    try {
+      const response = await fetch(`/api/arvento/vehicles/${arventoId}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+    } catch (error) {
+      console.error('Arvento araç detayları alınamadı:', error);
+    }
+    return null;
+  };
+
+  // Arvento araç konumunu getir
+  const fetchArventoVehicleLocation = async (arventoId: string) => {
+    try {
+      const response = await fetch(`/api/arvento/vehicles/${arventoId}/location`);
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+    } catch (error) {
+      console.error('Arvento araç konumu alınamadı:', error);
+    }
+    return null;
+  };
+
+  // Canlı takip verilerini getir
+  const fetchLiveTracking = async (vehicleIds: string[]) => {
+    try {
+      const response = await fetch('/api/arvento/live-tracking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ vehicleIds }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+    } catch (error) {
+      console.error('Canlı takip verileri alınamadı:', error);
+    }
+    return [];
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -303,6 +425,52 @@ export default function AraclarPage() {
     }
   };
 
+  // Arvento araç durumunu kontrol et
+  const getArventoStatus = (arac: Arac) => {
+    if (!arac.arventoData) return null;
+    
+    const hasLocation = arac.arventoData.lastLocation;
+    const isOnline = hasLocation && 
+      new Date(arac.arventoData.lastLocation.timestamp).getTime() > Date.now() - 5 * 60 * 1000; // 5 dakika
+    
+    return {
+      isOnline,
+      hasLocation,
+      lastUpdate: arac.arventoData.lastLocation?.timestamp,
+      speed: arac.arventoData.lastLocation?.speed,
+      heading: arac.arventoData.lastLocation?.heading
+    };
+  };
+
+  // Arvento araç eşleştirme
+  const matchArventoVehicle = (arac: Arac) => {
+    return arventoVehicles.find(av => av.plate === arac.plaka);
+  };
+
+  // Arvento araç detaylarını yükle
+  const loadArventoDetails = async (arac: Arac) => {
+    const matchedVehicle = matchArventoVehicle(arac);
+    if (matchedVehicle) {
+      const details = await fetchArventoVehicleDetails(matchedVehicle.id);
+      const location = await fetchArventoVehicleLocation(matchedVehicle.id);
+      
+      if (details) {
+        const updatedArac = {
+          ...arac,
+          arventoId: matchedVehicle.id,
+          arventoData: {
+            ...details,
+            lastLocation: location
+          }
+        };
+        
+        setAraclar(prev => 
+          prev.map(a => a.id === arac.id ? updatedArac : a)
+        );
+      }
+    }
+  };
+
   const filteredAraclar = araclar?.filter(arac => {
     const matchesSearch = arac.plaka.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          arac.marka.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -354,13 +522,44 @@ export default function AraclarPage() {
             Araç ekleme, düzenleme ve takip işlemleri
           </p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Yeni Araç
-        </button>
+        <div className="mt-4 sm:mt-0 flex space-x-2">
+          <button
+            onClick={() => setShowArventoModal(true)}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Arvento Entegrasyonu
+          </button>
+          <button
+            onClick={() => {
+              setLiveTrackingEnabled(!liveTrackingEnabled);
+              if (!liveTrackingEnabled) {
+                // Canlı takibi başlat
+                const arventoIds = araclar
+                  .filter(a => a.arventoId)
+                  .map(a => a.arventoId!);
+                if (arventoIds.length > 0) {
+                  fetchLiveTracking(arventoIds);
+                }
+              }
+            }}
+            className={`inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+              liveTrackingEnabled 
+                ? 'border-green-300 text-green-700 bg-green-50 dark:bg-green-900 dark:text-green-200 hover:bg-green-100 dark:hover:bg-green-800' 
+                : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            {liveTrackingEnabled ? <Wifi className="h-4 w-4 mr-2" /> : <WifiOff className="h-4 w-4 mr-2" />}
+            {liveTrackingEnabled ? 'Canlı Takip Açık' : 'Canlı Takip'}
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Yeni Araç
+          </button>
+        </div>
       </div>
 
       {/* Filtreler */}
@@ -420,7 +619,9 @@ export default function AraclarPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Durum
                 </th>
-
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Arvento Durumu
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Son Güncelleme
                 </th>
@@ -448,11 +649,45 @@ export default function AraclarPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDurumRenk(arac.durum)}`}>
-                       {arac.durum === 'MUSAIT' && 'Müsait'}
-                       {arac.durum === 'TRANSFERDE' && 'Transferde'}
-                       {arac.durum === 'BAKIMDA' && 'Bakımda'}
-                     </span>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDurumRenk(arac.durum)}`}>
+                      {arac.durum === 'MUSAIT' && 'Müsait'}
+                      {arac.durum === 'TRANSFERDE' && 'Transferde'}
+                      {arac.durum === 'BAKIMDA' && 'Bakımda'}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {(() => {
+                      const arventoStatus = getArventoStatus(arac);
+                      if (!arventoStatus) {
+                        return (
+                          <div className="flex items-center">
+                            <WifiOff className="h-4 w-4 text-gray-400 mr-1" />
+                            <span className="text-xs text-gray-500">Bağlı Değil</span>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <div className="flex items-center">
+                          {arventoStatus.isOnline ? (
+                            <Wifi className="h-4 w-4 text-green-500 mr-1" />
+                          ) : (
+                            <WifiOff className="h-4 w-4 text-red-500 mr-1" />
+                          )}
+                          <div className="text-xs">
+                            <div className={`font-medium ${arventoStatus.isOnline ? 'text-green-700' : 'text-red-700'}`}>
+                              {arventoStatus.isOnline ? 'Çevrimiçi' : 'Çevrimdışı'}
+                            </div>
+                            {arventoStatus.speed !== undefined && (
+                              <div className="text-gray-500">
+                                {arventoStatus.speed} km/h
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -463,12 +698,23 @@ export default function AraclarPage() {
                       <button
                         onClick={() => openEditModal(arac)}
                         className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                        title="Düzenle"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
+                      {arac.arventoId && (
+                        <button
+                          onClick={() => loadArventoDetails(arac)}
+                          className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                          title="Arvento Detayları"
+                        >
+                          <MapPin className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => deleteArac(arac.id)}
                         className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                        title="Sil"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -644,6 +890,188 @@ export default function AraclarPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Arvento Entegrasyonu Modal */}
+      {showArventoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">
+                Arvento Entegrasyonu
+              </h2>
+              <button
+                onClick={() => setShowArventoModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Arvento Bağlantı Durumu */}
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  Bağlantı Durumu
+                </h3>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center">
+                    {arventoLoading ? (
+                      <RefreshCw className="h-4 w-4 text-blue-500 animate-spin mr-2" />
+                    ) : arventoVehicles.length > 0 ? (
+                      <Wifi className="h-4 w-4 text-green-500 mr-2" />
+                    ) : (
+                      <WifiOff className="h-4 w-4 text-red-500 mr-2" />
+                    )}
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {arventoLoading 
+                        ? 'Bağlantı kontrol ediliyor...' 
+                        : arventoVehicles.length > 0 
+                          ? `${arventoVehicles.length} araç Arvento'da bulundu` 
+                          : 'Arvento bağlantısı kurulamadı'
+                      }
+                    </span>
+                  </div>
+                  <button
+                    onClick={fetchArventoVehicles}
+                    disabled={arventoLoading}
+                    className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 disabled:opacity-50"
+                  >
+                    Yenile
+                  </button>
+                </div>
+              </div>
+
+              {/* Araç Eşleştirme */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
+                  Araç Eşleştirme
+                </h3>
+                <div className="space-y-3">
+                  {araclar.map(arac => {
+                    const matchedVehicle = matchArventoVehicle(arac);
+                    return (
+                      <div key={arac.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-600 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <Car className="h-5 w-5 text-gray-400" />
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {arac.plaka} - {arac.marka} {arac.model}
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {getAracTipiText(arac.aracTipi)} • {arac.yolcuKapasitesi} kişi
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {matchedVehicle ? (
+                            <div className="flex items-center text-green-600 dark:text-green-400">
+                              <Wifi className="h-4 w-4 mr-1" />
+                              <span className="text-sm">Eşleşti</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center text-gray-500 dark:text-gray-400">
+                              <WifiOff className="h-4 w-4 mr-1" />
+                              <span className="text-sm">Eşleşmedi</span>
+                            </div>
+                          )}
+                          {matchedVehicle && (
+                            <button
+                              onClick={() => loadArventoDetails(arac)}
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Arvento Araçları */}
+              {arventoVehicles.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
+                    Arvento Araçları ({arventoVehicles.length})
+                  </h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {arventoVehicles.map(vehicle => (
+                      <div key={vehicle.id} className="flex items-center justify-between p-2 border border-gray-200 dark:border-gray-600 rounded">
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            {vehicle.plate} - {vehicle.brand} {vehicle.model}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {vehicle.year} • {vehicle.fuelType} • {vehicle.transmission}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            vehicle.status === 'active' 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : vehicle.status === 'maintenance'
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }`}>
+                            {vehicle.status === 'active' ? 'Aktif' : 
+                             vehicle.status === 'maintenance' ? 'Bakımda' : 'Pasif'}
+                          </span>
+                          {vehicle.driver && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Şoför: {vehicle.driver.name}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Ayarlar */}
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  Ayarlar
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Canlı Takip
+                    </span>
+                    <button
+                      onClick={() => setLiveTrackingEnabled(!liveTrackingEnabled)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        liveTrackingEnabled 
+                          ? 'bg-blue-600' 
+                          : 'bg-gray-200 dark:bg-gray-600'
+                      }`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        liveTrackingEnabled ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Canlı takip açıkken araçların konumları otomatik olarak güncellenir.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-600">
+              <button
+                onClick={() => setShowArventoModal(false)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Kapat
+              </button>
+            </div>
           </div>
         </div>
       )}

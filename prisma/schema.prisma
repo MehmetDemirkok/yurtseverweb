@@ -159,6 +159,10 @@ model Arac {
   updatedAt       DateTime   @updatedAt
   companyId       Int
   
+  // Arvento entegrasyonu
+  arventoId       String?    // Arvento araç ID'si
+  arventoData     Json?      // Arvento'dan gelen veriler (JSON formatında)
+  
   // Relations
   company         Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   soforler        Sofor[]
