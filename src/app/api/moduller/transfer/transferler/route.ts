@@ -26,7 +26,7 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json({ transferler });
+    return NextResponse.json(transferler);
   } catch (error) {
     console.error('Transferler alınamadı:', error);
     return NextResponse.json(

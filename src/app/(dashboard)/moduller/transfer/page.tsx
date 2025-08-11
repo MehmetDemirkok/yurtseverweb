@@ -83,31 +83,31 @@ export default function TransferDashboard() {
       const soforler = soforlerRes.ok ? (await soforlerRes.json()) : [];
       const transferler = transferlerRes.ok ? (await transferlerRes.json()) : [];
 
-
-
       // Yaklaşan transferleri al (bugün ve yarın)
       const bugun = new Date().toISOString().split('T')[0];
       const yarin = new Date();
       yarin.setDate(yarin.getDate() + 1);
       const yarinStr = yarin.toISOString().split('T')[0];
 
-      const yaklasanTransferler = transferler
-        ?.filter((t: any) => {
-          const transferTarihi = new Date(t.kalkisTarihi).toISOString().split('T')[0];
-          return (transferTarihi === bugun || transferTarihi === yarinStr) && 
-                 t.durum !== 'TAMAMLANDI' && t.durum !== 'IPTAL';
-        })
-        .slice(0, 5) // En fazla 5 transfer göster
-        .map((t: any) => ({
-          id: t.id,
-          kalkisYeri: t.kalkisYeri,
-          varisYeri: t.varisYeri,
-          kalkisSaati: t.kalkisSaati,
-          yolcuSayisi: t.yolcuSayisi,
-          aracPlaka: t.arac?.plaka || 'Atanmamış',
-          soforAdi: t.sofor ? `${t.sofor.ad} ${t.sofor.soyad}` : 'Atanmamış',
-          durum: t.durum.toLowerCase()
-        })) || [];
+      const yaklasanTransferler = Array.isArray(transferler) 
+        ? transferler
+            .filter((t: any) => {
+              const transferTarihi = new Date(t.kalkisTarihi).toISOString().split('T')[0];
+              return (transferTarihi === bugun || transferTarihi === yarinStr) && 
+                     t.durum !== 'TAMAMLANDI' && t.durum !== 'IPTAL';
+            })
+            .slice(0, 5) // En fazla 5 transfer göster
+            .map((t: any) => ({
+              id: t.id,
+              kalkisYeri: t.kalkisYeri,
+              varisYeri: t.varisYeri,
+              kalkisSaati: t.kalkisSaati,
+              yolcuSayisi: t.yolcuSayisi,
+              aracPlaka: t.arac?.plaka || 'Atanmamış',
+              soforAdi: t.sofor ? `${t.sofor.ad} ${t.sofor.soyad}` : 'Atanmamış',
+              durum: t.durum.toLowerCase()
+            }))
+        : [];
 
       setYaklasanTransferler(yaklasanTransferler);
     } catch (error) {
