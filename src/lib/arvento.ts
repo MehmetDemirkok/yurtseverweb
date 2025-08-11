@@ -73,17 +73,74 @@ class ArventoService {
   // Araç listesini getir
   async getVehicles(): Promise<ArventoVehicle[]> {
     try {
+      // Mock data - gerçek API kurulana kadar
+      if (!this.apiKey || this.apiKey === '') {
+        return [
+          {
+            id: 'mock-1',
+            plate: '34 ABC 123',
+            brand: 'Mercedes',
+            model: 'Sprinter',
+            year: 2022,
+            fuelType: 'Diesel',
+            engineSize: '2.2L',
+            transmission: 'Automatic',
+            color: 'White',
+            vin: 'MOCK123456789',
+            status: 'active',
+            lastLocation: {
+              latitude: 41.0082,
+              longitude: 28.9784,
+              timestamp: new Date().toISOString(),
+              speed: 45,
+              heading: 180
+            }
+          },
+          {
+            id: 'mock-2',
+            plate: '06 DEF 456',
+            brand: 'Ford',
+            model: 'Transit',
+            year: 2021,
+            fuelType: 'Diesel',
+            engineSize: '2.0L',
+            transmission: 'Manual',
+            color: 'Blue',
+            vin: 'MOCK987654321',
+            status: 'active',
+            lastLocation: {
+              latitude: 39.9334,
+              longitude: 32.8597,
+              timestamp: new Date().toISOString(),
+              speed: 0,
+              heading: 90
+            }
+          }
+        ];
+      }
+      
       const data = await this.makeRequest('/vehicles');
       return data.vehicles || [];
     } catch (error) {
       console.error('Arvento vehicles fetch error:', error);
-      throw error;
+      // Hata durumunda boş array döndür
+      return [];
     }
   }
 
   // Belirli bir aracın detaylarını getir
   async getVehicle(vehicleId: string): Promise<ArventoVehicle> {
     try {
+      // Mock data - gerçek API kurulana kadar
+      if (!this.apiKey || this.apiKey === '') {
+        const mockVehicles = await this.getVehicles();
+        const vehicle = mockVehicles.find(v => v.id === vehicleId);
+        if (vehicle) {
+          return vehicle;
+        }
+        throw new Error('Vehicle not found');
+      }
+      
       const data = await this.makeRequest(`/vehicles/${vehicleId}`);
       return data.vehicle;
     } catch (error) {
@@ -95,6 +152,15 @@ class ArventoService {
   // Aracın son konumunu getir
   async getVehicleLocation(vehicleId: string): Promise<ArventoLocation> {
     try {
+      // Mock data - gerçek API kurulana kadar
+      if (!this.apiKey || this.apiKey === '') {
+        const vehicle = await this.getVehicle(vehicleId);
+        if (vehicle.lastLocation) {
+          return vehicle.lastLocation;
+        }
+        throw new Error('Location not found');
+      }
+      
       const data = await this.makeRequest(`/vehicles/${vehicleId}/location`);
       return data.location;
     } catch (error) {
@@ -183,6 +249,12 @@ class ArventoService {
   // Canlı takip verilerini getir
   async getLiveTracking(vehicleIds: string[]): Promise<ArventoVehicle[]> {
     try {
+      // Mock data - gerçek API kurulana kadar
+      if (!this.apiKey || this.apiKey === '') {
+        const allVehicles = await this.getVehicles();
+        return allVehicles.filter(v => vehicleIds.includes(v.id));
+      }
+      
       const data = await this.makeRequest('/live-tracking', {
         method: 'POST',
         body: JSON.stringify({ vehicleIds }),
@@ -190,7 +262,7 @@ class ArventoService {
       return data.vehicles || [];
     } catch (error) {
       console.error('Arvento live tracking error:', error);
-      throw error;
+      return [];
     }
   }
 }

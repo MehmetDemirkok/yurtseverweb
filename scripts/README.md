@@ -1,13 +1,18 @@
-# Türkiye Otelleri Script'leri
+# Scripts Klasörü
 
-Bu klasörde Türkiye'deki otelleri çekmek ve yönetmek için kullanılan script'ler bulunmaktadır.
+Bu klasörde proje yönetimi ve veri işlemleri için kullanılan script'ler bulunmaktadır.
 
 ## 📁 Dosyalar
 
-- `fetchTurkeyHotels.js` - Türkiye otellerini oluşturan ana script (rastgele)
+### 🏨 Otel Yönetimi
+- `fetchTurkeyHotels.js` - Türkiye otellerini oluşturan ana script
 - `importHotelsToDB.js` - Dinamik otel oluşturup veritabanına aktaran script (önerilen)
-- `turkey_hotels.json` - Oluşturulan otellerin JSON dosyası (otomatik oluşturulur)
-- `turkey_hotels_fixed.json` - Sabit Türkiye otelleri listesi (eski versiyon)
+
+### 👤 Kullanıcı Yönetimi
+- `createAdmin.js` - Admin kullanıcısı oluşturma scripti
+
+### 💾 Veri Yedekleme
+- `backupAndMail.js` - Veritabanı yedekleme ve email gönderme scripti
 
 ## 🚀 Kullanım
 
@@ -56,6 +61,30 @@ Bu komut:
 ### 3. Web Arayüzünden Çekme
 
 Oteller sayfasında "Türkiye Otellerini Çek" butonuna tıklayarak da otelleri çekebilirsiniz.
+
+## 👤 Admin Kullanıcı Oluşturma
+
+```bash
+node scripts/createAdmin.js
+```
+
+Bu script:
+- Admin kullanıcısı oluşturur
+- Email: `admin@yurtsever.com`
+- Şifre: `admin123` (değiştirmeyi unutmayın!)
+- Tüm izinlere sahip
+
+## 💾 Veritabanı Yedekleme
+
+```bash
+node scripts/backupAndMail.js
+```
+
+Bu script:
+- Veritabanından verileri çeker
+- Excel dosyası oluşturur
+- Email ile gönderir
+- Haftalık otomatik yedekleme için kullanılır
 
 ## 📊 Oluşturulan Veriler
 
