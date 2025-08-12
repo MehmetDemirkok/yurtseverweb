@@ -23,6 +23,21 @@ export async function GET(
             soyad: true
           }
         },
+        cari: {
+          select: {
+            id: true,
+            ad: true,
+            soyad: true,
+            sirket: true
+          }
+        },
+        tedarikci: {
+          select: {
+            id: true,
+            sirketAdi: true,
+            yetkiliKisi: true
+          }
+        },
         yolcular: true
       }
     });
@@ -63,6 +78,14 @@ export async function PUT(
       notlar,
       fiyat,
       tahsisli,
+      cariId,
+      tedarikciId,
+      tedarikciyeYaptirilacak,
+      manuelAracMarka,
+      manuelAracModel,
+      manuelAracTip,
+      manuelAracPlaka,
+      manuelSoforAdi,
       yolcular
     } = body;
 
@@ -134,6 +157,14 @@ export async function PUT(
         notlar: notlar || '',
         fiyat: fiyat ? parseFloat(fiyat) : null,
         tahsisli: tahsisli || false,
+        cariId: cariId || null,
+        tedarikciId: tedarikciId || null,
+        tedarikciyeYaptirilacak: tedarikciyeYaptirilacak || false,
+        manuelAracMarka: manuelAracMarka || null,
+        manuelAracModel: manuelAracModel || null,
+        manuelAracTip: manuelAracTip || null,
+        manuelAracPlaka: manuelAracPlaka || null,
+        manuelSoforAdi: manuelSoforAdi || null,
         yolcular: {
           create: yolcular || []
         }
@@ -150,6 +181,21 @@ export async function PUT(
             id: true,
             ad: true,
             soyad: true
+          }
+        },
+        cari: {
+          select: {
+            id: true,
+            ad: true,
+            soyad: true,
+            sirket: true
+          }
+        },
+        tedarikci: {
+          select: {
+            id: true,
+            sirketAdi: true,
+            yetkiliKisi: true
           }
         },
         yolcular: true

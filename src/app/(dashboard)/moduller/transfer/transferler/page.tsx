@@ -51,8 +51,44 @@ interface Transfer {
   notlar: string;
   fiyat: number | null;
   tahsisli: boolean;
+  cariId: string | null;
+  cari: {
+    id: string;
+    ad: string;
+    soyad: string | null;
+    sirket: string | null;
+  } | null;
+  tedarikciId: string | null;
+  tedarikci: {
+    id: string;
+    sirketAdi: string;
+    yetkiliKisi: string | null;
+  } | null;
+  tedarikciyeYaptirilacak: boolean;
+  manuelAracMarka: string | null;
+  manuelAracModel: string | null;
+  manuelAracTip: string | null;
+  manuelAracPlaka: string | null;
+  manuelSoforAdi: string | null;
   yolcular?: Yolcu[];
   createdAt: string;
+}
+
+interface Cari {
+  id: string;
+  ad: string;
+  soyad: string | null;
+  sirket: string | null;
+  email: string | null;
+  telefon: string | null;
+}
+
+interface Tedarikci {
+  id: string;
+  sirketAdi: string;
+  yetkiliKisi: string | null;
+  email: string | null;
+  telefon: string | null;
 }
 
 export default function TransferlerPage() {
@@ -66,6 +102,8 @@ export default function TransferlerPage() {
   const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null);
   const [araclar, setAraclar] = useState<any[]>([]);
   const [soforler, setSoforler] = useState<any[]>([]);
+  const [cariler, setCariler] = useState<Cari[]>([]);
+  const [tedarikciler, setTedarikciler] = useState<Tedarikci[]>([]);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [userRole, setUserRole] = useState<string>('');
 
@@ -96,7 +134,15 @@ export default function TransferlerPage() {
     durum: 'BEKLEMEDE' as 'BEKLEMEDE' | 'YOLDA' | 'TAMAMLANDI' | 'IPTAL',
     notlar: '',
     fiyat: null as number | null,
-    tahsisli: false
+    tahsisli: false,
+    cariId: '',
+    tedarikciId: '',
+    tedarikciyeYaptirilacak: false,
+    manuelAracMarka: '',
+    manuelAracModel: '',
+    manuelAracTip: '',
+    manuelAracPlaka: '',
+    manuelSoforAdi: ''
   });
   
   // Yolcu bilgileri state
@@ -141,6 +187,8 @@ export default function TransferlerPage() {
     fetchTransferler();
     fetchAraclar();
     fetchSoforler();
+    fetchCariler();
+    fetchTedarikciler();
   }, []);
 
   const fetchTransferler = async () => {
@@ -189,6 +237,36 @@ export default function TransferlerPage() {
     } catch (error) {
       console.error('Şoförler alınamadı:', error);
       setSoforler([]);
+    }
+  };
+
+  const fetchCariler = async () => {
+    try {
+      const response = await fetch('/api/cariler');
+      if (response.ok) {
+        const data = await response.json();
+        setCariler(Array.isArray(data) ? data : []);
+      } else {
+        setCariler([]);
+      }
+    } catch (error) {
+      console.error('Cariler alınamadı:', error);
+      setCariler([]);
+    }
+  };
+
+  const fetchTedarikciler = async () => {
+    try {
+      const response = await fetch('/api/tedarikciler');
+      if (response.ok) {
+        const data = await response.json();
+        setTedarikciler(Array.isArray(data.tedarikciler) ? data.tedarikciler : []);
+      } else {
+        setTedarikciler([]);
+      }
+    } catch (error) {
+      console.error('Tedarikçiler alınamadı:', error);
+      setTedarikciler([]);
     }
   };
 
@@ -344,7 +422,15 @@ export default function TransferlerPage() {
       durum: 'BEKLEMEDE',
       notlar: '',
       fiyat: null,
-      tahsisli: false
+      tahsisli: false,
+      cariId: '',
+      tedarikciId: '',
+      tedarikciyeYaptirilacak: false,
+      manuelAracMarka: '',
+      manuelAracModel: '',
+      manuelAracTip: '',
+      manuelAracPlaka: '',
+      manuelSoforAdi: ''
     });
     
     setFormErrors({
@@ -371,7 +457,15 @@ export default function TransferlerPage() {
       durum: transfer.durum,
       notlar: transfer.notlar,
       fiyat: transfer.fiyat,
-      tahsisli: transfer.tahsisli
+      tahsisli: transfer.tahsisli,
+      cariId: transfer.cariId || '',
+      tedarikciId: transfer.tedarikciId || '',
+      tedarikciyeYaptirilacak: transfer.tedarikciyeYaptirilacak,
+      manuelAracMarka: transfer.manuelAracMarka || '',
+      manuelAracModel: transfer.manuelAracModel || '',
+      manuelAracTip: transfer.manuelAracTip || '',
+      manuelAracPlaka: transfer.manuelAracPlaka || '',
+      manuelSoforAdi: transfer.manuelSoforAdi || ''
     });
     setYolcular(transfer.yolcular || []);
     setShowModal(true);
@@ -612,6 +706,9 @@ export default function TransferlerPage() {
                   Yolcu
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Cari/Tedarikçi
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Araç/Şoför
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -655,8 +752,37 @@ export default function TransferlerPage() {
                       {transfer.yolcuSayisi} kişi
                     </div>
                   </td>
-                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                     {transfer.arac && transfer.sofor ? (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {transfer.cari ? (
+                      <div>
+                        <div className="flex items-center">
+                          <User className="h-4 w-4 mr-1" />
+                          {transfer.cari.sirket ? transfer.cari.sirket : `${transfer.cari.ad} ${transfer.cari.soyad || ''}`}
+                        </div>
+                        {transfer.tedarikciyeYaptirilacak && transfer.tedarikci && (
+                          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                            → {transfer.tedarikci.sirketAdi}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 dark:text-gray-500">Cari seçilmemiş</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                     {transfer.tedarikciyeYaptirilacak ? (
+                       // Manuel araç bilgileri
+                       <div>
+                         <div className="flex items-center">
+                           <Car className="h-4 w-4 mr-1" />
+                           {transfer.manuelAracPlaka || 'Plaka belirtilmemiş'}
+                         </div>
+                         <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                           {transfer.manuelAracMarka} {transfer.manuelAracModel} - {transfer.manuelSoforAdi || 'Şoför belirtilmemiş'}
+                         </div>
+                       </div>
+                     ) : transfer.arac && transfer.sofor ? (
+                       // Sistem araç ve şoför bilgileri
                        <div>
                          <div className="flex items-center">
                            <Car className="h-4 w-4 mr-1" />
@@ -927,42 +1053,167 @@ export default function TransferlerPage() {
                   Toplam {formData.yolcuSayisi} yolcu • Aşağıda her yolcu için bilgi girişi yapabilirsiniz
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Araç
-                  </label>
-                  <select
-                    value={formData.aracId}
-                    onChange={(e) => setFormData({...formData, aracId: e.target.value})}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="">Araç Seçin</option>
-                    {araclar.map((arac) => (
-                      <option key={arac.id} value={arac.id}>
-                        {arac.plaka} - {arac.marka} {arac.model} ({arac.yolcuKapasitesi} kişi)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Şoför
-                  </label>
-                  <select
-                    value={formData.soforId}
-                    onChange={(e) => setFormData({...formData, soforId: e.target.value})}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="">Şoför Seçin</option>
-                    {soforler.map((sofor) => (
-                      <option key={sofor.id} value={sofor.id}>
-                        {sofor.ad} {sofor.soyad}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              
+              {/* Cari Seçimi */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Cari
+                </label>
+                <select
+                  value={formData.cariId}
+                  onChange={(e) => setFormData({...formData, cariId: e.target.value})}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="">Cari Seçin</option>
+                  {cariler.map((cari) => (
+                    <option key={cari.id} value={cari.id}>
+                      {cari.sirket ? cari.sirket : `${cari.ad} ${cari.soyad || ''}`}
+                    </option>
+                  ))}
+                </select>
               </div>
+              
+              {/* Tedarikçiye Yaptırılacak Checkbox */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="tedarikciyeYaptirilacak"
+                  checked={formData.tedarikciyeYaptirilacak}
+                  onChange={(e) => setFormData({...formData, tedarikciyeYaptirilacak: e.target.checked})}
+                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                />
+                <label htmlFor="tedarikciyeYaptirilacak" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                  Tedarikçiye Yaptırılacak
+                </label>
+              </div>
+              
+              {/* Tedarikçi Seçimi - Sadece checkbox aktifse görünür */}
+              {formData.tedarikciyeYaptirilacak && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Tedarikçi
+                  </label>
+                  <select
+                    value={formData.tedarikciId}
+                    onChange={(e) => setFormData({...formData, tedarikciId: e.target.value})}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">Tedarikçi Seçin</option>
+                    {tedarikciler.map((tedarikci) => (
+                      <option key={tedarikci.id} value={tedarikci.id}>
+                        {tedarikci.sirketAdi}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
+              {/* Manuel Araç ve Şoför Bilgileri - Sadece tedarikçiye yaptırılacaksa görünür */}
+              {formData.tedarikciyeYaptirilacak && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Araç Marka
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.manuelAracMarka}
+                      onChange={(e) => setFormData({...formData, manuelAracMarka: e.target.value})}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="Araç markası"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Araç Model
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.manuelAracModel}
+                      onChange={(e) => setFormData({...formData, manuelAracModel: e.target.value})}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="Araç modeli"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Araç Tipi
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.manuelAracTip}
+                      onChange={(e) => setFormData({...formData, manuelAracTip: e.target.value})}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="Araç tipi"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Araç Plaka
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.manuelAracPlaka}
+                      onChange={(e) => setFormData({...formData, manuelAracPlaka: e.target.value})}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="Araç plakası"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Şoför Adı
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.manuelSoforAdi}
+                      onChange={(e) => setFormData({...formData, manuelSoforAdi: e.target.value})}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="Şoför adı"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* Araç ve Şoför Seçimi - Sadece tedarikçiye yaptırılmayacaksa görünür */}
+              {!formData.tedarikciyeYaptirilacak && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Araç
+                    </label>
+                    <select
+                      value={formData.aracId}
+                      onChange={(e) => setFormData({...formData, aracId: e.target.value})}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="">Araç Seçin</option>
+                      {araclar.map((arac) => (
+                        <option key={arac.id} value={arac.id}>
+                          {arac.plaka} - {arac.marka} {arac.model} ({arac.yolcuKapasitesi} kişi)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Şoför
+                    </label>
+                    <select
+                      value={formData.soforId}
+                      onChange={(e) => setFormData({...formData, soforId: e.target.value})}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="">Şoför Seçin</option>
+                      {soforler.map((sofor) => (
+                        <option key={sofor.id} value={sofor.id}>
+                          {sofor.ad} {sofor.soyad}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Durum

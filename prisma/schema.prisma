@@ -216,10 +216,24 @@ model Transfer {
   tahsisli     Boolean       @default(false)
   companyId    Int
   
+  // Cari ve Tedarikçi ilişkileri
+  cariId       String?
+  tedarikciId  String?
+  tedarikciyeYaptirilacak Boolean @default(false)
+  
+  // Manuel araç bilgileri (tedarikçiye yaptırılacaksa)
+  manuelAracMarka    String?
+  manuelAracModel    String?
+  manuelAracTip      String?
+  manuelAracPlaka    String?
+  manuelSoforAdi     String?
+  
   // Relations
   company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   arac         Arac?         @relation(fields: [aracId], references: [id])
   sofor        Sofor?        @relation(fields: [soforId], references: [id])
+  cari         Cari?         @relation(fields: [cariId], references: [id])
+  tedarikci    Tedarikci?    @relation(fields: [tedarikciId], references: [id])
   yolcular     Yolcu[]
 }
 
@@ -259,6 +273,7 @@ model Cari {
   
   // Relations
   company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  transferler  Transfer[]
 }
 
 model Tedarikci {
@@ -281,6 +296,7 @@ model Tedarikci {
   
   // Relations
   company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  transferler  Transfer[]
 }
 
 enum CompanyStatus {
