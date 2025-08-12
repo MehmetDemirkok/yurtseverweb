@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { arventoService } from '@/lib/arvento';
+import { ArventoService } from '@/lib/arvento';
 import { requireCompanyAccess } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
     // Kullanıcı yetkilendirmesi
-    await requireCompanyAccess();
+    const user = await requireCompanyAccess();
+
+    // Şirket bazlı Arvento servisi oluştur
+    const arventoService = new ArventoService(user.companyId);
 
     // Arvento'dan araçları getir
     const vehicles = await arventoService.getVehicles();

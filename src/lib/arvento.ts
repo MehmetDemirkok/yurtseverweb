@@ -45,10 +45,37 @@ export interface ArventoDriver {
 class ArventoService {
   private apiKey: string;
   private baseUrl: string;
+  private companyId?: number;
 
-  constructor() {
+  constructor(companyId?: number) {
+    this.companyId = companyId;
     this.apiKey = process.env.ARVENTO_API_KEY || '';
     this.baseUrl = process.env.ARVENTO_BASE_URL || 'https://api.arvento.com';
+  }
+
+  // Şirket konfigürasyonunu yükle
+  async loadCompanyConfig() {
+    if (!this.companyId) return;
+    
+    try {
+      const { prisma } = await import('@/lib/prisma');
+      const company = await prisma.company.findUnique({
+        where: { id: this.companyId },
+        select: {
+          arventoApiKey: true,
+          arventoBaseUrl: true
+        }
+      });
+      
+      if (company?.arventoApiKey) {
+        this.apiKey = company.arventoApiKey;
+      }
+      if (company?.arventoBaseUrl) {
+        this.baseUrl = company.arventoBaseUrl;
+      }
+    } catch (error) {
+      console.error('Şirket konfigürasyonu yüklenemedi:', error);
+    }
   }
 
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
@@ -73,6 +100,9 @@ class ArventoService {
   // Araç listesini getir
   async getVehicles(): Promise<ArventoVehicle[]> {
     try {
+      // Şirket konfigürasyonunu yükle
+      await this.loadCompanyConfig();
+      
       // Mock data - gerçek API kurulana kadar
       if (!this.apiKey || this.apiKey === '') {
         return [
@@ -131,6 +161,9 @@ class ArventoService {
   // Belirli bir aracın detaylarını getir
   async getVehicle(vehicleId: string): Promise<ArventoVehicle> {
     try {
+      // Şirket konfigürasyonunu yükle
+      await this.loadCompanyConfig();
+      
       // Mock data - gerçek API kurulana kadar
       if (!this.apiKey || this.apiKey === '') {
         const mockVehicles = await this.getVehicles();
@@ -152,6 +185,9 @@ class ArventoService {
   // Aracın son konumunu getir
   async getVehicleLocation(vehicleId: string): Promise<ArventoLocation> {
     try {
+      // Şirket konfigürasyonunu yükle
+      await this.loadCompanyConfig();
+      
       // Mock data - gerçek API kurulana kadar
       if (!this.apiKey || this.apiKey === '') {
         const vehicle = await this.getVehicle(vehicleId);
@@ -249,6 +285,9 @@ class ArventoService {
   // Canlı takip verilerini getir
   async getLiveTracking(vehicleIds: string[]): Promise<ArventoVehicle[]> {
     try {
+      // Şirket konfigürasyonunu yükle
+      await this.loadCompanyConfig();
+      
       // Mock data - gerçek API kurulana kadar
       if (!this.apiKey || this.apiKey === '') {
         const allVehicles = await this.getVehicles();
@@ -267,4 +306,8 @@ class ArventoService {
   }
 }
 
+// Global instance - geriye uyumluluk için
 export const arventoService = new ArventoService();
+
+// Şirket bazlı instance oluşturmak için
+export { ArventoService };

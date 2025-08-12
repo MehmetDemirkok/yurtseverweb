@@ -523,12 +523,19 @@ export default function AraclarPage() {
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex space-x-2">
+          <a
+            href="/moduller/transfer/araclar/arvento-panel"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Arvento Paneli
+          </a>
           <button
             onClick={() => setShowArventoModal(true)}
             className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <Settings className="h-4 w-4 mr-2" />
-            Arvento Entegrasyonu
+            Hızlı Ayarlar
           </button>
           <button
             onClick={() => {

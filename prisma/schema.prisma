@@ -23,6 +23,12 @@ model Company {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
+  // Arvento entegrasyonu
+  arventoApiKey       String?
+  arventoBaseUrl      String?   @default("https://api.arvento.com")
+  arventoLastTest     DateTime?
+  arventoIsConnected  Boolean   @default(false)
+  
   // Relations
   users         User[]
   accommodations Accommodation[]
