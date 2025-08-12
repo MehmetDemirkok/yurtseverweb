@@ -92,6 +92,21 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Login error:', error);
+    
+    // Veritabanı bağlantı hatası kontrolü
+    if (error instanceof Error) {
+      if (error.message.includes('fetch failed') || 
+          error.message.includes('connection') ||
+          error.message.includes('timeout') ||
+          error.message.includes('P1001') ||
+          error.message.includes('P1002')) {
+        return NextResponse.json(
+          { error: 'Veritabanına bağlanırken bir hata oluştu. Lütfen daha sonra tekrar deneyin.' },
+          { status: 503 }
+        );
+      }
+    }
+    
     return NextResponse.json(
       { error: 'Sunucu hatası' },
       { status: 500 }

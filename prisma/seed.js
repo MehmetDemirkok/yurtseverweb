@@ -44,7 +44,7 @@ async function createUsers(companies) {
       companyId: companies[0].id
     },
     {
-      email: 'yurtsever@yursever.com',
+      email: 'yurtsever@yurtsever.com',
       name: 'Mustafa Yurtsever',
       password: 'manager123',
       role: 'MUDUR',
@@ -96,7 +96,7 @@ async function main() {
     console.log('Seeding finished successfully.');
     console.log('Oluşturulan kullanıcılar:');
     console.log('1. Mehmet Demirkök (admin@yurtsever.com) - ADMIN');
-    console.log('2. Mustafa Yurtsever (yurtsever@yursever.com) - MUDUR');
+    console.log('2. Mustafa Yurtsever (yurtsever@yurtsever.com) - MUDUR');
   } catch (error) {
     console.error('Seeding error:', error);
     throw error;

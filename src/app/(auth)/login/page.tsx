@@ -12,14 +12,14 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     try {
-      const res = await fetch("/api/user/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: username, password }),
         credentials: "include",
       });
       const data = await res.json();
-      if (res.ok && data.success) {
+      if (res.ok && data.message) {
         // Başarılı giriş sonrası session expired alert flag'ini temizle
         localStorage.removeItem('sessionExpiredAlertShown');
         
