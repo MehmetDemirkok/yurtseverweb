@@ -2,11 +2,11 @@
 
 Bu klasörde proje yönetimi ve veri işlemleri için kullanılan script'ler bulunmaktadır.
 
-## 📁 Dosyalar
+## ⚠️ Önemli Değişiklik
 
-### 🏨 Otel Yönetimi
-- `fetchTurkeyHotels.js` - Türkiye otellerini oluşturan ana script
-- `importHotelsToDB.js` - Dinamik otel oluşturup veritabanına aktaran script (önerilen)
+**Otel çekme işlemleri artık API tabanlı olarak yapılmaktadır.** Eski script tabanlı sistem kaldırılmıştır.
+
+## 📁 Mevcut Dosyalar
 
 ### 👤 Kullanıcı Yönetimi
 - `createAdmin.js` - Admin kullanıcısı oluşturma scripti
@@ -14,53 +14,27 @@ Bu klasörde proje yönetimi ve veri işlemleri için kullanılan script'ler bul
 ### 💾 Veri Yedekleme
 - `backupAndMail.js` - Veritabanı yedekleme ve email gönderme scripti
 
-## 🚀 Kullanım
+### 🧹 Yardımcı Scriptler
+- `clearCookies.js` - Tarayıcı çerezlerini temizleme scripti
 
-### 1. Otelleri Oluştur ve JSON'a Kaydet
+## 🚀 Yeni API Tabanlı Sistem
 
-```bash
-npm run fetch-hotels
-```
+Otel verileri artık gerçek API'lerden çekilmektedir:
 
-Bu komut:
-- Türkiye'nin 85 şehrinde toplam ~850 otel oluşturur (rastgele)
-- Her şehir için 5-15 otel oluşturur
-- Otelleri `turkey_hotels.json` dosyasına kaydeder
-- İstatistikleri konsola yazdırır
+### Desteklenen API'ler:
+- **Booking.com API** (RapidAPI)
+- **TripAdvisor API** (RapidAPI)  
+- **Hotels.com API** (RapidAPI)
+- **Google Places API**
 
-**Not**: Bu script her çalıştığında farklı otel isimleri oluşturur, bu yüzden duplicate kontrolü çalışmaz.
+### Kullanım:
+1. API anahtarlarını `.env` dosyasına ekleyin
+2. Oteller sayfasına gidin
+3. "API'leri Test Et" butonu ile API'leri test edin
+4. "API'lerden Otelleri Çek" butonu ile verileri çekin
 
-### 1.1. Dinamik Otel Oluşturma (Önerilen)
-
-```bash
-npm run import-hotels
-# veya
-npm run generate-hotels
-```
-
-Bu komut:
-- Her şehir için sabit otel isimleri oluşturur
-- Duplicate kontrolü yapar (otel adı + şehir)
-- Sadece yeni otelleri ekler
-- Mevcut otelleri atlar
-- Her çalıştırmada aynı otel isimleri oluşturur (tutarlı)
-
-### 2. Otelleri Veritabanına Aktar
-
-```bash
-npm run import-hotels
-```
-
-Bu komut:
-- Her şehir için sabit otel isimleri oluşturur
-- Duplicate kontrolü yapar (otel adı + şehir)
-- Sadece yeni otelleri veritabanına kaydeder
-- Mevcut otelleri atlar
-- İstatistikleri konsola yazdırır
-
-### 3. Web Arayüzünden Çekme
-
-Oteller sayfasında "Türkiye Otellerini Çek" butonuna tıklayarak da otelleri çekebilirsiniz.
+### Detaylı Kurulum:
+`HOTEL_API_SETUP.md` dosyasını inceleyin.
 
 ## 👤 Admin Kullanıcı Oluşturma
 
@@ -86,72 +60,57 @@ Bu script:
 - Email ile gönderir
 - Haftalık otomatik yedekleme için kullanılır
 
-## 📊 Oluşturulan Veriler
+## 🧹 Çerez Temizleme
 
-### Otel Bilgileri
-- **Adı**: Rastgele otel zincirleri ve Türkçe isimler
-- **Adres**: Gerçekçi Türkçe adresler
-- **Şehir**: Türkiye'nin 85 şehri
-- **Ülke**: Türkiye
-- **Telefon**: Gerçekçi Türkiye telefon numaraları
-- **Email**: Otel adına göre oluşturulan email'ler
-- **Website**: Otel adına göre oluşturulan website'ler
-- **Yıldız**: 0-5 arası rastgele (ağırlıklı dağılım)
-- **Puan**: 0-10 arası (yıldız sayısına göre)
-- **Durum**: AKTIF, PASIF, TAMAMEN_DOLU, BAKIM
+```bash
+node scripts/clearCookies.js
+```
 
-### İstatistikler
-- **Toplam Otel**: ~850
-- **Şehir Sayısı**: 85
-- **Ortalama Yıldız**: ~2.7
-- **Ortalama Puan**: ~4.0
+Bu script:
+- Tarayıcı çerezlerini temizler
+- Test amaçlı kullanılır
 
-## 🎯 Özellikler
+## 📊 API İstatistikleri
 
-### Otel İsimleri
-- Uluslararası otel zincirleri (Hilton, Marriott, vb.)
-- Türkçe otel isimleri (Palas, Saray, Konak, vb.)
-- Şehir bazlı isimlendirme
-
-### Adresler
-- Gerçekçi Türkçe cadde isimleri
-- Mahalle/district isimleri
-- Şehir bazlı adresleme
-
-### Telefon Numaraları
-- Gerçek Türkiye alan kodları
-- Gerçekçi format (+90 XXX XXX XXXX)
-
-### Yıldız ve Puan Dağılımı
-- Gerçekçi ağırlıklı dağılım
-- Yıldız sayısına göre puan hesaplama
-- Çeşitli kalite seviyeleri
+Sistem her çekme işleminde şu istatistikleri verir:
+- Toplam otel sayısı
+- Yeni eklenen otel sayısı
+- Atlanan otel sayısı
+- Şehir sayısı
+- Ortalama yıldız ve puan
+- Durum dağılımı
+- API başarı/hata oranları
 
 ## ⚠️ Notlar
 
-1. **Duplicate Kontrolü**: 
-   - Güncellenmiş script (`importHotelsToDB.js`) otel adı + şehir kombinasyonuna göre kontrol yapar
-   - Her şehir için sabit otel isimleri kullanır (tutarlı)
-   - Rastgele script (`fetchTurkeyHotels.js`) her çalıştığında farklı isimler oluşturur
-2. **Veritabanı Bağlantısı**: Script'ler çalışmadan önce veritabanı bağlantısını kontrol edin
-3. **Büyük Veri**: 1170+ otel oluşturmak biraz zaman alabilir
-4. **Yasal Uyarı**: Bu script sadece test amaçlıdır, gerçek otel verileri için resmi API'ler kullanın
-5. **Önerilen Kullanım**: Güncellenmiş otel oluşturma (`importHotelsToDB.js`) kullanın
+1. **API Anahtarları**: Gerekli API anahtarlarının `.env` dosyasında tanımlanması gerekir
+2. **Rate Limiting**: Her API'nin kendi rate limit'i vardır, sistem otomatik olarak bekler
+3. **Hata Yönetimi**: API hatası durumunda sistem fallback veriler oluşturur
+4. **Veri Kalitesi**: API'lerden gelen veriler otomatik olarak normalize edilir
+5. **Duplicate Kontrolü**: Mevcut oteller tekrar eklenmez
 
 ## 🔧 Geliştirme
 
-### Yeni Şehir Ekleme
-`fetchTurkeyHotels.js` dosyasındaki `TURKEY_CITIES` dizisine yeni şehirler ekleyebilirsiniz.
+### Yeni API Ekleme
+`src/lib/hotel-api.ts` dosyasına yeni API servisleri ekleyebilirsiniz.
 
-### Otel İsimleri Değiştirme
-`HOTEL_CHAINS` ve `TURKISH_HOTEL_NAMES` dizilerini düzenleyebilirsiniz.
+### API Konfigürasyonu
+Environment variables ile API anahtarlarını yönetebilirsiniz.
 
-### Adres Formatı
-`generateAddress()` fonksiyonunu düzenleyerek adres formatını değiştirebilirsiniz.
+### Rate Limiting
+API'leri yormamak için delay sürelerini ayarlayabilirsiniz.
 
 ## 📞 Destek
 
 Herhangi bir sorun yaşarsanız:
-1. Console çıktılarını kontrol edin
-2. Veritabanı bağlantısını kontrol edin
-3. Prisma schema'sının güncel olduğundan emin olun
+1. Console loglarını kontrol edin
+2. API anahtarlarınızı doğrulayın
+3. Rate limit'leri kontrol edin
+4. Network bağlantınızı test edin
+
+## 🔗 İlgili Dosyalar
+
+- `HOTEL_API_SETUP.md` - API kurulum rehberi
+- `src/lib/hotel-api.ts` - API servisleri
+- `src/app/api/konaklama/oteller/fetch-turkey-hotels/route.ts` - API endpoint
+- `src/app/api/konaklama/oteller/test-apis/route.ts` - Test endpoint

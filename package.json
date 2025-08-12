@@ -6,10 +6,7 @@
     "dev": "next dev",
     "build": "prisma migrate deploy && prisma generate && next build",
     "start": "next start",
-    "lint": "next lint",
-    "fetch-hotels": "node scripts/fetchTurkeyHotels.js",
-    "import-hotels": "node scripts/importHotelsToDB.js",
-    "generate-hotels": "node scripts/importHotelsToDB.js"
+    "lint": "next lint"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

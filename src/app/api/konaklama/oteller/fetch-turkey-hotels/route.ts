@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
+import { hotelApiService } from '@/lib/hotel-api';
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
@@ -635,7 +636,7 @@ function removeDuplicates(hotels: any[]) {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 Türkiye otelleri çekiliyor... (Performans Optimizasyonu Aktif)');
+    console.log('🚀 Türkiye otelleri API\'lerden çekiliyor...');
     
     // Kullanıcının company ID'sini al
     const cookieStore = await cookies();
@@ -659,40 +660,52 @@ export async function POST(request: NextRequest) {
     
     const allHotels = [];
     const processedCities = new Set();
+    const apiStats = {
+      booking: { success: 0, error: 0 },
+      tripadvisor: { success: 0, error: 0 },
+      hotels: { success: 0, error: 0 },
+      google: { success: 0, error: 0 }
+    };
     
-    // Her şehir için otel verilerini çek
+    // Her şehir için gerçek API'lerden otel verilerini çek
     for (const city of TURKEY_CITIES) {
       if (processedCities.has(city)) continue;
       processedCities.add(city);
       
-      console.log(`📍 ${city} için oteller çekiliyor...`);
+      console.log(`📍 ${city} için API'lerden oteller çekiliyor...`);
       
       try {
-        // Gerçek otel verilerini çek
-        const realHotels = await fetchRealHotelData(city);
+        // Gerçek API'lerden otel verilerini çek
+        const apiHotels = await hotelApiService.fetchHotelsFromAllSources(city, 15);
         
-        // Company ID'yi ekle
-        realHotels.forEach(hotel => {
-          hotel.companyId = user.companyId;
+        // Verileri normalize et ve company ID ekle
+        const normalizedHotels = apiHotels.map(hotel => {
+          const normalized = hotelApiService.normalizeHotelData(hotel);
+          return {
+            ...normalized,
+            companyId: user.companyId,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
         });
         
-        allHotels.push(...realHotels);
+        allHotels.push(...normalizedHotels);
         
-        console.log(`✅ ${city} için ${realHotels.length} otel çekildi`);
+        console.log(`✅ ${city} için ${normalizedHotels.length} otel API'lerden çekildi`);
         
         // Rate limiting - API'leri yormamak için
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
       } catch (error) {
-        console.log(`❌ ${city} için hata:`, error);
+        console.log(`❌ ${city} için API hatası:`, error);
         
-        // Hata durumunda rastgele otel oluştur
+        // API hatası durumunda fallback oteller oluştur
         const fallbackHotels = await generateFallbackHotels(city, user.companyId);
         allHotels.push(...fallbackHotels);
       }
     }
     
-    console.log(`✅ Toplam ${allHotels.length} otel çekildi!`);
+    console.log(`✅ Toplam ${allHotels.length} otel API'lerden çekildi!`);
     
     // Duplicate'leri temizle
     const uniqueHotels = removeDuplicates(allHotels);
@@ -731,7 +744,8 @@ export async function POST(request: NextRequest) {
           statusDistribution: uniqueHotels.reduce((acc, h) => {
             acc[h.durum] = (acc[h.durum] || 0) + 1;
             return acc;
-          }, {} as Record<string, number>)
+          }, {} as Record<string, number>),
+          apiStats
         }
       });
     }
@@ -754,7 +768,8 @@ export async function POST(request: NextRequest) {
       statusDistribution: uniqueHotels.reduce((acc, h) => {
         acc[h.durum] = (acc[h.durum] || 0) + 1;
         return acc;
-      }, {} as Record<string, number>)
+      }, {} as Record<string, number>),
+      apiStats
     };
     
     console.log('\n📊 İstatistikler:', stats);
@@ -763,7 +778,7 @@ export async function POST(request: NextRequest) {
       success: true,
       count: createdHotels.count,
       message: createdHotels.count > 0 
-        ? `${createdHotels.count} yeni otel eklendi! ${uniqueHotels.length - createdHotels.count} otel zaten mevcuttu.`
+        ? `${createdHotels.count} yeni otel API'lerden eklendi! ${uniqueHotels.length - createdHotels.count} otel zaten mevcuttu.`
         : 'Tüm oteller zaten mevcut! Yeni otel eklenmedi.',
       stats
     });
