@@ -4,11 +4,12 @@ import { prisma } from '@/lib/prisma';
 // GET - Belirli bir transferi getir
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
     const transfer = await prisma.transfer.findUnique({
-      where: { id: params.id },
+      where: { id: paramsData.id },
       include: {
         arac: {
           select: {
@@ -47,9 +48,10 @@ export async function GET(
 // PUT - Transfer güncelle
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
     const body = await request.json();
     const { 
       kalkisYeri, 
@@ -117,11 +119,11 @@ export async function PUT(
 
     // Önce mevcut yolcuları sil
     await prisma.yolcu.deleteMany({
-      where: { transferId: params.id }
+      where: { transferId: paramsData.id }
     });
 
     const transfer = await prisma.transfer.update({
-      where: { id: params.id },
+      where: { id: paramsData.id },
       data: {
         kalkisYeri,
         varisYeri,
@@ -169,11 +171,12 @@ export async function PUT(
 // DELETE - Transfer sil
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
     const transfer = await prisma.transfer.findUnique({
-      where: { id: params.id }
+      where: { id: paramsData.id }
     });
 
     if (!transfer) {
@@ -192,7 +195,7 @@ export async function DELETE(
     }
 
     await prisma.transfer.delete({
-      where: { id: params.id }
+      where: { id: paramsData.id }
     });
 
     return NextResponse.json({ message: 'Transfer başarıyla silindi' });

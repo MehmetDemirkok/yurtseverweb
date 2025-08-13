@@ -4,11 +4,12 @@ import { requireAuth, Role } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth(Role.ADMIN);
-    const companyId = parseInt(params.id);
+    const paramsData = await params;
+    const companyId = parseInt(paramsData.id);
 
     const company = await prisma.company.findUnique({
       where: { id: companyId },
@@ -48,11 +49,12 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth(Role.ADMIN);
-    const companyId = parseInt(params.id);
+    const paramsData = await params;
+    const companyId = parseInt(paramsData.id);
     const data = await request.json();
 
     const company = await prisma.company.update({
@@ -87,11 +89,12 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth(Role.ADMIN);
-    const companyId = parseInt(params.id);
+    const paramsData = await params;
+    const companyId = parseInt(paramsData.id);
 
     // Şirketin kullanıcı sayısını kontrol et
     const userCount = await prisma.user.count({

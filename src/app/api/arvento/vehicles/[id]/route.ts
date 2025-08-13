@@ -4,13 +4,15 @@ import { requireCompanyAccess } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
+    
     // Kullanıcı yetkilendirmesi
     await requireCompanyAccess();
 
-    const vehicleId = params.id;
+    const vehicleId = paramsData.id;
 
     // Arvento'dan araç detaylarını getir
     const vehicle = await arventoService.getVehicle(vehicleId);
@@ -36,13 +38,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
+    
     // Kullanıcı yetkilendirmesi
     await requireCompanyAccess();
 
-    const vehicleId = params.id;
+    const vehicleId = paramsData.id;
     const data = await request.json();
 
     // Araç durumunu güncelle

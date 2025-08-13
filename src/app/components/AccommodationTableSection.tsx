@@ -14,7 +14,6 @@ export interface AccommodationRecord {
   cikisTarihi: string;
   odaTipi: string;
   konaklamaTipi: "BB" | "HB" | "FB" | "UHD";
-  faturaEdildi: boolean;
   gecelikUcret: number;
   toplamUcret: number;
   organizasyonAdi?: string;
@@ -69,7 +68,6 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
     cikisTarihi: true,
     odaTipi: true,
     konaklamaTipi: true,
-    faturaEdildi: true,
     gecelikUcret: true,
     toplamUcret: true,
     organizasyonAdi: true,
@@ -88,7 +86,6 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
     cikisTarihi: '',
     odaTipi: 'Single Oda',
     konaklamaTipi: 'BB' as const,
-    faturaEdildi: false,
     gecelikUcret: 0,
     toplamUcret: 0,
     organizationId: '',
@@ -252,6 +249,9 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
   const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     
+    // id alanını değiştirmeye izin verme
+    if (name === 'id') return;
+    
     if (type === 'number') {
       setEditingRecord(prev => {
         if (!prev) return prev;
@@ -304,12 +304,27 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
     setIsSubmitting(true);
     
     try {
-      const response = await fetch(`/api/accommodation/${editingRecord.id}`, {
+      // ID'yi ayrı tut
+      const recordId = editingRecord.id;
+      
+      // Sadece güncellenebilir alanları gönder - id ve diğer sistem alanlarını çıkar
+      const { 
+        id, 
+        organization, 
+        companyId, 
+        createdAt, 
+        updatedAt,
+        organizationId,
+        isMunferit,
+        ...updateData 
+      } = editingRecord;
+      
+      const response = await fetch(`/api/accommodation/${recordId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editingRecord),
+        body: JSON.stringify(updateData),
       });
       
       if (response.ok) {
@@ -632,7 +647,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
           const gecelikUcret = parseFloat(getColumnValue('Gecelik Ücret') || getColumnValue('GecelikUcret') || row[8]?.toString() || '0') || 0;
   
           const otelAdi = getColumnValue('Otel Adı') || getColumnValue('OtelAdi') || row[10]?.toString() || '';
-          const kurumCari = getColumnValue('Kurum / Cari') || getColumnValue('Kurum Cari') || getColumnValue('KurumCari') || row[11]?.toString() || '';
+          const kurumCari = getColumnValue('Cari') || getColumnValue('Kurum / Cari') || getColumnValue('Kurum Cari') || getColumnValue('KurumCari') || row[11]?.toString() || '';
 
           if (!adiSoyadi || !girisTarihi || !cikisTarihi) {
             console.warn(`Satır ${index + 2}: Gerekli alanlar eksik (Ad Soyad, Giriş Tarihi, Çıkış Tarihi)`);
@@ -706,7 +721,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
       { key: 'toplamUcret', label: 'Toplam Ücret' },
       
       { key: 'otelAdi', label: 'Otel Adı' },
-      { key: 'kurumCari', label: 'Kurum / Cari' },
+      { key: 'kurumCari', label: 'Cari' },
     ]);
     setSelectedColumns([
       'id', 'adiSoyadi', 'unvani', 'ulke', 'sehir', 'girisTarihi', 'cikisTarihi',
@@ -769,8 +784,8 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
         
         } else if (column === 'otelAdi') {
           filteredRecord['Otel Adı'] = record.otelAdi || '';
-        } else if (column === 'kurumCari') {
-          filteredRecord['Kurum / Cari'] = record.kurumCari || '';
+              } else if (column === 'kurumCari') {
+        filteredRecord['Cari'] = record.kurumCari || '';
         }
       });
       return filteredRecord;
@@ -1019,12 +1034,12 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
               </th>
               <th className="w-16 py-1 hidden xl:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('kurumCari')}>
                 <div className="flex items-center justify-between">
-                  <span>Kurum</span>
+                  <span>Cari</span>
                   <SortIcon column="kurumCari" />
                 </div>
               </th>
 
-              <th className="w-16 py-1 hidden xl:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('otelAdi')}>
+              <th className="w-16 py-1 hidden lg:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('otelAdi')}>
                 <div className="flex items-center justify-between">
                   <span>Otel</span>
                   <SortIcon column="otelAdi" />
@@ -1107,10 +1122,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
                 </td>
                 <td className="font-medium text-blue-600 whitespace-nowrap py-1">{record.id}</td>
                 <td className="truncate hidden xl:table-cell py-1">{record.kurumCari || '-'}</td>
-                <td className="truncate hidden lg:table-cell py-1">
-                  {record.organization?.name || (record.isMunferit ? 'Münferit' : '-')}
-                </td>
-                <td className="truncate hidden xl:table-cell py-1">{record.otelAdi || '-'}</td>
+                <td className="truncate hidden lg:table-cell py-1">{record.otelAdi || '-'}</td>
                 <td className="truncate py-1">
                   <span className="font-medium">{record.adiSoyadi}</span>
                 </td>
@@ -1320,7 +1332,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
                 </select>
               </div>
               <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kurum/Cari</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cari</label>
                 <select
                   name="kurumCari"
                   value={editingRecord.kurumCari || ''}
@@ -1537,7 +1549,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
                 </select>
               </div>
               <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kurum/Cari</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cari</label>
                 <select
                   name="kurumCari"
                   value={formData.kurumCari || ''}

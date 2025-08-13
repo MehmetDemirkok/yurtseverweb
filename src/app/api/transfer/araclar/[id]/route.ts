@@ -4,11 +4,12 @@ import { prisma } from '@/lib/prisma';
 // GET - Belirli bir aracı getir
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
     const arac = await prisma.arac.findUnique({
-      where: { id: params.id }
+      where: { id: paramsData.id }
     });
 
     if (!arac) {
@@ -31,9 +32,10 @@ export async function GET(
 // PUT - Araç güncelle
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
     const body = await request.json();
     const { plaka, marka, model, yolcuKapasitesi, durum, enlem, boylam } = body;
 
@@ -49,7 +51,7 @@ export async function PUT(
     const existingArac = await prisma.arac.findFirst({
       where: {
         plaka,
-        id: { not: params.id }
+        id: { not: paramsData.id }
       }
     });
 
@@ -61,7 +63,7 @@ export async function PUT(
     }
 
     const arac = await prisma.arac.update({
-      where: { id: params.id },
+      where: { id: paramsData.id },
       data: {
         plaka,
         marka,
@@ -87,13 +89,15 @@ export async function PUT(
 // DELETE - Araç sil
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
+    
     // Araç transferde kullanılıyor mu kontrol et
     const activeTransfer = await prisma.transfer.findFirst({
       where: {
-        aracId: params.id,
+        aracId: paramsData.id,
         durum: { in: ['BEKLEMEDE', 'YOLDA'] }
       }
     });
@@ -106,7 +110,7 @@ export async function DELETE(
     }
 
     await prisma.arac.delete({
-      where: { id: params.id }
+      where: { id: paramsData.id }
     });
 
     return NextResponse.json({ message: 'Araç başarıyla silindi' });

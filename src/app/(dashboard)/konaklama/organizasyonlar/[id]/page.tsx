@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import AccommodationTableSection from "@/app/components/AccommodationTableSection";
 import AuthGuard from "@/components/layout/AuthGuard";
+import * as XLSX from 'xlsx';
 
 interface User {
   id: number;
@@ -36,6 +37,7 @@ interface Organization {
 export default function OrganizasyonDetayPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const organizationId = params.id as string;
   
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -43,6 +45,17 @@ export default function OrganizasyonDetayPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [loadingOrg, setLoadingOrg] = useState(true);
+  
+  // Puantaj raporu için state'ler
+  const [showPuantajFilterModal, setShowPuantajFilterModal] = useState<boolean>(false);
+  const [puantajFilters, setPuantajFilters] = useState({
+    organizasyonAdi: '',
+    baslangicTarihi: '',
+    bitisTarihi: ''
+  });
+  const organizasyonRef = useRef<HTMLDivElement>(null);
+  const [showOrganizasyonOptions, setShowOrganizasyonOptions] = useState(false);
+  const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
   
   // Kullanıcı bilgilerini yükle
   useEffect(() => {
@@ -136,9 +149,203 @@ export default function OrganizasyonDetayPage() {
   };
 
   // Puantaj raporu fonksiyonu
-  const handlePuantajRaporu = () => {
-    // Bu organizasyon için puantaj raporu
-    router.push(`/konaklama/organizasyonlar/${organizationId}?action=puantaj`);
+  const handlePuantajRaporu = async () => {
+    // Organizasyon seçeneklerini yükle ve tarih aralığını belirle
+    try {
+      const response = await fetch(`/api/accommodation?organizationId=${organizationId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const uniqueOrganizations = [...new Set(data.map((record: any) => record.organizasyonAdi).filter(Boolean))];
+        setOrganizasyonOptions(uniqueOrganizations);
+        
+        // En küçük giriş tarihi ve en büyük çıkış tarihini bul
+        if (data.length > 0) {
+          const allDates = data.flatMap((record: any) => [new Date(record.girisTarihi), new Date(record.cikisTarihi)]);
+          const minDate = new Date(Math.min(...allDates.map((date: Date) => date.getTime())));
+          const maxDate = new Date(Math.max(...allDates.map((date: Date) => date.getTime())));
+          
+          // Tarihleri YYYY-MM-DD formatına çevir
+          const minDateStr = minDate.toISOString().split('T')[0];
+          const maxDateStr = maxDate.toISOString().split('T')[0];
+          
+          // Filtreleme değerlerini güncelle
+          setPuantajFilters(prev => ({
+            ...prev,
+            organizasyonAdi: organization?.name || '',
+            baslangicTarihi: minDateStr,
+            bitisTarihi: maxDateStr
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Organizasyon seçenekleri yüklenirken hata:', error);
+    }
+    
+    // Filtreleme modalını aç
+    setShowPuantajFilterModal(true);
+  };
+
+  // Puantaj raporu Excel dosyası oluşturma fonksiyonu
+  const generatePuantajRaporu = async () => {
+    const { organizasyonAdi, baslangicTarihi, bitisTarihi } = puantajFilters;
+    
+    try {
+      // API'den kayıtları al
+      const response = await fetch(`/api/accommodation?organizationId=${organizationId}`);
+      if (!response.ok) {
+        throw new Error('Kayıtlar alınamadı');
+      }
+      
+      let records = await response.json();
+      
+      // Eğer tarih aralığı belirtilmemişse, en küçük ve en büyük tarihleri bul
+      let startDate = baslangicTarihi ? new Date(baslangicTarihi) : null;
+      let endDate = bitisTarihi ? new Date(bitisTarihi) : null;
+      
+      if (!startDate || !endDate) {
+        const allDates = records.flatMap((record: any) => [new Date(record.girisTarihi), new Date(record.cikisTarihi)]);
+        const minDate = new Date(Math.min(...allDates.map((date: Date) => date.getTime())));
+        const maxDate = new Date(Math.max(...allDates.map((date: Date) => date.getTime())));
+        
+        if (!startDate) startDate = minDate;
+        if (!endDate) endDate = maxDate;
+      }
+      
+      // Metin bazlı filtreler
+      if (organizasyonAdi) {
+        records = records.filter((record: any) => 
+          record.organizasyonAdi?.toLowerCase().includes(organizasyonAdi.toLowerCase())
+        );
+      }
+      
+      // Tarih aralığında en az bir gün kesişen kayıtları filtrele
+      records = records.filter((record: any) => {
+        const recordBaslangic = new Date(record.girisTarihi);
+        const recordBitis = new Date(record.cikisTarihi);
+        
+        // İki tarih aralığının kesişimi var mı kontrol et
+        return (
+          (recordBaslangic <= endDate && recordBitis >= startDate)
+        );
+      });
+
+    // Tüm kayıtları tarih aralıklarına göre düzenle
+    const sortedRecords = [...records].sort((a, b) => {
+      // Önce giriş tarihine göre sırala
+      const dateA = new Date(a.girisTarihi).getTime();
+      const dateB = new Date(b.girisTarihi).getTime();
+      return dateA - dateB;
+    });
+
+    // Tüm tarihleri bul (benzersiz giriş ve çıkış tarihleri)
+    const allDatesSet = new Set<string>();
+    sortedRecords.forEach(record => {
+      // Giriş ve çıkış tarihleri arasındaki tün günleri ekle
+      const startDate = new Date(record.girisTarihi);
+      const endDate = new Date(record.cikisTarihi);
+      
+      // Her gün için döngü
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        allDatesSet.add(currentDate.toISOString().split('T')[0]); // YYYY-MM-DD formatında ekle
+        currentDate.setDate(currentDate.getDate() + 1); // Bir sonraki güne geç
+      }
+    });
+
+    // Tarihleri sırala
+    const allDates = Array.from(allDatesSet).sort();
+
+    // Başlık satırını oluştur (Otel konaklama puantajı için)
+    const headers = [
+      "Adı Soyadı", 
+      "Unvanı", 
+      "Cari", 
+      "Otel Adı", 
+      "Oda Tipi", 
+      "Konaklama Tipi", 
+      "Gecelik Ücret", 
+      "Toplam Ücret", 
+      "Giriş Tarihi", 
+      "Çıkış Tarihi", 
+      "Gece Sayısı"
+    ];
+
+    // Tarih başlıklarını ekle (startDate'den endDate'e kadar)
+    const dateRange = [];
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      dateRange.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    dateRange.forEach(date => {
+      headers.push(date.toLocaleDateString('tr-TR'));
+    });
+
+    // Veri satırlarını oluştur
+    const dataRows = sortedRecords.map(record => {
+      const row = [
+        record.adiSoyadi || '',
+        record.unvani || '',
+        record.kurumCari || '',
+        record.otelAdi || '',
+        record.odaTipi || '',
+        record.konaklamaTipi || '',
+        record.gecelikUcret || 0,
+        record.toplamUcret || 0,
+        new Date(record.girisTarihi).toLocaleDateString('tr-TR'),
+        new Date(record.cikisTarihi).toLocaleDateString('tr-TR'),
+        record.numberOfNights || 0
+      ];
+
+      // Her tarih için kontrol et
+      dateRange.forEach(date => {
+        const recordStart = new Date(record.girisTarihi);
+        const recordEnd = new Date(record.cikisTarihi);
+        
+        // Bu tarihte konaklama var mı?
+        if (date >= recordStart && date <= recordEnd) {
+          row.push('✓'); // Konaklama var
+        } else {
+          row.push(''); // Konaklama yok
+        }
+      });
+
+      return row;
+    });
+
+    // Excel dosyası oluştur
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+
+    // Sütun genişliklerini ayarla
+    const colWidths = [
+      { wch: 20 }, // Adı Soyadı
+      { wch: 15 }, // Unvanı
+      { wch: 20 }, // Cari
+      { wch: 20 }, // Otel Adı
+      { wch: 15 }, // Oda Tipi
+      { wch: 15 }, // Konaklama Tipi
+      { wch: 15 }, // Gecelik Ücret
+      { wch: 15 }, // Toplam Ücret
+      { wch: 15 }, // Giriş Tarihi
+      { wch: 15 }, // Çıkış Tarihi
+      { wch: 10 }, // Gece Sayısı
+      ...dateRange.map(() => ({ wch: 8 })) // Tarihler için genişlik
+    ];
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Puantaj Raporu');
+
+    // Dosya adını oluştur
+    const fileName = `Otel_Konaklama_Puantaj_${organization?.name || 'Organizasyon'}_${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}.xlsx`;
+    
+    // Dosyayı indir
+    XLSX.writeFile(wb, fileName);
+  } catch (error) {
+    console.error('Puantaj raporu oluşturulurken hata:', error);
+    alert('Puantaj raporu oluşturulurken bir hata oluştu.');
+  }
   };
 
   // Loading durumu
@@ -223,31 +430,22 @@ export default function OrganizasyonDetayPage() {
       <div className="w-full mx-auto px-2 sm:px-4 py-4 sm:py-8">
         {/* Başlık */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center">
-              <button
-                onClick={() => router.push('/konaklama/organizasyonlar')}
-                className="mr-4 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{organization.name}</h1>
-                <p className="text-gray-600 mt-1">Organizasyon konaklama kayıtları</p>
+                      <div className="flex items-center mb-4">
+              <div className="flex items-center">
+                <button
+                  onClick={() => router.push('/konaklama/organizasyonlar')}
+                  className="mr-4 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{organization.name}</h1>
+                  <p className="text-gray-600 mt-1">Organizasyon konaklama kayıtları</p>
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => router.push(`/konaklama/organizasyonlar/${organizationId}?action=add`)}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Yeni Kayıt Ekle
-            </button>
-          </div>
         </div>
 
         {/* Organizasyon Bilgileri */}
@@ -380,6 +578,88 @@ export default function OrganizasyonDetayPage() {
           filterType="organization"
           organizationId={parseInt(organizationId)}
         />
+
+        {/* Puantaj Filtre Modalı */}
+        {showPuantajFilterModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h2 className="text-xl font-bold mb-4">Puantaj Raporu Filtrele</h2>
+              <div className="space-y-4">
+                <div className="relative" ref={organizasyonRef}>
+                  <label htmlFor="organizasyonAdi" className="block text-sm font-medium text-gray-700 mb-1">Organizasyon Adı</label>
+                  <input
+                    type="text"
+                    id="organizasyonAdi"
+                    className="input w-full"
+                    value={puantajFilters.organizasyonAdi}
+                    onChange={(e) => setPuantajFilters(prev => ({ ...prev, organizasyonAdi: e.target.value }))}
+                    onFocus={() => setShowOrganizasyonOptions(true)}
+                  />
+                  {showOrganizasyonOptions && (
+                    <div className="absolute left-0 top-full z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-sm max-h-60 overflow-auto">
+                      {organizasyonOptions
+                        .filter(option => option.toLowerCase().includes(puantajFilters.organizasyonAdi.toLowerCase()))
+                        .map((option, index) => (
+                          <div
+                            key={index}
+                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm truncate"
+                            onClick={() => {
+                              setPuantajFilters(prev => ({ ...prev, organizasyonAdi: option }));
+                              setShowOrganizasyonOptions(false);
+                            }}
+                          >
+                            {option}
+                          </div>
+                        ))}
+                      {organizasyonOptions.filter(option => option.toLowerCase().includes(puantajFilters.organizasyonAdi.toLowerCase())).length === 0 && (
+                        <div className="px-4 py-2 text-gray-500 italic text-sm">Sonuç bulunamadı</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="baslangicTarihi" className="block text-sm font-medium text-gray-700 mb-1">Başlangıç Tarihi</label>
+                  <input
+                    type="date"
+                    id="baslangicTarihi"
+                    className="input w-full"
+                    value={puantajFilters.baslangicTarihi}
+                    onChange={(e) => setPuantajFilters(prev => ({ ...prev, baslangicTarihi: e.target.value }))}
+                    max={puantajFilters.bitisTarihi || undefined}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="bitisTarihi" className="block text-sm font-medium text-gray-700 mb-1">Bitiş Tarihi</label>
+                  <input
+                    type="date"
+                    id="bitisTarihi"
+                    className="input w-full"
+                    value={puantajFilters.bitisTarihi}
+                    onChange={(e) => setPuantajFilters(prev => ({ ...prev, bitisTarihi: e.target.value }))}
+                    min={puantajFilters.baslangicTarihi || undefined}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  className="btn btn-outline"
+                  onClick={() => setShowPuantajFilterModal(false)}
+                >
+                  İptal
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={async () => {
+                    await generatePuantajRaporu();
+                    setShowPuantajFilterModal(false);
+                  }}
+                >
+                  Rapor Oluştur
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AuthGuard>
   );

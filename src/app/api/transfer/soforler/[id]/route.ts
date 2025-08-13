@@ -4,11 +4,12 @@ import { prisma } from '@/lib/prisma';
 // GET - Belirli bir şoförü getir
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
     const sofor = await prisma.sofor.findUnique({
-      where: { id: params.id },
+      where: { id: paramsData.id },
       include: {
         atananArac: {
           select: {
@@ -39,7 +40,7 @@ export async function GET(
 // PUT - Şoför güncelle
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
@@ -53,11 +54,13 @@ export async function PUT(
       );
     }
 
+    const paramsData = await params;
+    
     // Telefon benzersizlik kontrolü (kendi ID'si hariç)
     const existingSofor = await prisma.sofor.findFirst({
       where: {
         telefon,
-        id: { not: params.id }
+        id: { not: paramsData.id }
       }
     });
 
@@ -69,7 +72,7 @@ export async function PUT(
     }
 
     const sofor = await prisma.sofor.update({
-      where: { id: params.id },
+      where: { id: paramsData.id },
       data: {
         ad,
         soyad,
@@ -103,13 +106,15 @@ export async function PUT(
 // DELETE - Şoför sil
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
+    
     // Şoför transferde kullanılıyor mu kontrol et
     const activeTransfer = await prisma.transfer.findFirst({
       where: {
-        soforId: params.id,
+        soforId: paramsData.id,
         durum: { in: ['BEKLEMEDE', 'YOLDA'] }
       }
     });
@@ -122,7 +127,7 @@ export async function DELETE(
     }
 
     await prisma.sofor.delete({
-      where: { id: params.id }
+      where: { id: paramsData.id }
     });
 
     return NextResponse.json({ message: 'Şoför başarıyla silindi' });

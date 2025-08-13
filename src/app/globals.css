@@ -362,6 +362,17 @@ html {
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
+.btn-outline {
+  background: transparent;
+  color: var(--foreground);
+  border: 2px solid var(--card-border);
+}
+
+.btn-outline:hover {
+  background: var(--muted-background);
+  border-color: var(--foreground);
+}
+
 /* Input styles */
 .input {
   width: 100%;

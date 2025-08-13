@@ -3,8 +3,9 @@ import { prisma } from '@/lib/prisma';
 import { getUserFromToken } from '@/lib/auth';
 
 // Belirli bir konaklama kaydını getir
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const id = parseInt(params.id);
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const paramsData = await params;
+  const id = parseInt(paramsData.id);
   if (isNaN(id)) {
     return NextResponse.json({ error: 'Geçersiz ID' }, { status: 400 });
   }
@@ -48,8 +49,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // Konaklama kaydını güncelle
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
-  const id = parseInt(params.id);
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const paramsData = await params;
+  const id = parseInt(paramsData.id);
   if (isNaN(id)) {
     return NextResponse.json({ error: 'Geçersiz ID' }, { status: 400 });
   }
@@ -82,8 +84,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     const data = await request.json();
     
-    // companyId'yi değiştirmeye izin verme
-    const { companyId, ...updateData } = data;
+    // companyId, id ve organization objesini değiştirmeye izin verme
+    const { companyId, id: dataId, organization, ...updateData } = data;
     
     // Organizasyon ID varsa organizasyonun mevcut olduğunu kontrol et
     if (updateData.organizationId) {
@@ -145,8 +147,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 // Konaklama kaydını sil
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  const id = parseInt(params.id);
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const paramsData = await params;
+  const id = parseInt(paramsData.id);
   if (isNaN(id)) {
     return NextResponse.json({ error: 'Geçersiz ID' }, { status: 400 });
   }

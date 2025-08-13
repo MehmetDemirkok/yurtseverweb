@@ -4,11 +4,12 @@ import { prisma } from '@/lib/prisma';
 // GET - Belirli bir cariyi getir
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
     const cari = await prisma.cari.findUnique({
-      where: { id: params.id }
+      where: { id: paramsData.id }
     });
 
     if (!cari) {
@@ -31,7 +32,7 @@ export async function GET(
 // PUT - Cari güncelle
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json();
@@ -70,8 +71,9 @@ export async function PUT(
       }
     }
 
+    const paramsData = await params;
     const cari = await prisma.cari.update({
-      where: { id: params.id },
+      where: { id: paramsData.id },
       data: {
         ad,
         soyad: soyad || null,
@@ -102,11 +104,12 @@ export async function PUT(
 // DELETE - Cari sil
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
     const cari = await prisma.cari.findUnique({
-      where: { id: params.id }
+      where: { id: paramsData.id }
     });
 
     if (!cari) {
@@ -117,7 +120,7 @@ export async function DELETE(
     }
 
     await prisma.cari.delete({
-      where: { id: params.id }
+      where: { id: paramsData.id }
     });
 
     return NextResponse.json({ message: 'Cari başarıyla silindi' });

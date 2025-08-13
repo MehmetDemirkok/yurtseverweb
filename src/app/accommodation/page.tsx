@@ -149,12 +149,10 @@ export default function AccommodationPage() {
     const headers = [
       "Adı Soyadı", 
       "Unvanı", 
-      "Kurum / Cari", 
-      "Organizasyon Adı", 
+      "Cari", 
       "Otel Adı", 
       "Oda Tipi", 
       "Konaklama Tipi", 
-      "Fatura Edildi mi?", 
       "Gecelik Ücret", 
       "Toplam Ücret", 
       ...allDates.map(date => {
@@ -170,11 +168,9 @@ export default function AccommodationPage() {
         record.adiSoyadi,
         record.unvani,
         record.kurumCari || "",
-        record.organizasyonAdi || "",
         record.otelAdi || "",
         record.odaTipi,
         record.konaklamaTipi,
-        record.faturaEdildi,
         record.gecelikUcret.toLocaleString('tr-TR'),
         record.toplamUcret.toLocaleString('tr-TR')
       ];
@@ -204,12 +200,10 @@ export default function AccommodationPage() {
     const wscols = [
       { wch: 20 }, // Adı Soyadı
       { wch: 15 }, // Unvanı
-      { wch: 20 }, // Kurum / Cari
-      { wch: 25 }, // Organizasyon Adı
+      { wch: 20 }, // Cari
       { wch: 20 }, // Otel Adı
       { wch: 15 }, // Oda Tipi
       { wch: 15 }, // Konaklama Tipi
-      { wch: 15 }, // Fatura Edildi mi?
       { wch: 15 }, // Gecelik Ücret
       { wch: 15 }, // Toplam Ücret
       ...allDates.map(() => ({ wch: 10 })) // Tarihler için genişlik
@@ -221,7 +215,7 @@ export default function AccommodationPage() {
     XLSX.utils.book_append_sheet(wb, ws, "Puantaj Raporu");
     
     // Dosya adını oluştur
-    const fileName = `Puantaj_Raporu_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `Otel_Konaklama_Puantaj_${new Date().toISOString().split('T')[0]}.xlsx`;
     
     // Dosyayı indir
     XLSX.writeFile(wb, fileName);

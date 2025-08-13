@@ -4,11 +4,12 @@ import { prisma } from '@/lib/prisma';
 // GET - Belirli bir tedarikçiyi getir
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
     const tedarikci = await prisma.tedarikci.findUnique({
-      where: { id: params.id }
+      where: { id: paramsData.id }
     });
 
     if (!tedarikci) {
@@ -31,9 +32,10 @@ export async function GET(
 // PUT - Tedarikçi güncelle
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
     const body = await request.json();
     const { 
       sirketAdi, 
@@ -65,12 +67,12 @@ export async function PUT(
         return NextResponse.json(
           { error: 'Geçersiz email formatı' },
           { status: 400 }
-        );
+      );
       }
     }
 
     const tedarikci = await prisma.tedarikci.update({
-      where: { id: params.id },
+      where: { id: paramsData.id },
       data: {
         sirketAdi,
         yetkiliKisi: yetkiliKisi || null,
@@ -100,11 +102,12 @@ export async function PUT(
 // DELETE - Tedarikçi sil
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
     const tedarikci = await prisma.tedarikci.findUnique({
-      where: { id: params.id }
+      where: { id: paramsData.id }
     });
 
     if (!tedarikci) {
@@ -115,7 +118,7 @@ export async function DELETE(
     }
 
     await prisma.tedarikci.delete({
-      where: { id: params.id }
+      where: { id: paramsData.id }
     });
 
     return NextResponse.json({ message: 'Tedarikçi başarıyla silindi' });

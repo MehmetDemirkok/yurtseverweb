@@ -4,16 +4,18 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
+    
     // Kullanıcı yetkilendirmesi
     const user = await requireCompanyAccess();
 
     // Aracın şirkete ait olduğunu kontrol et
     const arac = await prisma.arac.findFirst({
       where: {
-        id: params.id,
+        id: paramsData.id,
         companyId: user.companyId
       }
     });
@@ -27,7 +29,7 @@ export async function POST(
 
     // Araç eşleştirmesini kaldır
     await prisma.arac.update({
-      where: { id: params.id },
+      where: { id: paramsData.id },
       data: {
         arventoId: null,
         arventoData: null

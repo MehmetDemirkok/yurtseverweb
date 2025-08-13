@@ -4,13 +4,15 @@ import { requireCompanyAccess } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const paramsData = await params;
+    
     // Kullanıcı yetkilendirmesi
     await requireCompanyAccess();
 
-    const vehicleId = params.id;
+    const vehicleId = paramsData.id;
 
     // Arvento'dan araç konumunu getir
     const location = await arventoService.getVehicleLocation(vehicleId);
