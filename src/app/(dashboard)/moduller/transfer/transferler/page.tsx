@@ -596,131 +596,129 @@ export default function TransferlerPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Sayfa Başlığı */}
+    <div className="space-y-4">
+      {/* Sayfa Başlığı - Kompakt */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
             Transfer Yönetimi
           </h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
             Transfer oluşturma, düzenleme ve takip işlemleri
           </p>
         </div>
         <button
           onClick={openCreateModal}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          className="mt-3 sm:mt-0 inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-purple-500"
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-3 w-3 mr-1" />
           Yeni Transfer
         </button>
       </div>
 
-      {/* Filtreler */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Filtreler - Kompakt */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Ara
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
               <input
                 type="text"
-                placeholder="Kalkış, varış veya şoför..."
+                placeholder="Kalkış, varış..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="pl-7 w-full border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Durum Filtresi
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Durum
             </label>
             <select
               value={filterDurum}
               onChange={(e) => setFilterDurum(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
             >
-                             <option value="tümü">Tümü</option>
-               <option value="BEKLEMEDE">Beklemede</option>
-               <option value="YOLDA">Yolda</option>
-               <option value="TAMAMLANDI">Tamamlandı</option>
-               <option value="IPTAL">İptal</option>
+              <option value="tümü">Tümü</option>
+              <option value="BEKLEMEDE">Beklemede</option>
+              <option value="YOLDA">Yolda</option>
+              <option value="TAMAMLANDI">Tamamlandı</option>
+              <option value="IPTAL">İptal</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Tahsis Durumu
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Tahsis
             </label>
             <select
               value={filterTahsisli}
               onChange={(e) => setFilterTahsisli(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
             >
               <option value="tümü">Tümü</option>
-              <option value="tahsisli">Tahsisli Araçlar</option>
-              <option value="normal">Normal Transferler</option>
+              <option value="tahsisli">Tahsisli</option>
+              <option value="normal">Normal</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Tarih Filtresi
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Tarih
             </label>
             <input
               type="date"
               value={filterTarih}
               onChange={(e) => setFilterTarih(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <div className="sm:col-span-2">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Excel'e Aktar
             </label>
             <button
               onClick={exportToExcel}
-              className="w-full flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-green-600 hover:bg-green-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-xs bg-green-600 hover:bg-green-700 text-white focus:outline-none focus:ring-1 focus:ring-green-500"
             >
-              <FileDown className="h-4 w-4 mr-2" />
+              <FileDown className="h-3 w-3 mr-1" />
               Excel İndir
             </button>
           </div>
         </div>
       </div>
 
-      {/* Transferler Tablosu */}
+      {/* Transferler Tablosu - Responsive ve Kompakt */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Tablosu */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Kalkış → Varış
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Rota
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Tarih/Saat
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Yolcu
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Cari/Tedarikçi
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Cari
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Araç/Şoför
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Durum
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Fiyat/Tahsis
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Fiyat
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Notlar
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   İşlemler
                 </th>
               </tr>
@@ -728,112 +726,79 @@ export default function TransferlerPage() {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredTransferler.map((transfer) => (
                 <tr key={transfer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="text-xs font-medium text-gray-900 dark:text-white">
                       {transfer.kalkisYeri}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                       → {transfer.varisYeri}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                    <div>{new Date(transfer.kalkisTarihi).toLocaleDateString('tr-TR')}</div>
+                    <div className="font-medium">{transfer.kalkisSaati}</div>
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                     <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {new Date(transfer.kalkisTarihi).toLocaleDateString('tr-TR')}
-                    </div>
-                    <div className="flex items-center mt-1">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {transfer.kalkisSaati}
+                      <Users className="h-3 w-3 mr-1" />
+                      {transfer.yolcuSayisi}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    <div className="flex items-center">
-                      <Users className="h-4 w-4 mr-1" />
-                      {transfer.yolcuSayisi} kişi
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                     {transfer.cari ? (
-                      <div>
-                        <div className="flex items-center">
-                          <User className="h-4 w-4 mr-1" />
-                          {transfer.cari.sirket ? transfer.cari.sirket : `${transfer.cari.ad} ${transfer.cari.soyad || ''}`}
-                        </div>
-                        {transfer.tedarikciyeYaptirilacak && transfer.tedarikci && (
-                          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                            → {transfer.tedarikci.sirketAdi}
-                          </div>
-                        )}
+                      <div className="truncate max-w-24">
+                        {transfer.cari.sirket ? transfer.cari.sirket : `${transfer.cari.ad} ${transfer.cari.soyad || ''}`}
                       </div>
                     ) : (
-                      <span className="text-gray-400 dark:text-gray-500">Cari seçilmemiş</span>
+                      <span className="text-gray-400">-</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                     {transfer.tedarikciyeYaptirilacak ? (
-                       // Manuel araç bilgileri
-                       <div>
-                         <div className="flex items-center">
-                           <Car className="h-4 w-4 mr-1" />
-                           {transfer.manuelAracPlaka || 'Plaka belirtilmemiş'}
-                         </div>
-                         <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                           {transfer.manuelAracMarka} {transfer.manuelAracModel} - {transfer.manuelSoforAdi || 'Şoför belirtilmemiş'}
-                         </div>
-                       </div>
-                     ) : transfer.arac && transfer.sofor ? (
-                       // Sistem araç ve şoför bilgileri
-                       <div>
-                         <div className="flex items-center">
-                           <Car className="h-4 w-4 mr-1" />
-                           {transfer.arac.plaka}
-                         </div>
-                         <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                           {transfer.sofor.ad} {transfer.sofor.soyad}
-                         </div>
-                       </div>
-                     ) : (
-                       <span className="text-gray-400 dark:text-gray-500">Atanmamış</span>
-                     )}
-                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDurumRenk(transfer.durum)}`}>
-                       {transfer.durum === 'BEKLEMEDE' && 'Beklemede'}
-                       {transfer.durum === 'YOLDA' && 'Yolda'}
-                       {transfer.durum === 'TAMAMLANDI' && 'Tamamlandı'}
-                       {transfer.durum === 'IPTAL' && 'İptal'}
-                     </span>
+                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                    {transfer.tedarikciyeYaptirilacak ? (
+                      <div>
+                        <div className="truncate max-w-20">{transfer.manuelAracPlaka || '-'}</div>
+                        <div className="text-xs text-gray-400">{transfer.manuelSoforAdi || '-'}</div>
+                      </div>
+                    ) : transfer.arac && transfer.sofor ? (
+                      <div>
+                        <div className="truncate max-w-20">{transfer.arac.plaka}</div>
+                        <div className="text-xs text-gray-400">{transfer.sofor.ad}</div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    <div>
-                      {transfer.fiyat ? `${transfer.fiyat.toLocaleString('tr-TR')} TL` : '-'}
-                    </div>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDurumRenk(transfer.durum)}`}>
+                      {transfer.durum === 'BEKLEMEDE' && 'Beklemede'}
+                      {transfer.durum === 'YOLDA' && 'Yolda'}
+                      {transfer.durum === 'TAMAMLANDI' && 'Tamamlandı'}
+                      {transfer.durum === 'IPTAL' && 'İptal'}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                    <div>{transfer.fiyat ? `${transfer.fiyat.toLocaleString('tr-TR')} ₺` : '-'}</div>
                     {transfer.tahsisli && (
                       <div className="mt-1">
-                        <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
+                        <span className="inline-flex px-1 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
                           Tahsisli
                         </span>
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                    <div className="max-w-xs truncate">
-                      {transfer.notlar || '-'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
+                  <td className="px-3 py-2 whitespace-nowrap text-xs font-medium">
+                    <div className="flex space-x-1">
                       <button
                         onClick={() => openEditModal(transfer)}
-                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-3 w-3" />
                       </button>
                       <button
                         onClick={() => deleteTransfer(transfer.id)}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </button>
                     </div>
                   </td>
@@ -842,6 +807,106 @@ export default function TransferlerPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobil Kart Görünümü */}
+        <div className="lg:hidden">
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {filteredTransferler.map((transfer) => (
+              <div key={transfer.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    {/* Rota */}
+                    <div className="flex items-center mb-2">
+                      <MapPin className="h-4 w-4 text-gray-400 mr-2" />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {transfer.kalkisYeri}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          → {transfer.varisYeri}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tarih ve Saat */}
+                    <div className="flex items-center mb-2">
+                      <Calendar className="h-3 w-3 text-gray-400 mr-1" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400 mr-3">
+                        {new Date(transfer.kalkisTarihi).toLocaleDateString('tr-TR')}
+                      </span>
+                      <Clock className="h-3 w-3 text-gray-400 mr-1" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {transfer.kalkisSaati}
+                      </span>
+                    </div>
+
+                    {/* Yolcu ve Cari */}
+                    <div className="flex items-center mb-2">
+                      <Users className="h-3 w-3 text-gray-400 mr-1" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400 mr-3">
+                        {transfer.yolcuSayisi} kişi
+                      </span>
+                      {transfer.cari && (
+                        <>
+                          <User className="h-3 w-3 text-gray-400 mr-1" />
+                          <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {transfer.cari.sirket ? transfer.cari.sirket : `${transfer.cari.ad} ${transfer.cari.soyad || ''}`}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Araç/Şoför */}
+                    <div className="flex items-center mb-2">
+                      <Car className="h-3 w-3 text-gray-400 mr-1" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {transfer.tedarikciyeYaptirilacak 
+                          ? (transfer.manuelAracPlaka || 'Plaka belirtilmemiş')
+                          : (transfer.arac ? transfer.arac.plaka : 'Atanmamış')
+                        }
+                      </span>
+                    </div>
+
+                    {/* Alt Bilgiler */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDurumRenk(transfer.durum)}`}>
+                          {transfer.durum === 'BEKLEMEDE' && 'Beklemede'}
+                          {transfer.durum === 'YOLDA' && 'Yolda'}
+                          {transfer.durum === 'TAMAMLANDI' && 'Tamamlandı'}
+                          {transfer.durum === 'IPTAL' && 'İptal'}
+                        </span>
+                        {transfer.tahsisli && (
+                          <span className="inline-flex px-1 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
+                            Tahsisli
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span className="text-xs font-medium text-gray-900 dark:text-white">
+                          {transfer.fiyat ? `${transfer.fiyat.toLocaleString('tr-TR')} ₺` : '-'}
+                        </span>
+                        <button
+                          onClick={() => openEditModal(transfer)}
+                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteTransfer(transfer.id)}
+                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {filteredTransferler.length === 0 && (
           <div className="text-center py-8">
             <MapPin className="mx-auto h-12 w-12 text-gray-400" />

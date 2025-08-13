@@ -106,7 +106,8 @@ export default function TedarikcilerPage() {
       const response = await fetch('/api/tedarikciler');
       if (response.ok) {
         const data = await response.json();
-        setTedarikciler(Array.isArray(data) ? data : []);
+        // API'den gelen veri { tedarikciler: [...] } formatında
+        setTedarikciler(data.tedarikciler || []);
       } else {
         console.error('Tedarikçiler alınamadı');
         setTedarikciler([]);
@@ -343,52 +344,52 @@ export default function TedarikcilerPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Sayfa Başlığı */}
+    <div className="space-y-4">
+      {/* Sayfa Başlığı - Kompakt */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
             Tedarikçi Yönetimi
           </h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
             Hizmet sağlayıcıları ve tedarikçi firmalarını yönetin
           </p>
         </div>
         <button
           onClick={openCreateModal}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          className="mt-3 sm:mt-0 inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-purple-500"
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-3 w-3 mr-1" />
           Yeni Tedarikçi
         </button>
       </div>
 
-      {/* Filtreler */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Filtreler - Kompakt */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Ara
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
               <input
                 type="text"
-                placeholder="Şirket adı, yetkili kişi, email, hizmet türü..."
+                placeholder="Şirket adı, yetkili kişi..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="pl-7 w-full border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Durum Filtresi
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Durum
             </label>
             <select
               value={filterDurum}
               onChange={(e) => setFilterDurum(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
             >
               <option value="tümü">Tümü</option>
               <option value="AKTIF">Aktif</option>
@@ -397,42 +398,43 @@ export default function TedarikcilerPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Excel'e Aktar
             </label>
             <button
               onClick={exportToExcel}
-              className="w-full flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-green-600 hover:bg-green-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full flex items-center justify-center border border-gray-300 dark:border-gray-600 rounded-md px-2 py-1.5 text-xs bg-green-600 hover:bg-green-700 text-white focus:outline-none focus:ring-1 focus:ring-green-500"
             >
-              <FileDown className="h-4 w-4 mr-2" />
+              <FileDown className="h-3 w-3 mr-1" />
               Excel İndir
             </button>
           </div>
         </div>
       </div>
 
-      {/* Tedarikçiler Tablosu */}
+      {/* Tedarikçiler Tablosu - Responsive ve Kompakt */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Tablosu */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Şirket/Yetkili
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   İletişim
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Konum
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Hizmet/Vergi
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Durum
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   İşlemler
                 </th>
               </tr>
@@ -440,75 +442,74 @@ export default function TedarikcilerPage() {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredTedarikciler.map((tedarikci) => (
                 <tr key={tedarikci.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
-                        <Building className="h-4 w-4 mr-2 text-gray-400" />
-                        {tedarikci.sirketAdi}
+                      <div className="text-xs font-medium text-gray-900 dark:text-white flex items-center">
+                        <Building className="h-3 w-3 mr-1 text-gray-400" />
+                        <span className="truncate max-w-32">{tedarikci.sirketAdi}</span>
                       </div>
                       {tedarikci.yetkiliKisi && (
-                        <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center mt-1">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center mt-1">
                           <User className="h-3 w-3 mr-1" />
-                          {tedarikci.yetkiliKisi}
+                          <span className="truncate max-w-28">{tedarikci.yetkiliKisi}</span>
                         </div>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                     {tedarikci.email && (
                       <div className="flex items-center mb-1">
                         <Mail className="h-3 w-3 mr-1" />
-                        {tedarikci.email}
+                        <span className="truncate max-w-32">{tedarikci.email}</span>
                       </div>
                     )}
                     {tedarikci.telefon && (
                       <div className="flex items-center">
                         <Phone className="h-3 w-3 mr-1" />
-                        {tedarikci.telefon}
+                        <span className="truncate max-w-24">{tedarikci.telefon}</span>
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                     <div className="flex items-center">
                       <MapPin className="h-3 w-3 mr-1" />
-                      {tedarikci.sehir && `${tedarikci.sehir}, `}{tedarikci.ulke}
+                      <span className="truncate max-w-24">
+                        {tedarikci.sehir && `${tedarikci.sehir}, `}{tedarikci.ulke}
+                      </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                     {tedarikci.hizmetTuru && (
                       <div className="mb-1">
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        <span className="inline-flex px-1 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 truncate max-w-20">
                           {tedarikci.hizmetTuru}
                         </span>
                       </div>
                     )}
                     {tedarikci.vergiNo && (
-                      <div>VN: {tedarikci.vergiNo}</div>
-                    )}
-                    {tedarikci.vergiDairesi && (
-                      <div>VD: {tedarikci.vergiDairesi}</div>
+                      <div className="text-xs">VN: {tedarikci.vergiNo}</div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDurumRenk(tedarikci.durum)}`}>
                       {tedarikci.durum === 'AKTIF' && 'Aktif'}
                       {tedarikci.durum === 'PASIF' && 'Pasif'}
                       {tedarikci.durum === 'ENGELLI' && 'Engelli'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
+                  <td className="px-3 py-2 whitespace-nowrap text-xs font-medium">
+                    <div className="flex space-x-1">
                       <button
                         onClick={() => openEditModal(tedarikci)}
-                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-3 w-3" />
                       </button>
                       <button
                         onClick={() => deleteTedarikci(tedarikci.id)}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       </button>
                     </div>
                   </td>
@@ -517,6 +518,94 @@ export default function TedarikcilerPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobil Kart Görünümü */}
+        <div className="lg:hidden">
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {filteredTedarikciler.map((tedarikci) => (
+              <div key={tedarikci.id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    {/* Şirket ve Yetkili */}
+                    <div className="flex items-center mb-2">
+                      <Building className="h-4 w-4 text-gray-400 mr-2" />
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {tedarikci.sirketAdi}
+                        </div>
+                        {tedarikci.yetkiliKisi && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                            <User className="h-3 w-3 mr-1" />
+                            {tedarikci.yetkiliKisi}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* İletişim */}
+                    <div className="flex items-center mb-2">
+                      {tedarikci.email && (
+                        <>
+                          <Mail className="h-3 w-3 text-gray-400 mr-1" />
+                          <span className="text-xs text-gray-500 dark:text-gray-400 mr-3 truncate">
+                            {tedarikci.email}
+                          </span>
+                        </>
+                      )}
+                      {tedarikci.telefon && (
+                        <>
+                          <Phone className="h-3 w-3 text-gray-400 mr-1" />
+                          <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {tedarikci.telefon}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Konum */}
+                    <div className="flex items-center mb-2">
+                      <MapPin className="h-3 w-3 text-gray-400 mr-1" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {tedarikci.sehir && `${tedarikci.sehir}, `}{tedarikci.ulke}
+                      </span>
+                    </div>
+
+                    {/* Alt Bilgiler */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        {tedarikci.hizmetTuru && (
+                          <span className="inline-flex px-1 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            {tedarikci.hizmetTuru}
+                          </span>
+                        )}
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getDurumRenk(tedarikci.durum)}`}>
+                          {tedarikci.durum === 'AKTIF' && 'Aktif'}
+                          {tedarikci.durum === 'PASIF' && 'Pasif'}
+                          {tedarikci.durum === 'ENGELLI' && 'Engelli'}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => openEditModal(tedarikci)}
+                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteTedarikci(tedarikci.id)}
+                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {filteredTedarikciler.length === 0 && (
           <div className="text-center py-8">
             <Truck className="mx-auto h-12 w-12 text-gray-400" />
