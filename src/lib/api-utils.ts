@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { cache, withCache, createCacheKey } from './cache';
 
+// Re-export createCacheKey for backward compatibility
+export { createCacheKey };
+
 // API response wrapper
 export const apiResponse = {
   success: <T>(data: T, status: number = 200) => {

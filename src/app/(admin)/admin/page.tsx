@@ -26,6 +26,8 @@ type CurrentUser = {
   email: string;
   name?: string;
   role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
+  companyId?: number;
+  companyName?: string;
 };
 
 type NewUser = {
@@ -99,11 +101,41 @@ export default function AdminPage() {
     { key: 'tedarikciler', label: 'Tedarikçiler' },
   ];
 
+  // Rol seçenekleri - MUDUR sadece OPERATOR ve KULLANICI oluşturabilir
+  const getRoleOptions = () => {
+    if (currentUser?.role === 'MUDUR') {
+      return [
+        { value: 'OPERATOR', label: 'Operatör' },
+        { value: 'KULLANICI', label: 'Kullanıcı' }
+      ];
+    }
+    return [
+      { value: 'ADMIN', label: 'Admin' },
+      { value: 'MUDUR', label: 'Müdür' },
+      { value: 'OPERATOR', label: 'Operatör' },
+      { value: 'KULLANICI', label: 'Kullanıcı' }
+    ];
+  };
+
+  // Şirket seçenekleri - MUDUR sadece kendi şirketini görebilir
+  const getCompanyOptions = () => {
+    if (currentUser?.role === 'MUDUR') {
+      return []; // MUDUR için şirket listesi gerekli değil
+    }
+    return companies;
+  };
+
   useEffect(() => {
     checkCurrentUser();
     fetchUsers();
-    fetchCompanies();
   }, []);
+
+  useEffect(() => {
+    // currentUser değiştiğinde şirketleri yükle
+    if (currentUser) {
+      fetchCompanies();
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     // İstatistikleri hesapla
@@ -177,7 +209,32 @@ export default function AdminPage() {
       const res = await fetch('/api/user', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
-        setCurrentUser(data.user);
+        let user = data.user;
+        
+        // Eğer companyId eksikse, token'ı güncelle
+        if (!user.companyId && user.role === 'MUDUR') {
+          console.log('MUDUR kullanıcısının companyId bilgisi eksik, token güncelleniyor...');
+          const refreshRes = await fetch('/api/user/refresh-token', { 
+            method: 'POST',
+            credentials: 'include' 
+          });
+          if (refreshRes.ok) {
+            const refreshData = await refreshRes.json();
+            user = refreshData.user;
+          } else {
+            // Token güncellenemezse, veritabanından çek
+            const userRes = await fetch('/api/users', { credentials: 'include' });
+            if (userRes.ok) {
+              const users = await userRes.json();
+              const currentUserFromList = users.find((u: any) => u.id === user.id);
+              if (currentUserFromList) {
+                user = { ...user, companyId: currentUserFromList.companyId };
+              }
+            }
+          }
+        }
+        
+        setCurrentUser(user);
       } else {
         console.error('Kullanıcı bilgisi alınamadı:', res.status);
         setCurrentUser(null);
@@ -207,6 +264,11 @@ export default function AdminPage() {
   };
 
   const fetchCompanies = async () => {
+    // MUDUR rolü için şirket listesi gerekli değil
+    if (currentUser?.role === 'MUDUR') {
+      return;
+    }
+    
     try {
       const res = await fetch('/api/companies', { credentials: 'include' });
       if (res.ok) {
@@ -224,7 +286,15 @@ export default function AdminPage() {
 
   // Modal handlers
   const openAddModal = () => {
-    setNewUser({ email: '', name: '', password: '', role: 'KULLANICI', permissions: [], companyId: 0 });
+    const initialCompanyId = currentUser?.role === 'MUDUR' ? (currentUser.companyId || 0) : 0;
+    setNewUser({ 
+      email: '', 
+      name: '', 
+      password: '', 
+      role: 'KULLANICI', 
+      permissions: [], 
+      companyId: initialCompanyId 
+    });
     setShowAddModal(true);
   };
 
@@ -269,6 +339,16 @@ export default function AdminPage() {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // MUDUR rolü için user-management ve logs iznini otomatik olarak ekle
+      let permissions = newUser.permissions;
+      if (newUser.role === 'MUDUR') {
+        if (!permissions.includes('user-management')) {
+          permissions = [...permissions, 'user-management'];
+        }
+        if (!permissions.includes('logs')) {
+          permissions = [...permissions, 'logs'];
+        }
+      }
 
       const res = await fetch('/api/users', {
         method: 'POST',
@@ -276,6 +356,7 @@ export default function AdminPage() {
         credentials: 'include',
         body: JSON.stringify({
           ...newUser,
+          permissions: permissions,
           companyId: newUser.companyId === 0 ? null : newUser.companyId
         })
       });
@@ -296,6 +377,16 @@ export default function AdminPage() {
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // MUDUR rolü için user-management ve logs iznini otomatik olarak ekle
+      let permissions = editUser.permissions;
+      if (editUser.role === 'MUDUR') {
+        if (!permissions.includes('user-management')) {
+          permissions = [...permissions, 'user-management'];
+        }
+        if (!permissions.includes('logs')) {
+          permissions = [...permissions, 'logs'];
+        }
+      }
 
       const res = await fetch(`/api/users/${editUser.id}`, {
         method: 'PUT',
@@ -304,7 +395,7 @@ export default function AdminPage() {
         body: JSON.stringify({ 
           name: editUser.name, 
           role: editUser.role, 
-          permissions: editUser.permissions,
+          permissions: permissions,
           companyId: editUser.companyId === 0 ? null : editUser.companyId
         })
       });
@@ -431,7 +522,7 @@ export default function AdminPage() {
   }
 
   // Admin yetkisi kontrolü
-  if (currentUser && currentUser.role !== 'ADMIN') {
+  if (currentUser && !['ADMIN', 'MUDUR'].includes(currentUser.role)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -641,7 +732,7 @@ export default function AdminPage() {
                       <SortIcon column="name" />
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('role')}>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider" onClick={() => handleSort('role')}>
                     <div className="flex items-center justify-between">
                       <span>Role</span>
                       <SortIcon column="role" />
@@ -724,15 +815,19 @@ export default function AdminPage() {
                           </svg>
                           Düzenle
                         </button>
-                        <button
-                          onClick={() => openDeleteModal(user)}
-                          className="text-red-600 hover:text-red-900 transition-colors flex items-center gap-1 text-xs sm:text-sm"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Sil
-                        </button>
+                        {currentUser && user.id !== currentUser.id ? (
+                          <button
+                            onClick={() => openDeleteModal(user)}
+                            className="text-red-600 hover:text-red-900 transition-colors flex items-center gap-1 text-xs sm:text-sm"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Sil
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-xs">Kendi Hesabınız</span>
+                        )}
                         {currentUser && user.id === currentUser.id && (
                           <span className="text-gray-400 text-xs">Mevcut Kullanıcı</span>
                         )}
@@ -844,29 +939,38 @@ export default function AdminPage() {
                     }}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   >
-                    <option value="KULLANICI">Kullanıcı</option>
-                    <option value="OPERATOR">Operatör</option>
-                    <option value="MUDUR">Müdür</option>
-                    <option value="ADMIN">Admin</option>
+                    {getRoleOptions().map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">
                     Şirket
                   </label>
-                  <select
-                    value={newUser.companyId}
-                    onChange={(e) => setNewUser(prev => ({ ...prev, companyId: parseInt(e.target.value) }))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  >
-                    <option value="0">Şirket Seçin</option>
-                    {companies.map((company) => (
-                      <option key={company.id} value={company.id}>
-                        {company.name} ({company.email})
-                      </option>
-                    ))}
-                  </select>
-                  {newUser.companyId === 0 && (
+                  {currentUser?.role === 'MUDUR' ? (
+                    // MUDUR için şirket seçimi otomatik ve değiştirilemez
+                    <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
+                      {currentUser.companyName || 'Şirket bilgisi yükleniyor...'}
+                    </div>
+                  ) : (
+                    // ADMIN için normal dropdown
+                    <select
+                      value={newUser.companyId}
+                      onChange={(e) => setNewUser(prev => ({ ...prev, companyId: parseInt(e.target.value) }))}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    >
+                      <option value="0">Şirket Seçin</option>
+                      {getCompanyOptions().map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.name} ({company.email})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {newUser.companyId === 0 && currentUser?.role !== 'MUDUR' && (
                     <p className="text-sm text-orange-600 mt-1">
                       ⚠️ Kullanıcının bir şirkete atanması gerekiyor
                     </p>
@@ -970,27 +1074,36 @@ export default function AdminPage() {
                     }}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   >
-                    <option value="KULLANICI">Kullanıcı</option>
-                    <option value="OPERATOR">Operatör</option>
-                    <option value="MUDUR">Müdür</option>
-                    <option value="ADMIN">Admin</option>
+                    {getRoleOptions().map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Şirket</label>
-                  <select
-                    value={editUser.companyId}
-                    onChange={(e) => setEditUser(prev => ({ ...prev, companyId: parseInt(e.target.value) }))}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  >
-                    <option value="0">Şirket Seçin</option>
-                    {companies.map((company) => (
-                      <option key={company.id} value={company.id}>
-                        {company.name} ({company.email})
-                      </option>
-                    ))}
-                  </select>
-                  {editUser.companyId === 0 && (
+                  {currentUser?.role === 'MUDUR' ? (
+                    // MUDUR için şirket seçimi otomatik ve değiştirilemez
+                    <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
+                      {currentUser.companyName || 'Şirket bilgisi yükleniyor...'}
+                    </div>
+                  ) : (
+                    // ADMIN için normal dropdown
+                    <select
+                      value={editUser.companyId}
+                      onChange={(e) => setEditUser(prev => ({ ...prev, companyId: parseInt(e.target.value) }))}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    >
+                      <option value="0">Şirket Seçin</option>
+                      {getCompanyOptions().map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.name} ({company.email})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {editUser.companyId === 0 && currentUser?.role !== 'MUDUR' && (
                     <p className="text-sm text-orange-600 mt-1">
                       ⚠️ Kullanıcının bir şirkete atanması gerekiyor
                     </p>

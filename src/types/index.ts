@@ -25,7 +25,7 @@ export interface Accommodation {
   cikisTarihi: string;
   odaTipi: string;
   konaklamaTipi: string;
-  faturaEdildi: boolean;
+
   gecelikUcret: number;
   toplamUcret: number;
   organizasyonAdi?: string;

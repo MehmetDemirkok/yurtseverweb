@@ -28,10 +28,25 @@ export default function PermissionGuard({ children, requiredPermission }: Permis
 
           // Admin rolü için özel kontrol - admin her sayfaya erişebilir
           if (user.role === 'ADMIN') {
-            console.log('Admin access granted for:', pathname);
             setHasAccess(true);
             setLoading(false);
             return;
+          }
+
+          // MUDUR rolü için şirket bazlı erişim kontrolü
+          if (user.role === 'MUDUR') {
+            // Şirket yönetimi sayfalarına sadece ADMIN erişebilir
+            if (pathname.startsWith('/admin/companies')) {
+              router.replace("/no-access");
+              return;
+            }
+            
+            // Kullanıcı yönetimi sayfasına MUDUR erişebilir (sadece kendi şirketindeki kullanıcılar)
+            if (pathname === '/admin') {
+              setHasAccess(true);
+              setLoading(false);
+              return;
+            }
           }
 
           // Dashboard ve login sayfalarına herkes erişebilir
@@ -51,14 +66,13 @@ export default function PermissionGuard({ children, requiredPermission }: Permis
             }
           }
 
-          // Sayfa bazlı izin kontrolü
+          // Sayfa bazlı izin kontrolü - /admin sayfası için özel kontrol
           const pagePermissions: { [key: string]: string } = {
             '/konaklama': 'home',
             '/konaklama/oteller': 'home',
             '/moduller/transfer': 'transfer',
             '/cariler': 'cariler',
             '/tedarikciler': 'tedarikciler',
-            '/admin': 'user-management',
             '/admin/logs': 'logs',
           };
 

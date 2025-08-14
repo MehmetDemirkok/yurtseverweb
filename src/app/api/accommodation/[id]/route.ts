@@ -64,7 +64,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     // Kullanıcının düzenleme yetkisi kontrol et
-    if (!['ADMIN', 'MANAGER', 'USER'].includes(user.role)) {
+    if (!['ADMIN', 'MUDUR', 'OPERATOR'].includes(user.role)) {
       return NextResponse.json({ error: 'Düzenleme yetkiniz yok' }, { status: 403 });
     }
 
@@ -86,6 +86,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     
     // companyId, id ve organization objesini değiştirmeye izin verme
     const { companyId, id: dataId, organization, ...updateData } = data;
+    
+    // organizationId boş string ise null yap
+    if (updateData.organizationId === '') {
+      updateData.organizationId = null;
+    }
     
     // Organizasyon ID varsa organizasyonun mevcut olduğunu kontrol et
     if (updateData.organizationId) {
@@ -162,7 +167,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     }
 
     // Kullanıcının silme yetkisi kontrol et
-    if (!['ADMIN', 'MANAGER'].includes(user.role)) {
+    if (!['ADMIN', 'MUDUR'].includes(user.role)) {
       return NextResponse.json({ error: 'Silme yetkiniz yok' }, { status: 403 });
     }
     

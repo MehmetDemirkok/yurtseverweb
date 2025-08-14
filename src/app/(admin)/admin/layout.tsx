@@ -53,7 +53,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  if (!currentUser || currentUser.role !== 'ADMIN') {
+  if (!currentUser || !['ADMIN', 'MUDUR'].includes(currentUser.role)) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
@@ -84,12 +84,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       icon: Users,
       current: pathname === '/admin'
     },
-    {
+    // Şirket Yönetimi sadece ADMIN için görünür
+    ...(currentUser.role === 'ADMIN' ? [{
       name: 'Şirket Yönetimi',
       href: '/admin/companies',
       icon: Building2,
       current: pathname === '/admin/companies'
-    },
+    }] : []),
     {
       name: 'Sistem Logları',
       href: '/admin/logs',
@@ -181,7 +182,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <Menu className="h-6 w-6" />
                 </button>
                 <h1 className="ml-2 lg:ml-0 text-xl font-semibold text-gray-900 dark:text-white">
-                  Admin Paneli
+                  {currentUser.role === 'ADMIN' ? 'Admin Paneli' : 'Kullanıcı Yönetimi'}
                 </h1>
               </div>
               <UserHeader />

@@ -95,7 +95,6 @@ model Accommodation {
   cikisTarihi     String
   odaTipi         String
   konaklamaTipi   String
-  faturaEdildi    Boolean
   gecelikUcret    Float
   toplamUcret     Float
   organizasyonAdi String? // Eski alan - geriye uyumluluk için

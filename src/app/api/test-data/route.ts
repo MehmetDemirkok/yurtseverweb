@@ -213,7 +213,7 @@ async function generateTestData() {
         cikisTarihi: cikisTarihi.toISOString().split('T')[0],
         odaTipi: odaTipi,
         konaklamaTipi: konaklamaTipi,
-        faturaEdildi: Math.random() > 0.3,
+
         gecelikUcret: gecelikUcret,
         toplamUcret: toplamUcret,
         otelAdi: otelAdi,

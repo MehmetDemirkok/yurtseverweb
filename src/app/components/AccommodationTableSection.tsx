@@ -27,13 +27,16 @@ export interface AccommodationRecord {
   kurumCari?: string;
   numberOfNights?: number;
   isMunferit?: boolean;
+  companyId?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface User {
   id: number;
   email: string;
   name?: string;
-  role: 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER';
+  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
   permissions?: string[];
 }
 
@@ -88,7 +91,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
     konaklamaTipi: 'BB' as const,
     gecelikUcret: 0,
     toplamUcret: 0,
-    organizationId: '',
+    organizationId: null as number | null,
     otelAdi: '',
     kurumCari: '',
     numberOfNights: 0,
@@ -102,7 +105,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
   
   // Organizasyon state'leri
   const [organizations, setOrganizations] = useState<Array<{id: number, name: string, status: string}>>([]);
-  const [hotels, setHotels] = useState<Array<{id: number, adi: string, sehir: string, ulke: string}>>([]);
+  const [hotels, setHotels] = useState<Array<{id: number, adi: string, sehir: string, ulke: string, durum: string}>>([]);
   const [cariler, setCariler] = useState<Array<{id: string, ad: string, soyad?: string, sirket?: string, tip: string, durum: string}>>([]);
 
   // Seçili kayıtların kurum ve otel adı aynı mı?
@@ -117,14 +120,14 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
   // Role tabanlı yetki kontrolü fonksiyonları
   const hasRole = (requiredRole: string): boolean => {
     if (!currentUser) return false;
-    const roleHierarchy: Record<string, number> = { 'ADMIN': 4, 'MANAGER': 3, 'USER': 2, 'VIEWER': 1 };
+    const roleHierarchy: Record<string, number> = { 'ADMIN': 4, 'MUDUR': 3, 'OPERATOR': 2, 'KULLANICI': 1 };
     const userRole = currentUser.role as string;
     return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
   };
 
-  const canAdd = () => hasRole('USER');
-  const canEdit = () => hasRole('USER');
-  const canDelete = () => hasRole('MANAGER');
+  const canAdd = () => hasRole('KULLANICI');
+  const canEdit = () => hasRole('KULLANICI');
+  const canDelete = () => hasRole('MUDUR');
 
 
 
@@ -142,6 +145,11 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
       }
     }
     fetchUser();
+  }, []);
+
+  // currentUser değiştiğinde kayıtları çek
+  useEffect(() => {
+    if (!currentUser) return;
 
     const fetchRecords = () => {
       let url = '/api/accommodation';
@@ -201,7 +209,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [currentUser, filterType, organizationId]);
 
   // Doğru gün sayısı hesaplama fonksiyonu (çıkış günü hariç)
   function calculateNumberOfNights(girisTarihi: string, cikisTarihi: string): number {
@@ -265,7 +273,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
         if (!prev) return prev;
         return {
           ...prev,
-          [name]: value
+          [name]: name === 'organizationId' ? (value ? parseInt(value) : null) : value
         };
       });
     }
@@ -314,7 +322,6 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
         companyId, 
         createdAt, 
         updatedAt,
-        organizationId,
         isMunferit,
         ...updateData 
       } = editingRecord;
@@ -356,12 +363,13 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
       cikisTarihi: '',
       odaTipi: 'Single Oda',
       konaklamaTipi: 'BB',
-      faturaEdildi: false,
       gecelikUcret: 0,
       toplamUcret: 0,
+      organizationId: null as number | null,
       otelAdi: '',
       kurumCari: '',
       numberOfNights: 0,
+      isMunferit: false,
     });
     setShowAddModal(true);
   };
@@ -377,12 +385,13 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
       cikisTarihi: '',
       odaTipi: 'Single Oda',
       konaklamaTipi: 'BB',
-      faturaEdildi: false,
       gecelikUcret: 0,
       toplamUcret: 0,
+      organizationId: null as number | null,
       otelAdi: '',
       kurumCari: '',
       numberOfNights: 0,
+      isMunferit: false,
     });
   };
   
@@ -391,7 +400,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
 
     setFormData(prev => ({
       ...prev,
-      [name]: value === '' ? null : (type === 'number' ? parseFloat(value) || 0 : value)
+      [name]: value === '' ? null : (type === 'number' ? parseFloat(value) || 0 : (name === 'organizationId' ? (value ? parseInt(value) : null) : value))
     }));
 
     // Toplam ücret hesaplama
@@ -666,7 +675,6 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
             cikisTarihi,
             odaTipi,
             konaklamaTipi,
-            faturaEdildi: false,
             gecelikUcret,
             toplamUcret,
             numberOfNights,
@@ -715,7 +723,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
       { key: 'cikisTarihi', label: 'Çıkış Tarihi' },
       { key: 'odaTipi', label: 'Oda Tipi' },
       { key: 'konaklamaTipi', label: 'Konaklama Tipi' },
-      { key: 'faturaEdildi', label: 'Fatura Edildi' },
+
       { key: 'numberOfNights', label: 'Gece Sayısı' },
       { key: 'gecelikUcret', label: 'Gecelik Ücret' },
       { key: 'toplamUcret', label: 'Toplam Ücret' },
@@ -725,7 +733,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
     ]);
     setSelectedColumns([
       'id', 'adiSoyadi', 'unvani', 'ulke', 'sehir', 'girisTarihi', 'cikisTarihi',
-      'odaTipi', 'konaklamaTipi', 'faturaEdildi', 'numberOfNights', 'gecelikUcret',
+      'odaTipi', 'konaklamaTipi', 'numberOfNights', 'gecelikUcret',
               'toplamUcret', 'otelAdi', 'kurumCari'
     ]);
     setShowExportFilterModal(true);
@@ -773,8 +781,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
           filteredRecord['Oda Tipi'] = record.odaTipi;
         } else if (column === 'konaklamaTipi') {
           filteredRecord['Konaklama Tipi'] = record.konaklamaTipi;
-        } else if (column === 'faturaEdildi') {
-          filteredRecord['Fatura Edildi'] = record.faturaEdildi ? 'Evet' : 'Hayır';
+
         } else if (column === 'numberOfNights') {
           filteredRecord['Gece Sayısı'] = record.numberOfNights || 0;
         } else if (column === 'gecelikUcret') {

@@ -80,6 +80,28 @@ export default function CompaniesPage() {
     fetchCompanies();
   }, []);
 
+  // Admin yetkisi kontrolü
+  useEffect(() => {
+    const checkAdminAccess = async () => {
+      try {
+        const res = await fetch('/api/user', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user.role !== 'ADMIN') {
+            window.location.href = '/no-access';
+          }
+        } else {
+          window.location.href = '/login';
+        }
+      } catch (error) {
+        console.error('Yetki kontrolü hatası:', error);
+        window.location.href = '/login';
+      }
+    };
+    
+    checkAdminAccess();
+  }, []);
+
   const fetchCompanies = async () => {
     try {
       const response = await fetch('/api/companies', { credentials: 'include' });

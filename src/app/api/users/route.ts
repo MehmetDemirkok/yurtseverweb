@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { cookies } from 'next/headers';
@@ -6,9 +6,9 @@ import bcrypt from 'bcryptjs';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
-type MyJwtPayload = JwtPayload & { role: string; userId: number };
+type MyJwtPayload = JwtPayload & { role: string; userId: number; companyId?: number };
 
-// Tüm kullanıcıları listele - sadece ADMIN ve MANAGER
+// Tüm kullanıcıları listele - ADMIN tümünü, MUDUR sadece kendi şirketini
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -22,7 +22,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Bu işlem için yetki gereklidir.' }, { status: 403 });
     }
     
+    // MUDUR sadece kendi şirketindeki kullanıcıları görebilir
+    const whereClause = decoded.role === 'MUDUR' 
+      ? { companyId: decoded.companyId }
+      : {};
+    
     const users = await prisma.user.findMany({
+      where: whereClause,
       select: {
         id: true,
         email: true,
@@ -30,7 +36,12 @@ export async function GET() {
         role: true,
         createdAt: true,
         permissions: true,
-        companyId: true
+        companyId: true,
+        company: {
+          select: {
+            name: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'
@@ -43,7 +54,7 @@ export async function GET() {
   }
 }
 
-// Yeni kullanıcı oluştur - sadece ADMIN
+// Yeni kullanıcı oluştur - ADMIN tüm şirketler için, MUDUR sadece kendi şirketi için
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
@@ -53,8 +64,8 @@ export async function POST(request: Request) {
     }
     
     const decoded = jwt.verify(token, JWT_SECRET) as MyJwtPayload;
-    if (decoded.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Bu işlem için ADMIN yetkisi gereklidir.' }, { status: 403 });
+    if (!['ADMIN', 'MUDUR'].includes(decoded.role)) {
+      return NextResponse.json({ error: 'Bu işlem için yetki gereklidir.' }, { status: 403 });
     }
     
     const data = await request.json();
@@ -63,13 +74,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email ve şifre zorunludur.' }, { status: 400 });
     }
     
-    // Email kontrolü
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email }
+    // MUDUR sadece OPERATOR ve KULLANICI rolünde kullanıcı oluşturabilir
+    if (decoded.role === 'MUDUR' && ['ADMIN', 'MUDUR'].includes(data.role)) {
+      return NextResponse.json({ error: 'Müdür sadece OPERATOR ve KULLANICI rolünde kullanıcı oluşturabilir.' }, { status: 403 });
+    }
+    
+    // MUDUR sadece kendi şirketi için kullanıcı oluşturabilir
+    const companyId = decoded.role === 'MUDUR' ? decoded.companyId : data.companyId;
+    
+    // Email kontrolü (şirket bazlı)
+    const existingUser = await prisma.user.findFirst({
+      where: { 
+        email: data.email,
+        companyId: companyId
+      }
     });
     
     if (existingUser) {
-      return NextResponse.json({ error: 'Bu email adresi zaten kullanılıyor.' }, { status: 400 });
+      return NextResponse.json({ error: 'Bu email adresi bu şirkette zaten kullanılıyor.' }, { status: 400 });
     }
     
     // Şifreyi hash'le
@@ -82,7 +104,7 @@ export async function POST(request: Request) {
         password: hashedPassword,
         role: data.role || 'KULLANICI',
         permissions: data.permissions || [],
-        companyId: data.companyId || null
+        companyId: companyId
       },
       select: {
         id: true,
@@ -91,7 +113,12 @@ export async function POST(request: Request) {
         role: true,
         createdAt: true,
         permissions: true,
-        companyId: true
+        companyId: true,
+        company: {
+          select: {
+            name: true
+          }
+        }
       }
     });
     

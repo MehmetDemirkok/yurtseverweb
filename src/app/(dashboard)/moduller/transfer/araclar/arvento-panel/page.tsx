@@ -18,7 +18,7 @@ import {
   Unlink,
   Globe,
   Clock,
-  Speed,
+  Gauge,
   Navigation
 } from 'lucide-react';
 import { ArventoVehicle } from '@/lib/arvento';
@@ -570,7 +570,7 @@ export default function ArventoPanelPage() {
                               <span>{vehicle.lastLocation.latitude.toFixed(4)}, {vehicle.lastLocation.longitude.toFixed(4)}</span>
                               {vehicle.lastLocation.speed !== undefined && (
                                 <>
-                                  <Speed className="h-3 w-3" />
+                                  <Gauge className="h-3 w-3" />
                                   <span>{vehicle.lastLocation.speed} km/h</span>
                                 </>
                               )}

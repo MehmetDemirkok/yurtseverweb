@@ -7,24 +7,24 @@ export interface UserToken {
   id: number;
   email: string;
   name?: string;
-  role: 'ADMIN' | 'MANAGER' | 'USER' | 'VIEWER';
+  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
   companyId: number;
   companyName?: string;
 }
 
 export enum Role {
   ADMIN = 'ADMIN',
-  MANAGER = 'MANAGER', 
-  USER = 'USER',
-  VIEWER = 'VIEWER'
+  MUDUR = 'MUDUR', 
+  OPERATOR = 'OPERATOR',
+  KULLANICI = 'KULLANICI'
 }
 
 // Role hiyerarşisi - yüksek roller düşük rollerin yetkilerine sahip
 export const roleHierarchy = {
   [Role.ADMIN]: 4,
-  [Role.MANAGER]: 3,
-  [Role.USER]: 2,
-  [Role.VIEWER]: 1
+  [Role.MUDUR]: 3,
+  [Role.OPERATOR]: 2,
+  [Role.KULLANICI]: 1
 };
 
 // JWT'den kullanıcı bilgilerini çıkar

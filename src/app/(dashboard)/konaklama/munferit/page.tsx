@@ -336,7 +336,6 @@ export default function MunferitKonaklamaPage() {
         {/* Münferit konaklamalar tablosu */}
         <AccommodationTableSection 
           handlePuantajRaporu={handlePuantajRaporu}
-          filterType="munferit"
         />
 
         {/* Puantaj Filtre Modalı */}

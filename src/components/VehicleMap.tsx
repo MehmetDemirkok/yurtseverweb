@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MapPin, Car, Navigation, Speed, Clock } from 'lucide-react';
+import { MapPin, Car, Navigation, Gauge, Clock } from 'lucide-react';
 import { ArventoVehicle } from '@/lib/arvento';
 
 interface VehicleMapProps {
@@ -261,7 +261,7 @@ export default function VehicleMap({ vehicles, onVehicleSelect, selectedVehicle 
                 
                 {selectedVehicle.lastLocation.speed !== undefined && (
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    <Speed className="h-3 w-3 inline mr-1" />
+                    <Gauge className="h-3 w-3 inline mr-1" />
                     {selectedVehicle.lastLocation.speed} km/h
                   </div>
                 )}

@@ -43,6 +43,11 @@ export default function DashboardPage() {
       return true;
     }
     
+    // Kullanıcı Yönetimi modülü için özel kontrol
+    if (module === 'admin') {
+      return userRole === 'MUDUR' || userRole === 'ADMIN';
+    }
+    
     const hasAccess = canViewModule(userRole, module as any);
     return hasAccess;
   };

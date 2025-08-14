@@ -61,11 +61,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Kullanıcının ekleme yetkisi kontrol et
-    if (!['ADMIN', 'MANAGER', 'USER'].includes(user.role)) {
+    if (!['ADMIN', 'MUDUR', 'OPERATOR'].includes(user.role)) {
       return NextResponse.json({ error: 'Kayıt ekleme yetkiniz yok' }, { status: 403 });
     }
 
     const data = await request.json();
+    
+    // organizationId boş string ise null yap
+    if (data.organizationId === '') {
+      data.organizationId = null;
+    }
     
     // Organizasyon ID varsa organizasyonun mevcut olduğunu kontrol et
     if (data.organizationId) {
@@ -113,7 +118,7 @@ export async function POST(request: NextRequest) {
         recordData: JSON.stringify(accommodation),
         userId: user.id,
         companyId: user.companyId,
-        ipAddress: request.headers.get('x-forwarded-for') || request.ip || 'unknown',
+        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown'
       }
     });
