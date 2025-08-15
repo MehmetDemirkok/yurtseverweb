@@ -158,10 +158,10 @@ export default function AraclarPage() {
       const response = await fetch('/api/moduller/transfer/araclar');
       if (response.ok) {
         const data = await response.json();
-        // API doğrudan array döndürüyor, data.araclar değil
-        setAraclar(Array.isArray(data) ? data : []);
+        // API { araclar: [...] } formatında döndürüyor
+        setAraclar(data.araclar || []);
       } else {
-        console.error('Araçlar alınamadı');
+        console.error('Araçlar alınamadı:', response.status, response.statusText);
         setAraclar([]);
       }
     } catch (error) {

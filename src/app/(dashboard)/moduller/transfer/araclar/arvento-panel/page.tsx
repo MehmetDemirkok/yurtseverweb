@@ -122,7 +122,7 @@ export default function ArventoPanelPage() {
       const response = await fetch('/api/moduller/transfer/araclar');
       if (response.ok) {
         const data = await response.json();
-        setAraclar(Array.isArray(data) ? data : []);
+        setAraclar(data.araclar || []);
       }
     } catch (error) {
       console.error('Araçlar alınamadı:', error);

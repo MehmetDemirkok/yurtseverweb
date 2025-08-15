@@ -79,7 +79,7 @@ export default function TransferDashboard() {
         fetch('/api/moduller/transfer/transferler')
       ]);
 
-      const araclar = araclarRes.ok ? (await araclarRes.json()) : [];
+      const araclar = araclarRes.ok ? (await araclarRes.json()).araclar || [] : [];
       const soforler = soforlerRes.ok ? (await soforlerRes.json()) : [];
       const transferler = transferlerRes.ok ? (await transferlerRes.json()) : [];
 
