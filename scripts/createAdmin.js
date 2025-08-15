@@ -5,13 +5,36 @@ const prisma = new PrismaClient();
 
 async function createAdminUser() {
   try {
+    // Önce şirket oluştur (eğer yoksa)
+    let company = await prisma.company.findFirst({
+      where: { email: 'info@yurtsever.com' }
+    });
+
+    if (!company) {
+      company = await prisma.company.create({
+        data: {
+          name: 'Yurtsever Turizm A.Ş.',
+          email: 'info@yurtsever.com',
+          phone: '+90 212 555 0123',
+          address: 'İstanbul, Türkiye',
+          city: 'İstanbul',
+          country: 'Türkiye',
+          taxNumber: '1234567890',
+          taxOffice: 'İstanbul Vergi Dairesi',
+          status: 'ACTIVE'
+        }
+      });
+      console.log('Şirket oluşturuldu:', company.name);
+    }
+
     // Admin kullanıcı bilgileri
     const adminData = {
-      email: 'admin@yurtsever.com',
-      name: 'Admin User',
-      password: 'admin123', // Bu şifreyi değiştirin!
+      email: 'mehmet@yurtsever.com',
+      name: 'Mehmet Admin',
+      password: 'mehmet123',
       role: 'ADMIN',
-      permissions: ['dashboard', 'sales', 'statistics'] // Tüm izinler
+      permissions: ['dashboard', 'sales', 'statistics', 'admin', 'users', 'companies', 'logs'],
+      companyId: company.id
     };
 
     // Email kontrolü
@@ -21,6 +44,9 @@ async function createAdminUser() {
 
     if (existingUser) {
       console.log('Admin kullanıcısı zaten mevcut!');
+      console.log('Email:', existingUser.email);
+      console.log('Role:', existingUser.role);
+      console.log('ID:', existingUser.id);
       return;
     }
 
@@ -34,7 +60,8 @@ async function createAdminUser() {
         name: adminData.name,
         password: hashedPassword,
         role: adminData.role,
-        permissions: adminData.permissions
+        permissions: adminData.permissions,
+        companyId: adminData.companyId
       }
     });
 
@@ -43,6 +70,7 @@ async function createAdminUser() {
     console.log('Şifre:', adminData.password);
     console.log('Role:', adminData.role);
     console.log('ID:', adminUser.id);
+    console.log('Şirket:', company.name);
 
   } catch (error) {
     console.error('Hata:', error);
