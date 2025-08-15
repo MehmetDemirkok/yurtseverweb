@@ -37,7 +37,7 @@ export async function PUT(
   try {
     const paramsData = await params;
     const body = await request.json();
-    const { plaka, marka, model, aracTipi, yolcuKapasitesi, durum, enlem, boylam } = body;
+    const { plaka, marka, model, aracTipi, yolcuKapasitesi, durum, enlem, boylam, sigortaTarihi, muayeneTarihi } = body;
 
     // Validasyon
     if (!plaka || !marka || !model || !aracTipi || !yolcuKapasitesi) {
@@ -73,6 +73,8 @@ export async function PUT(
         durum,
         enlem: parseFloat(enlem) || 0,
         boylam: parseFloat(boylam) || 0,
+        sigortaTarihi: sigortaTarihi ? new Date(sigortaTarihi) : null,
+        muayeneTarihi: muayeneTarihi ? new Date(muayeneTarihi) : null,
         sonGuncelleme: new Date()
       }
     });

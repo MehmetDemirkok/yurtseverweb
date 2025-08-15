@@ -40,6 +40,7 @@ model Company {
   cariler       Cari[]
   tedarikciler  Tedarikci[]
   organizations Organization[]
+  aracBakimlar  AracBakim[]
 }
 
 model User {
@@ -52,6 +53,7 @@ model User {
   permissions String[] @default([])
   companyId   Int
   logs        Log[]
+  aracBakimlar AracBakim[]
   
   // Relations
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -160,6 +162,8 @@ model Arac {
   enlem           Float      @default(0)
   boylam          Float      @default(0)
   sonGuncelleme   DateTime   @default(now())
+  sigortaTarihi   DateTime?  // Sigorta bitiş tarihi
+  muayeneTarihi   DateTime?  // Muayene bitiş tarihi
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   companyId       Int
@@ -172,6 +176,7 @@ model Arac {
   company         Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   soforler        Sofor[]
   transferler     Transfer[]
+  bakimlar        AracBakim[]
   
   @@unique([plaka, companyId])
 }
@@ -298,6 +303,35 @@ model Tedarikci {
   transferler  Transfer[]
 }
 
+model AracBakim {
+  id              String          @id @default(cuid())
+  aracId          String
+  bakimTipi       AracBakimTipi
+  durum           AracBakimDurum  @default(PLANLANDI)
+  baslik          String
+  aciklama        String?
+  planlananTarih  DateTime
+  baslamaTarihi   DateTime?
+  bitisTarihi     DateTime?
+  maliyet         Float?
+  odemeDurumu     Boolean         @default(false)
+  odemeTarihi     DateTime?
+  tedarikci       String?
+  tedarikciTelefon String?
+  tedarikciAdres  String?
+  notlar          String?
+  dosyalar        String[]        @default([]) // Dosya URL'leri
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  createdBy       Int
+  companyId       Int
+  
+  // Relations
+  arac            Arac            @relation(fields: [aracId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [createdBy], references: [id])
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
 enum CompanyStatus {
   ACTIVE
   INACTIVE
@@ -322,6 +356,10 @@ enum AracDurum {
   MUSAIT
   TRANSFERDE
   BAKIMDA
+  CALISMA
+  BAKIM
+  ARIZA
+  PASIF
 }
 
 enum AracTipi {
@@ -329,6 +367,25 @@ enum AracTipi {
   MINIBUS
   MIDIBUS
   OTOBUS
+  KAMYON
+  PICKUP
+}
+
+enum AracBakimTipi {
+  BAKIM
+  ONARIM
+  SIGORTA
+  MUAYENE
+  LASTIK
+  YAKIT
+  DIGER
+}
+
+enum AracBakimDurum {
+  PLANLANDI
+  DEVAM_EDIYOR
+  TAMAMLANDI
+  IPTAL
 }
 
 enum SoforDurum {

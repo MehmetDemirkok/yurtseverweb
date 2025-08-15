@@ -56,11 +56,16 @@ export async function POST(request: NextRequest) {
     const user = await requireCompanyAccess();
     const data = await request.json();
 
+    // Tarih alanlarını dönüştür
+    const processedData = {
+      ...data,
+      sigortaTarihi: data.sigortaTarihi ? new Date(data.sigortaTarihi) : null,
+      muayeneTarihi: data.muayeneTarihi ? new Date(data.muayeneTarihi) : null,
+      companyId: user.companyId
+    };
+
     const arac = await prisma.arac.create({
-      data: {
-        ...data,
-        companyId: user.companyId
-      }
+      data: processedData
     });
 
     return NextResponse.json(arac);

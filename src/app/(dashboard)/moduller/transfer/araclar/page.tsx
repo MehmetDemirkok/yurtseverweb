@@ -26,6 +26,8 @@ interface Arac {
   yolcuKapasitesi: number;
   durum: 'MUSAIT' | 'BAKIMDA' | 'TRANSFERDE';
   sonGuncelleme: string;
+  sigortaTarihi?: string;
+  muayeneTarihi?: string;
   createdAt: string;
   updatedAt: string;
   companyId: number;
@@ -75,7 +77,9 @@ export default function AraclarPage() {
     model: '',
     aracTipi: 'BINEK' as 'BINEK' | 'MINIBUS' | 'MIDIBUS' | 'OTOBUS',
     yolcuKapasitesi: 4,
-    durum: 'MUSAIT' as 'MUSAIT' | 'TRANSFERDE' | 'BAKIMDA'
+    durum: 'MUSAIT' as 'MUSAIT' | 'TRANSFERDE' | 'BAKIMDA',
+    sigortaTarihi: '',
+    muayeneTarihi: ''
   });
   
   // Form validation
@@ -84,7 +88,9 @@ export default function AraclarPage() {
     marka: '',
     model: '',
     aracTipi: '',
-    yolcuKapasitesi: ''
+    yolcuKapasitesi: '',
+    sigortaTarihi: '',
+    muayeneTarihi: ''
   });
   
   // Plaka formatını kontrol eden fonksiyon
@@ -371,14 +377,18 @@ export default function AraclarPage() {
       model: '',
       aracTipi: 'BINEK',
       yolcuKapasitesi: 4,
-      durum: 'MUSAIT'
+      durum: 'MUSAIT',
+      sigortaTarihi: '',
+      muayeneTarihi: ''
     });
     setFormErrors({
       plaka: '',
       marka: '',
       model: '',
       aracTipi: '',
-      yolcuKapasitesi: ''
+      yolcuKapasitesi: '',
+      sigortaTarihi: '',
+      muayeneTarihi: ''
     });
   };
 
@@ -390,7 +400,9 @@ export default function AraclarPage() {
       model: arac.model,
       aracTipi: arac.aracTipi || 'BINEK',
       yolcuKapasitesi: arac.yolcuKapasitesi,
-      durum: arac.durum
+      durum: arac.durum,
+      sigortaTarihi: arac.sigortaTarihi ? new Date(arac.sigortaTarihi).toISOString().split('T')[0] : '',
+      muayeneTarihi: arac.muayeneTarihi ? new Date(arac.muayeneTarihi).toISOString().split('T')[0] : ''
     });
     setShowModal(true);
   };
@@ -630,6 +642,12 @@ export default function AraclarPage() {
                   Arvento Durumu
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Sigorta Tarihi
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Muayene Tarihi
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Son Güncelleme
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -695,6 +713,26 @@ export default function AraclarPage() {
                         </div>
                       );
                     })()}
+                  </td>
+
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {arac.sigortaTarihi ? (
+                      <div className={`${new Date(arac.sigortaTarihi) < new Date() ? 'text-red-600 font-medium' : new Date(arac.sigortaTarihi) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) ? 'text-yellow-600 font-medium' : ''}`}>
+                        {new Date(arac.sigortaTarihi).toLocaleDateString('tr-TR')}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {arac.muayeneTarihi ? (
+                      <div className={`${new Date(arac.muayeneTarihi) < new Date() ? 'text-red-600 font-medium' : new Date(arac.muayeneTarihi) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) ? 'text-yellow-600 font-medium' : ''}`}>
+                        {new Date(arac.muayeneTarihi).toLocaleDateString('tr-TR')}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -875,10 +913,35 @@ export default function AraclarPage() {
                   onChange={(e) => setFormData({...formData, durum: e.target.value as any})}
                   className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                                     <option value="MUSAIT">Müsait</option>
-                   <option value="TRANSFERDE">Transferde</option>
-                   <option value="BAKIMDA">Bakımda</option>
+                  <option value="MUSAIT">Müsait</option>
+                  <option value="TRANSFERDE">Transferde</option>
+                  <option value="BAKIMDA">Bakımda</option>
                 </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Sigorta Bitiş Tarihi
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.sigortaTarihi}
+                    onChange={(e) => setFormData({...formData, sigortaTarihi: e.target.value})}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Muayene Bitiş Tarihi
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.muayeneTarihi}
+                    onChange={(e) => setFormData({...formData, muayeneTarihi: e.target.value})}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">
