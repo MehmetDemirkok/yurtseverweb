@@ -26,6 +26,15 @@ interface YaklasanTransfer {
   durum: 'beklemede' | 'yolda' | 'tamamlandi';
 }
 
+interface TransferStats {
+  toplamArac: number;
+  müsaitArac: number;
+  toplamSofor: number;
+  bugunTransfer: number;
+  buHaftaTransfer: number;
+  toplamTransfer: number;
+}
+
 export default function TransferDashboard() {
 
   
@@ -33,6 +42,14 @@ export default function TransferDashboard() {
   const [loading, setLoading] = useState(true);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [userRole, setUserRole] = useState<string>('');
+  const [stats, setStats] = useState<TransferStats>({
+    toplamArac: 0,
+    müsaitArac: 0,
+    toplamSofor: 0,
+    bugunTransfer: 0,
+    buHaftaTransfer: 0,
+    toplamTransfer: 0
+  });
 
   // İzin kontrolü fonksiyonu
   const hasPermission = (permission: string): boolean => {
@@ -80,8 +97,8 @@ export default function TransferDashboard() {
       ]);
 
       const araclar = araclarRes.ok ? (await araclarRes.json()).araclar || [] : [];
-      const soforler = soforlerRes.ok ? (await soforlerRes.json()) : [];
-      const transferler = transferlerRes.ok ? (await transferlerRes.json()) : [];
+      const soforler = soforlerRes.ok ? (await soforlerRes.json()).soforler || [] : [];
+      const transferler = transferlerRes.ok ? (await transferlerRes.json()).transferler || [] : [];
 
       // Yaklaşan transferleri al (bugün ve yarın)
       const bugun = new Date().toISOString().split('T')[0];
@@ -109,6 +126,28 @@ export default function TransferDashboard() {
             }))
         : [];
 
+      // İstatistikleri hesapla
+      const buHafta = new Date();
+      buHafta.setDate(buHafta.getDate() + 7);
+
+      const bugunTransferler = transferler.filter((t: any) => 
+        new Date(t.kalkisTarihi).toISOString().split('T')[0] === bugun
+      );
+
+      const buHaftaTransferler = transferler.filter((t: any) => 
+        new Date(t.kalkisTarihi) <= buHafta
+      );
+
+      const stats = {
+        toplamArac: araclar.length,
+        müsaitArac: araclar.filter((a: any) => a.durum === 'MUSAIT').length,
+        toplamSofor: soforler.length,
+        bugunTransfer: bugunTransferler.length,
+        buHaftaTransfer: buHaftaTransferler.length,
+        toplamTransfer: transferler.length
+      };
+
+      setStats(stats);
       setYaklasanTransferler(yaklasanTransferler);
     } catch (error) {
       console.error('Dashboard verisi alınamadı:', error);
@@ -194,7 +233,128 @@ export default function TransferDashboard() {
         </div>
       </div>
 
+      {/* İstatistik Kartları */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Car className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                    Toplam Araç
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
+                    {stats.toplamArac}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
 
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Car className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                    Müsait Araç
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
+                    {stats.müsaitArac}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Users className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                    Toplam Şoför
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
+                    {stats.toplamSofor}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Calendar className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                    Bugün Transfer
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
+                    {stats.bugunTransfer}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <TrendingUp className="h-6 w-6 text-indigo-600" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                    Bu Hafta Transfer
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
+                    {stats.buHaftaTransfer}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <MapPin className="h-6 w-6 text-red-600" />
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
+                    Toplam Transfer
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
+                    {stats.toplamTransfer}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Yaklaşan Transferler */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg">

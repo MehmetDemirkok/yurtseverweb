@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(soforler);
+    return NextResponse.json({ soforler });
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Yetkilendirme gerekli' }, { status: 401 });

@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireCompanyAccess } from '@/lib/auth';
 
 // GET - Tüm transferleri listele
 export async function GET() {
   try {
+    console.log('Transferler API çağrısı başladı');
+    
+    const user = await requireCompanyAccess();
+    console.log('Kullanıcı bilgileri alındı:', { id: user.id, companyId: user.companyId });
+    
     const transferler = await prisma.transfer.findMany({
+      where: {
+        companyId: user.companyId
+      },
       include: {
         arac: {
           select: {
@@ -41,11 +50,24 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json(transferler);
-  } catch (error) {
-    console.error('Transferler alınamadı:', error);
+    console.log(`${transferler.length} transfer bulundu`);
+    return NextResponse.json({ transferler });
+  } catch (error: any) {
+    console.error('Transferler fetch error detayı:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Yetkilendirme gerekli' }, { status: 401 });
+    }
+    if (error.message === 'Company access denied') {
+      return NextResponse.json({ error: 'Şirket erişimi reddedildi' }, { status: 403 });
+    }
+    
     return NextResponse.json(
-      { error: 'Transferler alınamadı' },
+      { error: 'Transferler alınamadı', details: error.message },
       { status: 500 }
     );
   }
