@@ -91,8 +91,7 @@ export default function OtellerPage() {
   const [cityFilter, setCityFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState<string>('all');
   const [ratingFilter, setRatingFilter] = useState<string>('all');
-  const [isFetchingHotels, setIsFetchingHotels] = useState(false);
-  const [isTestingApis, setIsTestingApis] = useState(false);
+
   
   // Sıralama state'leri
   const [sortField, setSortField] = useState<string>('id');
@@ -324,75 +323,11 @@ export default function OtellerPage() {
   };
 
   const handleFetchTurkeyHotels = async () => {
-    if (!confirm('Türkiye\'deki otelleri API\'lerden çekmek istediğinizden emin misiniz? Bu işlem biraz zaman alabilir.')) {
-      return;
-    }
-
-    setIsFetchingHotels(true);
-    try {
-      const response = await fetch('/api/konaklama/oteller/fetch-turkey-hotels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        alert(`✅ ${result.count} otel API'lerden başarıyla eklendi!`);
-        fetchHotels(); // Otelleri yeniden yükle
-      } else {
-        const error = await response.json();
-        alert('❌ Hata: ' + error.message);
-      }
-    } catch (error) {
-      console.error('Otel çekme hatası:', error);
-      alert('❌ Otel çekme işlemi başarısız oldu!');
-    } finally {
-      setIsFetchingHotels(false);
-    }
+    // Yakında aktif edilecek popup'ı göster
+    alert('🚧 Bu özellik yakında aktif edilecektir!\n\nAPI entegrasyonları şu anda geliştirme aşamasındadır. Lütfen daha sonra tekrar deneyin.');
   };
 
-  const handleTestApis = async () => {
-    setIsTestingApis(true);
-    try {
-      const response = await fetch('/api/konaklama/oteller/test-apis?city=İstanbul&limit=3');
-      
-      if (response.ok) {
-        const result = await response.json();
-        const data = result.data;
-        
-        let message = `🧪 API Test Sonuçları:\n\n`;
-        message += `Şehir: ${data.city}\n`;
-        message += `Toplam Otel: ${data.totalHotels}\n\n`;
-        message += `API Durumları:\n`;
-        message += `🆓 Ücretsiz API'ler:\n`;
-        message += `• OpenTripMap: ${data.apiStatus.opentripmap}\n`;
-        message += `• Foursquare: ${data.apiStatus.foursquare}\n`;
-        message += `• Free Hotels: ${data.apiStatus['free-hotels']}\n\n`;
-        message += `💰 Ücretli API'ler:\n`;
-        message += `• Booking.com: ${data.apiStatus.booking}\n`;
-        message += `• TripAdvisor: ${data.apiStatus.tripadvisor}\n`;
-        message += `• Hotels.com: ${data.apiStatus.hotels}\n`;
-        message += `• Google Places: ${data.apiStatus.google}\n\n`;
-        
-        if (data.hotels.length > 0) {
-          message += `Örnek Oteller:\n`;
-          data.hotels.slice(0, 3).forEach((hotel: any, index: number) => {
-            message += `${index + 1}. ${hotel.name} (${hotel.stars}⭐)\n`;
-          });
-        }
-        
-        alert(message);
-      } else {
-        const error = await response.json();
-        alert('❌ API Test Hatası: ' + error.message);
-      }
-    } catch (error) {
-      console.error('API test hatası:', error);
-      alert('❌ API test işlemi başarısız oldu!');
-    } finally {
-      setIsTestingApis(false);
-    }
-  };
+
 
   // Toplu seçim fonksiyonları
   const handleSelectHotel = (hotelId: number) => {
@@ -638,33 +573,15 @@ export default function OtellerPage() {
                 Yeni Otel Ekle
               </button>
             )}
-            <button
-              onClick={handleTestApis}
-              className="btn btn-info flex items-center gap-2"
-              disabled={isTestingApis}
-            >
-              {isTestingApis ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-              {isTestingApis ? 'Test Ediliyor...' : 'API\'leri Test Et'}
-            </button>
+
             <button
               onClick={handleFetchTurkeyHotels}
               className="btn btn-success flex items-center gap-2"
-              disabled={isFetchingHotels}
             >
-              {isFetchingHotels ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-              )}
-              {isFetchingHotels ? 'API\'lerden Çekiliyor...' : 'API\'lerden Otelleri Çek'}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              API'lerden Otelleri Çek
             </button>
             {canDelete() && selectedHotelIds.length > 0 && (
               <button

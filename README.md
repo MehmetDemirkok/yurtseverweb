@@ -281,6 +281,63 @@ npm run seed         # Test verileri oluştur
 npm run seed:clear   # Test verilerini temizle
 ```
 
+### 🛠️ Yönetim Scriptleri
+
+#### Kritik Scriptler
+```bash
+# Admin kullanıcısı oluştur (ilk kurulum için)
+node scripts/createAdmin.js
+
+# Veritabanı yedekleme ve email gönderme
+node scripts/backupAndMail.js
+```
+
+#### Orta Önemli Scriptler
+```bash
+# Demo verileri temizle (production'a geçerken)
+node scripts/clearDemoData.js
+
+# MUDUR kullanıcılarının şirket bilgilerini kontrol et
+node scripts/checkMudurCompany.js
+
+# MUDUR kullanıcılarına eksik izinleri ekle
+node scripts/fixMudurPermissions.js
+```
+
+#### Debug Scriptleri
+```bash
+# Konaklama kayıtlarını debug et
+node scripts/debug-accommodation.js
+
+# Müşteri kayıtlarını düzelt (tek seferlik)
+node scripts/fix-munferit-records.js
+```
+
+#### Script Detayları
+
+**createAdmin.js** - Admin kullanıcısı oluşturur
+- Email: `mehmet@yurtsever.com`
+- Şifre: `mehmet123`
+- Tüm izinlere sahip
+
+**backupAndMail.js** - Veritabanı yedekleme
+- Excel formatında yedek oluşturur
+- Email ile gönderir
+- Haftalık otomatik yedekleme için kullanılır
+
+**clearDemoData.js** - Demo verileri temizler
+- Tüm test verilerini siler
+- Production'a geçerken kullanılır
+- Foreign key constraint'lere uygun silme
+
+**checkMudurCompany.js** - Kullanıcı-şirket kontrolü
+- MUDUR kullanıcılarının şirket bilgilerini kontrol eder
+- Eksik şirket bilgilerini tespit eder
+
+**fixMudurPermissions.js** - Yetki düzeltme
+- MUDUR kullanıcılarına eksik izinleri ekler
+- `user-management` ve `logs` izinlerini ekler
+
 ### Yeni Özellik Ekleme
 1. Prisma schema'yı güncelleyin
 2. API endpoint'lerini oluşturun
