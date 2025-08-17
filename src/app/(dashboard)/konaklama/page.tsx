@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthGuard from "@/components/layout/AuthGuard";
+import { canViewModule } from '@/lib/permissions';
 
 interface User {
   id: number;
@@ -79,7 +80,7 @@ export default function AccommodationPage() {
     if (currentUser?.role === 'ADMIN') {
       return true;
     }
-    return hasPermission('accommodation');
+    return canViewModule(currentUser?.role || '', 'accommodation');
   };
 
   const formatDate = (dateStr: string) => {

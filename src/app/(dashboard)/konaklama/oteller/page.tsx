@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthGuard from '@/components/layout/AuthGuard';
+import { canViewModule } from '@/lib/permissions';
 
 interface Hotel {
   id: number;
@@ -139,13 +140,11 @@ export default function OtellerPage() {
     return userPermissions.includes(permission) || currentUser?.role === 'ADMIN';
   };
 
-  const hasPageAccess = () => {
-    // Admin her zaman erişebilir
+  const hasPageAccess = (): boolean => {
     if (currentUser?.role === 'ADMIN') {
       return true;
     }
-    // Diğer roller için accommodation permission kontrolü
-    return hasPermission('accommodation');
+    return canViewModule(currentUser?.role || '', 'accommodation');
   };
 
   const canAdd = () => {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { canViewModule } from '@/lib/permissions';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -29,6 +30,9 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
 
   // Kullanıcının belirli bir izne sahip olup olmadığını kontrol eden fonksiyon
   const hasPermission = (permission: string) => {
+    if (permission === 'accommodation') {
+      return canViewModule(currentUser?.role || '', 'accommodation');
+    }
     return currentUser?.permissions?.includes(permission) || currentUser?.role === 'ADMIN';
   };
 

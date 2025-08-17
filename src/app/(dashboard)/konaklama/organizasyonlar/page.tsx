@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AuthGuard from "@/components/layout/AuthGuard";
+import { canViewModule, canAddModule, canEditModule, canDeleteModule } from '@/lib/permissions';
 
 interface User {
   id: number;
@@ -45,6 +46,7 @@ export default function OrganizasyonlarPage() {
   // Modal state'leri
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null);
   const [deletingOrganization, setDeletingOrganization] = useState<Organization | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,8 +100,23 @@ export default function OrganizasyonlarPage() {
     if (currentUser?.role === 'ADMIN') {
       return true;
     }
-    return hasPermission('accommodation');
+    return canViewModule(currentUser?.role || '', 'accommodation');
   };
+
+  const canAddOrganization = (): boolean => {
+    if (currentUser?.role === 'ADMIN') {
+      return true;
+    }
+    return canAddModule(currentUser?.role || '', 'accommodation');
+  };
+
+  // searchParams'dan action'ı kontrol et
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'add' && canAddOrganization()) {
+      setShowAddModal(true);
+    }
+  }, [searchParams, currentUser]);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
@@ -194,6 +211,51 @@ export default function OrganizasyonlarPage() {
     }
   };
 
+  // Organizasyon oluşturma
+  const handleAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const formData = new FormData(e.target as HTMLFormElement);
+      const newData = {
+        name: formData.get('name') as string,
+        description: formData.get('description') as string,
+        contactPerson: formData.get('contactPerson') as string,
+        contactEmail: formData.get('contactEmail') as string,
+        contactPhone: formData.get('contactPhone') as string,
+        status: formData.get('status') as string,
+        baslangicTarihi: formData.get('baslangicTarihi') as string,
+        bitisTarihi: formData.get('bitisTarihi') as string,
+        lokasyon: formData.get('lokasyon') as string,
+        sehir: formData.get('sehir') as string,
+        ulke: formData.get('ulke') as string,
+      };
+
+      const response = await fetch('/api/organizations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newData),
+      });
+
+      if (response.ok) {
+        await fetchOrganizations();
+        closeAddModal();
+        // URL'den action parametresini temizle
+        router.push('/konaklama/organizasyonlar');
+      } else {
+        const error = await response.json();
+        alert(`Oluşturma hatası: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Oluşturma hatası:', error);
+      alert('Oluşturma sırasında bir hata oluştu.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Organizasyon silme
   const handleDeleteConfirm = async () => {
     if (!deletingOrganization) return;
@@ -219,6 +281,13 @@ export default function OrganizasyonlarPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Modal kapatma fonksiyonları
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    // URL'den action parametresini temizle
+    router.push('/konaklama/organizasyonlar');
   };
 
   // Filtrelenmiş organizasyonlar
@@ -301,15 +370,17 @@ export default function OrganizasyonlarPage() {
                 <p className="text-gray-600 mt-1">Konaklama organizasyonları ve kayıtları</p>
               </div>
             </div>
-            <button
-              onClick={() => router.push('/konaklama/organizasyonlar?action=add')}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Yeni Organizasyon
-            </button>
+            {canAddOrganization() && (
+              <button
+                onClick={() => router.push('/konaklama/organizasyonlar?action=add')}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Yeni Organizasyon
+              </button>
+            )}
           </div>
         </div>
 
@@ -412,29 +483,33 @@ export default function OrganizasyonlarPage() {
                       </svg>
                     </button>
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleEditClick(org)}
-                        className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
-                        title="Düzenle"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleDeleteClick(org);
-                        }}
-                        className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                        title="Sil"
-                        type="button"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                      {canEditModule(currentUser?.role || '', 'accommodation') && (
+                        <button
+                          onClick={() => handleEditClick(org)}
+                          className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
+                          title="Düzenle"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      )}
+                      {canDeleteModule(currentUser?.role || '', 'accommodation') && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeleteClick(org);
+                          }}
+                          className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                          title="Sil"
+                          type="button"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -456,12 +531,14 @@ export default function OrganizasyonlarPage() {
                 : 'Henüz hiç organizasyon oluşturulmamış.'
               }
             </p>
-            <button
-              onClick={() => router.push('/konaklama/organizasyonlar?action=add')}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              İlk Organizasyonu Oluştur
-            </button>
+            {canAddOrganization() && (
+              <button
+                onClick={() => router.push('/konaklama/organizasyonlar?action=add')}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                İlk Organizasyonu Oluştur
+              </button>
+            )}
           </div>
         )}
 
@@ -641,7 +718,7 @@ export default function OrganizasyonlarPage() {
                 <p className="text-gray-700 mb-4">
                   <strong>{deletingOrganization.name}</strong> organizasyonunu silmek istediğinize emin misiniz?
                 </p>
-                {deletingOrganization._count?.accommodations > 0 && (
+                {deletingOrganization._count && deletingOrganization._count.accommodations > 0 && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                     <div className="flex items-center">
                       <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -682,6 +759,156 @@ export default function OrganizasyonlarPage() {
                   ) : 'Evet, Sil'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Organizasyon Oluşturma Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) closeAddModal(); }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 p-8 relative animate-fade-in border border-green-100">
+              <button
+                onClick={closeAddModal}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                aria-label="Kapat"
+              >
+                ×
+              </button>
+              <div className="flex items-center mb-6">
+                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-xl flex items-center justify-center mr-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800">Yeni Organizasyon Oluştur</h2>
+              </div>
+              <form onSubmit={handleAddSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Organizasyon Adı <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    name="name"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
+                  <select
+                    name="status"
+                    defaultValue="ACTIVE"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="ACTIVE">Aktif</option>
+                    <option value="INACTIVE">Pasif</option>
+                    <option value="SUSPENDED">Askıya Alınmış</option>
+                  </select>
+                </div>
+                <div className="form-group md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Açıklama</label>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Organizasyon hakkında açıklama..."
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Yetkili Kişi</label>
+                  <input
+                    type="text"
+                    name="contactPerson"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Yetkili kişi adı"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">E-posta</label>
+                  <input
+                    type="email"
+                    name="contactEmail"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="ornek@email.com"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+                  <input
+                    type="tel"
+                    name="contactPhone"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="+90 555 123 45 67"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Başlangıç Tarihi</label>
+                  <input
+                    type="date"
+                    name="baslangicTarihi"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Bitiş Tarihi</label>
+                  <input
+                    type="date"
+                    name="bitisTarihi"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Lokasyon</label>
+                  <input
+                    type="text"
+                    name="lokasyon"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Otel adı, adres..."
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Şehir</label>
+                  <input
+                    type="text"
+                    name="sehir"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="İstanbul"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ülke</label>
+                  <input
+                    type="text"
+                    name="ulke"
+                    defaultValue="Türkiye"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div className="flex justify-end space-x-2 md:col-span-2 pt-4">
+                  <button 
+                    type="button" 
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors disabled:opacity-50" 
+                    onClick={closeAddModal} 
+                    disabled={isSubmitting}
+                  >
+                    İptal
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50" 
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Oluşturuluyor...
+                      </>
+                    ) : 'Oluştur'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

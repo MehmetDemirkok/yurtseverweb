@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import AccommodationTableSection from "@/app/components/AccommodationTableSection";
 import AuthGuard from "@/components/layout/AuthGuard";
 import * as XLSX from 'xlsx';
+import { canViewModule } from '@/lib/permissions';
 
 interface User {
   id: number;
@@ -57,7 +58,7 @@ export default function MunferitKonaklamaPage() {
     if (currentUser?.role === 'ADMIN') {
       return true;
     }
-    return hasPermission('accommodation');
+    return canViewModule(currentUser?.role || '', 'accommodation');
   };
 
   // Puantaj raporu fonksiyonu
