@@ -19,6 +19,7 @@ import {
   X
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import TimeInput from '@/components/ui/TimeInput';
 
 interface Yolcu {
   id?: string;
@@ -197,7 +198,8 @@ export default function TransferlerPage() {
       const response = await fetch('/api/moduller/transfer/transferler');
       if (response.ok) {
         const data = await response.json();
-        setTransferler(Array.isArray(data) ? data : []);
+        // API { transferler } döndürüyor
+        setTransferler(Array.isArray(data) ? data : (data.transferler || []));
       } else {
         console.error('Transferler alınamadı');
         setTransferler([]);
@@ -230,7 +232,8 @@ export default function TransferlerPage() {
       const response = await fetch('/api/moduller/transfer/soforler');
       if (response.ok) {
         const data = await response.json();
-        setSoforler(Array.isArray(data) ? data : []);
+        // API { soforler } döndürüyor
+        setSoforler(data.soforler || (Array.isArray(data) ? data : []));
       } else {
         setSoforler([]);
       }
@@ -524,23 +527,51 @@ export default function TransferlerPage() {
   
   // Excel'e aktarma fonksiyonu
   const exportToExcel = () => {
-    // Dışa aktarılacak veriyi hazırla
-    const exportData = filteredTransferler.map(transfer => ({
-      'Kalkış Yeri': transfer.kalkisYeri,
-      'Varış Yeri': transfer.varisYeri,
-      'Tarih': new Date(transfer.kalkisTarihi).toLocaleDateString('tr-TR'),
-      'Saat': transfer.kalkisSaati,
-      'Yolcu Sayısı': transfer.yolcuSayisi,
-      'Araç Plakası': transfer.arac ? transfer.arac.plaka : 'Atanmamış',
-      'Şoför': transfer.sofor ? `${transfer.sofor.ad} ${transfer.sofor.soyad}` : 'Atanmamış',
-      'Durum': transfer.durum === 'BEKLEMEDE' ? 'Beklemede' : 
-               transfer.durum === 'YOLDA' ? 'Yolda' : 
-               transfer.durum === 'TAMAMLANDI' ? 'Tamamlandı' : 'İptal',
-      'Fiyat (TL)': transfer.fiyat ? transfer.fiyat.toLocaleString('tr-TR') : '-',
-      'Tahsisli': transfer.tahsisli ? 'Evet' : 'Hayır',
-      'Notlar': transfer.notlar || '-',
-      'Oluşturulma Tarihi': new Date(transfer.createdAt).toLocaleDateString('tr-TR')
-    }));
+    // Dışa aktarılacak veriyi hazırla (yolcu detayları dahil)
+    const exportData: any[] = [];
+    filteredTransferler.forEach((transfer) => {
+      const baseRow = {
+        'Kalkış Yeri': transfer.kalkisYeri,
+        'Varış Yeri': transfer.varisYeri,
+        'Tarih': new Date(transfer.kalkisTarihi).toLocaleDateString('tr-TR'),
+        'Saat': transfer.kalkisSaati,
+        'Yolcu Sayısı': transfer.yolcuSayisi,
+        'Araç Plakası': transfer.arac ? transfer.arac.plaka : 'Atanmamış',
+        'Şoför': transfer.sofor ? `${transfer.sofor.ad} ${transfer.sofor.soyad}` : 'Atanmamış',
+        'Durum': transfer.durum === 'BEKLEMEDE' ? 'Beklemede' : 
+                 transfer.durum === 'YOLDA' ? 'Yolda' : 
+                 transfer.durum === 'TAMAMLANDI' ? 'Tamamlandı' : 'İptal',
+        'Tahsisli': transfer.tahsisli ? 'Evet' : 'Hayır',
+        'Notlar': transfer.notlar || '-',
+        'Oluşturulma Tarihi': new Date(transfer.createdAt).toLocaleDateString('tr-TR')
+      };
+
+      if (transfer.yolcular && transfer.yolcular.length > 0) {
+        const formattedPrice = transfer.fiyat ? transfer.fiyat.toLocaleString('tr-TR') : '-';
+        transfer.yolcular.forEach((y, idx) => {
+          exportData.push({
+            ...baseRow,
+            'Fiyat (TL)': idx === 0 ? formattedPrice : '0',
+            'Yolcu Adı': y.ad || '',
+            'Yolcu Soyadı': y.soyad || '',
+            'Yolcu Telefon': y.telefon || '',
+            'Uçuş Saati': y.ucusSaati || '',
+            'TK Kodu': y.ucusTkKodu || ''
+          });
+        });
+      } else {
+        // Yolcu yoksa boş yolcu alanları ile tek satır ekle
+        exportData.push({
+          ...baseRow,
+          'Fiyat (TL)': transfer.fiyat ? transfer.fiyat.toLocaleString('tr-TR') : '-',
+          'Yolcu Adı': '',
+          'Yolcu Soyadı': '',
+          'Yolcu Telefon': '',
+          'Uçuş Saati': '',
+          'TK Kodu': ''
+        });
+      }
+    });
     
     // Excel çalışma kitabı oluştur
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -1005,16 +1036,14 @@ export default function TransferlerPage() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Saat
                   </label>
-                  <input
-                    type="time"
+                  <TimeInput
                     value={formData.kalkisSaati}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setFormData({...formData, kalkisSaati: value});
-                      if (!value) {
-                        setFormErrors({...formErrors, kalkisSaati: 'Saat alanı zorunludur'});
+                    onChange={(val) => {
+                      setFormData({ ...formData, kalkisSaati: val });
+                      if (!val) {
+                        setFormErrors({ ...formErrors, kalkisSaati: 'Saat alanı zorunludur' });
                       } else {
-                        setFormErrors({...formErrors, kalkisSaati: ''});
+                        setFormErrors({ ...formErrors, kalkisSaati: '' });
                       }
                     }}
                     className={`w-full border ${formErrors.kalkisSaati ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'} rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 ${formErrors.kalkisSaati ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
@@ -1428,10 +1457,9 @@ export default function TransferlerPage() {
                               <Clock className="h-3 w-3 mr-1" />
                               Uçuş Saati
                             </label>
-                            <input
-                              type="time"
+                            <TimeInput
                               value={yolcu.ucusSaati}
-                              onChange={(e) => updateYolcu(index, 'ucusSaati', e.target.value)}
+                              onChange={(val) => updateYolcu(index, 'ucusSaati', val)}
                               className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
                             />
                           </div>

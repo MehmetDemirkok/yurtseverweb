@@ -100,6 +100,8 @@ export async function POST(request: NextRequest) {
       yolcular
     } = body;
 
+    const user = await requireCompanyAccess();
+
     // Validasyon
     if (!kalkisYeri || !varisYeri || !kalkisSaati || !kalkisTarihi || !yolcuSayisi) {
       return NextResponse.json(
@@ -170,6 +172,7 @@ export async function POST(request: NextRequest) {
         manuelAracTip: manuelAracTip || null,
         manuelAracPlaka: manuelAracPlaka || null,
         manuelSoforAdi: manuelSoforAdi || null,
+        companyId: user.companyId,
         yolcular: {
           create: yolcular || []
         }

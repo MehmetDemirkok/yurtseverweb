@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireCompanyAccess } from '@/lib/auth';
 
 // GET - Belirli bir transferi getir
 export async function GET(
@@ -66,6 +67,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireCompanyAccess();
     const paramsData = await params;
     const body = await request.json();
     const { 
@@ -90,6 +92,18 @@ export async function PUT(
       manuelSoforAdi,
       yolcular
     } = body;
+
+    // İzin kontrolü: Transferin şirketi doğrulanmalı
+    const existing = await prisma.transfer.findUnique({
+      where: { id: paramsData.id },
+      select: { companyId: true }
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Transfer bulunamadı' }, { status: 404 });
+    }
+    if (existing.companyId !== user.companyId) {
+      return NextResponse.json({ error: 'Şirket erişimi reddedildi' }, { status: 403 });
+    }
 
     // Validasyon
     if (!kalkisYeri || !varisYeri || !kalkisSaati || !kalkisTarihi || !yolcuSayisi) {
@@ -145,6 +159,17 @@ export async function PUT(
       where: { transferId: paramsData.id }
     });
 
+    // Gelen yolcu verilerini temizle (izin verilen alanlar)
+    const sanitizedPassengers = Array.isArray(yolcular)
+      ? yolcular.map((y: any) => ({
+          ad: y.ad ?? '',
+          soyad: y.soyad ?? '',
+          telefon: y.telefon ?? null,
+          ucusSaati: y.ucusSaati ?? null,
+          ucusTkKodu: y.ucusTkKodu ?? null
+        }))
+      : [];
+
     const transfer = await prisma.transfer.update({
       where: { id: paramsData.id },
       data: {
@@ -168,7 +193,7 @@ export async function PUT(
         manuelAracPlaka: manuelAracPlaka || null,
         manuelSoforAdi: manuelSoforAdi || null,
         yolcular: {
-          create: yolcular || []
+          create: sanitizedPassengers
         }
       },
       include: {

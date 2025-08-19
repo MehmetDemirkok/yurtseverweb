@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireCompanyAccess } from '@/lib/auth';
 
 // GET - Tüm transferleri listele
 export async function GET() {
   try {
+    const user = await requireCompanyAccess();
     const transferler = await prisma.transfer.findMany({
+      where: {
+        companyId: user.companyId
+      },
       include: {
         arac: {
           select: {
@@ -39,6 +44,7 @@ export async function GET() {
 // POST - Yeni transfer ekle
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireCompanyAccess();
     const body = await request.json();
     const { 
       kalkisYeri, 
@@ -117,6 +123,7 @@ export async function POST(request: NextRequest) {
         notlar: notlar || '',
         fiyat: fiyat ? parseFloat(fiyat) : null,
         tahsisli: tahsisli || false,
+        companyId: user.companyId,
         yolcular: {
           create: yolcular || []
         }
