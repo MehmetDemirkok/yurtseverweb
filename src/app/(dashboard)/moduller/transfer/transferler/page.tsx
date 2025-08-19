@@ -413,6 +413,25 @@ export default function TransferlerPage() {
     }
   };
 
+  const notifyUetds = async (id: string) => {
+    try {
+      const res = await fetch('/api/moduller/transfer/uetds/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transferId: id }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.error || data.message || 'U-ETDS bildirimi başarısız');
+        return;
+      }
+      alert(`U-ETDS bildirimi başarılı${data.seferReferansNo ? ` • Ref: ${data.seferReferansNo}` : ''}`);
+      fetchTransferler();
+    } catch (e: any) {
+      alert(e?.message || 'U-ETDS bildirimi sırasında hata oluştu');
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       kalkisYeri: '',
@@ -826,6 +845,13 @@ export default function TransferlerPage() {
                         <Edit className="h-3 w-3" />
                       </button>
                       <button
+                        onClick={() => notifyUetds(transfer.id)}
+                        className="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300 p-1"
+                        title="U-ETDS'e Bildir"
+                      >
+                        U-ETDS
+                      </button>
+                      <button
                         onClick={() => deleteTransfer(transfer.id)}
                         className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
                       >
@@ -922,6 +948,13 @@ export default function TransferlerPage() {
                           className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 p-1"
                         >
                           <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => notifyUetds(transfer.id)}
+                          className="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300 p-1"
+                          title="U-ETDS'e Bildir"
+                        >
+                          U-ETDS
                         </button>
                         <button
                           onClick={() => deleteTransfer(transfer.id)}

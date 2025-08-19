@@ -29,6 +29,12 @@ model Company {
   arventoLastTest     DateTime?
   arventoIsConnected  Boolean   @default(false)
   
+  // U-ETDS entegrasyonu
+  uetdsUsername   String?
+  uetdsPassword   String?
+  uetdsYetkiBelgeNo String? // D2/Turizm vb. yetki belge numarası
+  uetdsTestMode   Boolean   @default(true)
+
   // Relations
   users         User[]
   accommodations Accommodation[]
@@ -194,6 +200,7 @@ model Sofor {
   ehliyetSiniflari String[]
   srcBelgeleri     String[]
   companyId        Int
+  tckn             String?
   
   // Relations
   company          Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -239,6 +246,11 @@ model Transfer {
   cari         Cari?         @relation(fields: [cariId], references: [id])
   tedarikci    Tedarikci?    @relation(fields: [tedarikciId], references: [id])
   yolcular     Yolcu[]
+
+  // U-ETDS alanları
+  uetdsSeferReferansNo String?
+  uetdsDurum           UetdsDurum @default(BILDIRILMEDI)
+  uetdsSonMesaj        String?
 }
 
 model Yolcu {
@@ -251,6 +263,8 @@ model Yolcu {
   transferId String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  tckn       String?
+  pasaportNo String?
   
   // Relations
   transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
@@ -399,6 +413,14 @@ enum TransferDurum {
   YOLDA
   TAMAMLANDI
   IPTAL
+}
+
+enum UetdsDurum {
+  BILDIRILMEDI
+  BILDIRILDI
+  GUNCELLENDI
+  IPTAL_BILDIRILDI
+  HATA
 }
 
 enum CariTip {

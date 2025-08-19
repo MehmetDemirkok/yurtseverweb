@@ -54,7 +54,8 @@
     "recharts": "^2.15.3",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "soap": "^0.45.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
