@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireCompanyAccess } from '@/lib/auth';
 
 // GET - Belirli bir tedarikçiyi getir
 export async function GET(
@@ -7,9 +8,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireCompanyAccess();
     const paramsData = await params;
-    const tedarikci = await prisma.tedarikci.findUnique({
-      where: { id: paramsData.id }
+    const tedarikci = await prisma.tedarikci.findFirst({
+      where: { 
+        id: paramsData.id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      }
     });
 
     if (!tedarikci) {
@@ -35,6 +40,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireCompanyAccess();
     const body = await request.json();
     const { 
       sirketAdi, 
@@ -54,7 +60,7 @@ export async function PUT(
     // Validasyon
     if (!sirketAdi) {
       return NextResponse.json(
-        { error: 'Şirket adı alanı zorunludur' },
+        { error: 'Şirket adı zorunludur' },
         { status: 400 }
       );
     }
@@ -72,7 +78,10 @@ export async function PUT(
 
     const paramsData = await params;
     const tedarikci = await prisma.tedarikci.update({
-      where: { id: paramsData.id },
+      where: { 
+        id: paramsData.id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      },
       data: {
         sirketAdi,
         yetkiliKisi: yetkiliKisi || null,
@@ -105,20 +114,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireCompanyAccess();
     const paramsData = await params;
-    const tedarikci = await prisma.tedarikci.findUnique({
-      where: { id: paramsData.id }
-    });
-
-    if (!tedarikci) {
-      return NextResponse.json(
-        { error: 'Tedarikçi bulunamadı' },
-        { status: 404 }
-      );
-    }
-
+    
+    // Tedarikçiyi sil (şirket bazlı)
     await prisma.tedarikci.delete({
-      where: { id: paramsData.id }
+      where: { 
+        id: paramsData.id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      }
     });
 
     return NextResponse.json({ message: 'Tedarikçi başarıyla silindi' });

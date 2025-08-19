@@ -1,17 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireCompanyAccess } from '@/lib/auth';
 
 // GET - Tüm tedarikçileri listele
 export async function GET() {
   try {
+    const user = await requireCompanyAccess();
+    
     const tedarikciler = await prisma.tedarikci.findMany({
+      where: {
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      },
       orderBy: {
         createdAt: 'desc'
       }
     });
 
     return NextResponse.json({ tedarikciler });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Yetkilendirme gerekli' }, { status: 401 });
+    }
+    if (error.message === 'Company access denied') {
+      return NextResponse.json({ error: 'Şirket erişimi reddedildi' }, { status: 403 });
+    }
+    
     console.error('Tedarikçiler alınamadı:', error);
     return NextResponse.json(
       { error: 'Tedarikçiler alınamadı' },
@@ -23,6 +36,7 @@ export async function GET() {
 // POST - Yeni tedarikçi ekle
 export async function POST(request: NextRequest) {
   try {
+    const user = await requireCompanyAccess();
     const body = await request.json();
     const { 
       sirketAdi, 
@@ -71,12 +85,20 @@ export async function POST(request: NextRequest) {
         vergiDairesi: vergiDairesi || null,
         hizmetTuru: hizmetTuru || null,
         notlar: notlar || null,
-        durum: durum || 'AKTIF'
+        durum: durum || 'AKTIF',
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
       }
     });
 
     return NextResponse.json({ tedarikci }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Yetkilendirme gerekli' }, { status: 401 });
+    }
+    if (error.message === 'Company access denied') {
+      return NextResponse.json({ error: 'Şirket erişimi reddedildi' }, { status: 403 });
+    }
+    
     console.error('Tedarikçi oluşturulamadı:', error);
     return NextResponse.json(
       { error: 'Tedarikçi oluşturulamadı' },

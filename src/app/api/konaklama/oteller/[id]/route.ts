@@ -36,8 +36,11 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
     }
 
-    const hotel = await prisma.hotel.findUnique({
-      where: { id }
+    const hotel = await prisma.hotel.findFirst({
+      where: { 
+        id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      }
     });
 
     if (!hotel) {
@@ -109,9 +112,12 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    // Otelin var olup olmadığını kontrol et
-    const existingHotel = await prisma.hotel.findUnique({
-      where: { id }
+    // Otelin var olup olmadığını kontrol et (şirket bazlı)
+    const existingHotel = await prisma.hotel.findFirst({
+      where: { 
+        id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      }
     });
 
     if (!existingHotel) {
@@ -119,7 +125,10 @@ export async function PUT(
     }
 
     const updatedHotel = await prisma.hotel.update({
-      where: { id },
+      where: { 
+        id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      },
       data: {
         adi,
         adres,
@@ -143,6 +152,7 @@ export async function PUT(
         recordId: id,
         recordData: JSON.stringify(updatedHotel),
         userId: user.id,
+        companyId: user.companyId, // Şirket bilgisi ekle
         ipAddress: request.headers.get('x-forwarded-for') || request.ip || 'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown'
       }
@@ -177,9 +187,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
     }
 
-    // Otelin var olup olmadığını kontrol et
-    const existingHotel = await prisma.hotel.findUnique({
-      where: { id }
+    // Otelin var olup olmadığını kontrol et (şirket bazlı)
+    const existingHotel = await prisma.hotel.findFirst({
+      where: { 
+        id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      }
     });
 
     if (!existingHotel) {
@@ -194,14 +207,18 @@ export async function DELETE(
         recordId: id,
         recordData: JSON.stringify(existingHotel),
         userId: user.id,
+        companyId: user.companyId, // Şirket bilgisi ekle
         ipAddress: request.headers.get('x-forwarded-for') || request.ip || 'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown'
       }
     });
 
-    // Oteli sil
+    // Oteli sil (şirket bazlı)
     await prisma.hotel.delete({
-      where: { id }
+      where: { 
+        id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      }
     });
 
     return NextResponse.json({ message: 'Hotel deleted successfully' });

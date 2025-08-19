@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireCompanyAccess } from '@/lib/auth';
 
 // GET - Belirli bir şoförü getir
 export async function GET(
@@ -7,9 +8,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireCompanyAccess();
     const paramsData = await params;
-    const sofor = await prisma.sofor.findUnique({
-      where: { id: paramsData.id },
+    const sofor = await prisma.sofor.findFirst({
+      where: { 
+        id: paramsData.id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      },
       include: {
         atananArac: {
           select: {
@@ -43,6 +48,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireCompanyAccess();
     const paramsData = await params;
     const body = await request.json();
     const { ad, soyad, telefon, ehliyetSinifi, ehliyetSiniflari, srcBelgeleri, atananAracId, durum } = body;
@@ -55,10 +61,11 @@ export async function PUT(
       );
     }
 
-    // Telefon benzersizlik kontrolü (kendi ID'si hariç)
+    // Telefon benzersizlik kontrolü (kendi ID'si hariç, aynı şirket içinde)
     const existingSofor = await prisma.sofor.findFirst({
       where: {
         telefon,
+        companyId: user.companyId, // Şirket bazlı veri izolasyonu
         id: { not: paramsData.id }
       }
     });
@@ -71,7 +78,10 @@ export async function PUT(
     }
 
     const sofor = await prisma.sofor.update({
-      where: { id: paramsData.id },
+      where: { 
+        id: paramsData.id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      },
       data: {
         ad,
         soyad,
@@ -108,25 +118,31 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireCompanyAccess();
     const paramsData = await params;
     
-    // Şoför transferde kullanılıyor mu kontrol et
+    // Şoför aktif transferde kullanılıyor mu kontrol et (şirket bazlı)
     const activeTransfer = await prisma.transfer.findFirst({
       where: {
         soforId: paramsData.id,
+        companyId: user.companyId, // Şirket bazlı veri izolasyonu
         durum: { in: ['BEKLEMEDE', 'YOLDA'] }
       }
     });
 
     if (activeTransfer) {
       return NextResponse.json(
-        { error: 'Bu şoför aktif bir transferde kullanılıyor' },
+        { error: 'Bu şoför aktif bir transferde kullanılıyor, silinemez' },
         { status: 400 }
       );
     }
 
+    // Şoförü sil (şirket bazlı)
     await prisma.sofor.delete({
-      where: { id: paramsData.id }
+      where: { 
+        id: paramsData.id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      }
     });
 
     return NextResponse.json({ message: 'Şoför başarıyla silindi' });

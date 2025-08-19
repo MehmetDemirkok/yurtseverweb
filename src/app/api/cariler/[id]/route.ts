@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { requireCompanyAccess } from '@/lib/auth';
 
 // GET - Belirli bir cariyi getir
 export async function GET(
@@ -7,9 +8,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireCompanyAccess();
     const paramsData = await params;
-    const cari = await prisma.cari.findUnique({
-      where: { id: paramsData.id }
+    const cari = await prisma.cari.findFirst({
+      where: { 
+        id: paramsData.id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      }
     });
 
     if (!cari) {
@@ -35,6 +40,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireCompanyAccess();
     const body = await request.json();
     const { 
       ad, 
@@ -73,7 +79,10 @@ export async function PUT(
 
     const paramsData = await params;
     const cari = await prisma.cari.update({
-      where: { id: paramsData.id },
+      where: { 
+        id: paramsData.id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      },
       data: {
         ad,
         soyad: soyad || null,
@@ -107,20 +116,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await requireCompanyAccess();
     const paramsData = await params;
-    const cari = await prisma.cari.findUnique({
-      where: { id: paramsData.id }
-    });
-
-    if (!cari) {
-      return NextResponse.json(
-        { error: 'Cari bulunamadı' },
-        { status: 404 }
-      );
-    }
-
+    
+    // Cariyi sil (şirket bazlı)
     await prisma.cari.delete({
-      where: { id: paramsData.id }
+      where: { 
+        id: paramsData.id,
+        companyId: user.companyId // Şirket bazlı veri izolasyonu
+      }
     });
 
     return NextResponse.json({ message: 'Cari başarıyla silindi' });
