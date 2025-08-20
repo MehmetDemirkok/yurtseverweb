@@ -36,3 +36,13 @@ next-env.d.ts
 
 # large files
 yurtsever_nextjs_backup.tar.gz
+
+# database backups and archives
+/backups/
+/archives/
+/logs/
+
+# backup files
+*.sql
+*.tar.gz
+*.zip

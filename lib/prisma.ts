@@ -73,7 +73,4 @@ prisma.$use(async (params, next) => {
   return result
 })
 
-// Enhanced Prisma client with retry logic (geriye uyumluluk için)
-export const enhancedPrisma = prisma
-
 export default prisma
