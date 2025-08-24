@@ -62,7 +62,7 @@ function CarilerSidebar({ isOpen, toggleSidebar }: CarilerSidebarProps) {
           <div className={`flex items-center ${!isOpen && 'md:hidden'}`}>
             <Image src="/logo.svg" alt="Logo" width={32} height={32} className="h-8 w-8" />
             <span className={`ml-2 font-semibold text-gray-800 dark:text-white transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}>
-              Yurtsever
+              TrackINN
             </span>
           </div>
           <button 

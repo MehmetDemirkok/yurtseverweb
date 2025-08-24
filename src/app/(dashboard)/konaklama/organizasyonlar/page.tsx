@@ -214,6 +214,12 @@ export default function OrganizasyonlarPage() {
   // Organizasyon oluşturma
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Eğer zaten submit işlemi devam ediyorsa, yeni submit'i engelle
+    if (isSubmitting) {
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       const formData = new FormData(e.target as HTMLFormElement);

@@ -117,6 +117,7 @@ model Accommodation {
   gecelikUcret    Float
   toplamUcret     Float
   organizasyonAdi String? // Eski alan - geriye uyumluluk için
+  takim           String? // Takım adı
   otelAdi         String?
   kurumCari       String?
   numberOfNights  Int?

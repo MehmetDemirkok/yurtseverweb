@@ -8,8 +8,8 @@ async function createCompanies() {
   
   const companies = [
     {
-      name: 'Yurtsever Turizm A.Ş.',
-      email: 'info@yurtsever.com',
+      name: 'TrackINN Hospitality Solutions',
+      email: 'info@trackinn.com',
       phone: '+90 212 555 0123',
       address: 'İstanbul, Türkiye',
       city: 'İstanbul',
@@ -37,9 +37,9 @@ async function createUsers(companies) {
   
   const users = [
     {
-      email: 'yurtsever@yurtsever.com',
-      name: 'Yurtsever Admin',
-      password: 'yurtsever123',
+      email: 'admin@trackinn.com',
+      name: 'TrackINN Admin',
+      password: 'admin123',
       role: 'ADMIN',
       companyId: companies[0].id
     }
@@ -369,7 +369,7 @@ async function createTestMunferitKonaklamalar(companyId) {
   const soyisimler = ['Yılmaz', 'Demir', 'Çelik', 'Şahin', 'Yıldız', 'Yıldırım', 'Özkan', 'Aydın', 'Özdemir', 'Arslan', 'Doğan', 'Kılıç', 'Aslan', 'Çetin', 'Erdoğan', 'Koç', 'Kurt', 'Özkan', 'Şen', 'Güneş'];
   const unvanlar = ['Mühendis', 'Doktor', 'Öğretmen', 'Avukat', 'Mimar', 'Diş Hekimi', 'Eczacı', 'Veteriner', 'Hemşire', 'Teknisyen'];
   const sehirler = ['İstanbul', 'Ankara', 'İzmir', 'Antalya', 'Bursa', 'Adana', 'Gaziantep', 'Konya', 'Mersin', 'Diyarbakır'];
-  const odaTipleri = ['Tek Kişilik', 'Çift Kişilik', 'Üç Kişilik', 'Suit', 'Deluxe', 'Standart'];
+  const odaTipleri = ['Tek Kişilik', 'Çift Kişilik', 'Triple', 'Aile Odası', 'Suit', 'Deluxe', 'Standart'];
   const konaklamaTipleri = ['Yarım Pansiyon', 'Tam Pansiyon', 'Ultra Her Şey Dahil', 'Sadece Kahvaltı', 'Oda Kahvaltı'];
   const otelAdlari = ['Grand Hotel', 'Palace Hotel', 'Resort Hotel', 'Business Hotel', 'Boutique Hotel', 'Luxury Hotel', 'City Hotel', 'Airport Hotel', 'Beach Hotel', 'Mountain Hotel'];
   
@@ -428,7 +428,7 @@ async function createTestOrganizasyonKonaklamalari(companyId, organizasyonlar) {
   const isimler = ['Ahmet', 'Mehmet', 'Ali', 'Veli', 'Hasan', 'Hüseyin', 'Mustafa', 'İbrahim', 'Ömer', 'Yusuf', 'Murat', 'Emre', 'Can', 'Burak', 'Serkan', 'Tolga', 'Erkan', 'Orhan', 'Osman', 'Kemal'];
   const soyisimler = ['Yılmaz', 'Demir', 'Çelik', 'Şahin', 'Yıldız', 'Yıldırım', 'Özkan', 'Aydın', 'Özdemir', 'Arslan', 'Doğan', 'Kılıç', 'Aslan', 'Çetin', 'Erdoğan', 'Koç', 'Kurt', 'Özkan', 'Şen', 'Güneş'];
   const unvanlar = ['Mühendis', 'Doktor', 'Öğretmen', 'Avukat', 'Mimar', 'Diş Hekimi', 'Eczacı', 'Veteriner', 'Hemşire', 'Teknisyen'];
-  const odaTipleri = ['Tek Kişilik', 'Çift Kişilik', 'Üç Kişilik', 'Suit', 'Deluxe', 'Standart'];
+  const odaTipleri = ['Tek Kişilik', 'Çift Kişilik', 'Triple', 'Aile Odası', 'Suit', 'Deluxe', 'Standart'];
   const konaklamaTipleri = ['Yarım Pansiyon', 'Tam Pansiyon', 'Ultra Her Şey Dahil', 'Sadece Kahvaltı', 'Oda Kahvaltı'];
   const otelAdlari = ['Grand Hotel', 'Palace Hotel', 'Resort Hotel', 'Business Hotel', 'Boutique Hotel', 'Luxury Hotel', 'City Hotel', 'Airport Hotel', 'Beach Hotel', 'Mountain Hotel'];
   

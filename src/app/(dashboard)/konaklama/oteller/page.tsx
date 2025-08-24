@@ -236,6 +236,11 @@ export default function OtellerPage() {
   const handleAddHotel = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Eğer zaten submit işlemi devam ediyorsa, yeni submit'i engelle
+    if (isLoading) {
+      return;
+    }
+    
     // Form validasyonu
     if (!newHotel.adi.trim() || !newHotel.adres.trim() || !newHotel.sehir.trim() || !newHotel.ulke.trim()) {
       setError('Lütfen tüm zorunlu alanları doldurun (Otel Adı, Adres, Şehir, Ülke)');
@@ -243,6 +248,7 @@ export default function OtellerPage() {
       return;
     }
     
+    setIsLoading(true);
     try {
       const response = await fetch('/api/konaklama/oteller', {
         method: 'POST',
@@ -266,6 +272,8 @@ export default function OtellerPage() {
       console.error('Otel eklenirken hata:', error);
       setError('Otel eklenirken hata oluştu');
       setShowErrorModal(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 

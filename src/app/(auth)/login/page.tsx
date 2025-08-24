@@ -212,7 +212,7 @@ export default function LoginPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2 title-glow">Yurtsever</h1>
+            <h1 className="text-3xl font-bold text-white mb-2 title-glow">TrackINN</h1>
             <p className="text-white/80 text-sm">Güvenli giriş yapın</p>
           </div>
           

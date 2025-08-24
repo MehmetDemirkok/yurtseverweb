@@ -121,6 +121,12 @@ export default function CompaniesPage() {
 
   const handleAddCompany = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Eğer zaten submit işlemi devam ediyorsa, yeni submit'i engelle
+    if (submitting) {
+      return;
+    }
+    
     setSubmitting(true);
 
     try {
@@ -152,6 +158,11 @@ export default function CompaniesPage() {
   const handleEditCompany = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCompany) return;
+
+    // Eğer zaten submit işlemi devam ediyorsa, yeni submit'i engelle
+    if (submitting) {
+      return;
+    }
 
     setSubmitting(true);
 

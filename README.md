@@ -1,6 +1,6 @@
-# Yurtsever Konaklama Yönetim Sistemi
+# TrackINN - Smart Hospitality Management System
 
-Modern Next.js tabanlı, çok kiracılı konaklama ve transfer yönetim sistemi.
+Modern Next.js based, multi-tenant accommodation and transfer management system.
 
 ## 🚀 Özellikler
 

@@ -276,6 +276,11 @@ export default function TransferlerPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Eğer zaten submit işlemi devam ediyorsa, yeni submit'i engelle
+    if (loading) {
+      return;
+    }
+    
     // Form validasyonu
     let hasError = false;
     const newErrors = { ...formErrors };

@@ -15,10 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Yurtsever - Konaklama Yönetim Sistemi",
-  description: "Profesyonel konaklama kayıt ve takip platformu",
-  keywords: "konaklama, yönetim, otel, kayıt, takip",
-  authors: [{ name: "Yurtsever" }],
+  title: "TrackINN - Smart Hospitality Management System",
+  description: "Professional accommodation and transfer management platform",
+  keywords: "hospitality, management, hotel, accommodation, tracking, transfer",
+  authors: [{ name: "TrackINN" }],
 };
 
 export default function RootLayout({

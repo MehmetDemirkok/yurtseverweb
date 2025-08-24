@@ -180,7 +180,7 @@ async function generateTestData() {
   // Test konaklamaları oluştur
   const unvanlar = ['Mühendis', 'Doktor', 'Öğretmen', 'Avukat', 'Mimar', 'Diş Hekimi', 'Eczacı', 'Veteriner', 'Hemşire', 'Teknisyen'];
   const sehirler = ['İstanbul', 'Ankara', 'İzmir', 'Antalya', 'Bursa', 'Adana', 'Gaziantep', 'Konya', 'Mersin', 'Diyarbakır'];
-  const odaTipleri = ['Tek Kişilik', 'Çift Kişilik', 'Üç Kişilik', 'Suit', 'Deluxe', 'Standart'];
+  const odaTipleri = ['Tek Kişilik', 'Çift Kişilik', 'Triple', 'Aile Odası', 'Suit', 'Deluxe', 'Standart'];
   const konaklamaTipleri = ['Yarım Pansiyon', 'Tam Pansiyon', 'Ultra Her Şey Dahil', 'Sadece Kahvaltı', 'Oda Kahvaltı'];
   const otelAdlari = ['Grand Hotel', 'Palace Hotel', 'Resort Hotel', 'Business Hotel', 'Boutique Hotel', 'Luxury Hotel', 'City Hotel', 'Airport Hotel', 'Beach Hotel', 'Mountain Hotel'];
   

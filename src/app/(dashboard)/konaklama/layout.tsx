@@ -103,7 +103,7 @@ export default function KonaklamaLayout({
           <div className={`flex items-center ${!sidebarOpen && 'md:hidden'}`}>
             <Image src="/logo.svg" alt="Logo" width={32} height={32} className="h-6 w-6 sm:h-8 sm:w-8" />
             <span className={`ml-2 font-semibold text-gray-800 dark:text-white transition-opacity duration-300 text-sm sm:text-base ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
-              Konaklama
+              TrackINN
             </span>
           </div>
           <button 

@@ -166,6 +166,11 @@ export default function BakimModal({ isOpen, onClose, onSave, bakim, araclar, lo
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Eğer zaten submit işlemi devam ediyorsa, yeni submit'i engelle
+    if (loading) {
+      return;
+    }
+    
     if (validateForm()) {
       onSave(formData);
     }

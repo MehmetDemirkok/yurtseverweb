@@ -1,4 +1,4 @@
-# Yurtsever Konaklama Yönetim Sistemi - Cursor Rules
+# TrackINN - Smart Hospitality Management System - Cursor Rules
 
 ## 🏗️ Proje Genel Bakış
 Bu proje, Next.js 15.3.3 tabanlı, TypeScript ile geliştirilmiş, çok kiracılı (multi-tenant) bir konaklama ve transfer yönetim sistemidir. Türkçe dil desteği ile geliştirilmiştir.

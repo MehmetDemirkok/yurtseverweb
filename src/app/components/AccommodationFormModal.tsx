@@ -78,10 +78,11 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
           <div className="space-y-2">
             <label htmlFor="odaTipi" className="block text-sm font-semibold text-gray-700">Oda Tipi</label>
             <select id="odaTipi" className="input" value={formData.odaTipi} onChange={onChange}>
-              <option value="Single Oda">Single Oda</option>
-              <option value="Double Oda">Double Oda</option>
-              <option value="Triple Oda">Triple Oda</option>
-              <option value="Suit Oda">Suit Oda</option>
+              <option value="Tek Kişilik">Tek Kişilik</option>
+              <option value="Çift Kişilik">Çift Kişilik</option>
+              <option value="Triple">Triple</option>
+              <option value="Aile Odası">Aile Odası</option>
+              <option value="Suit">Suit</option>
             </select>
           </div>
           <div className="space-y-2">

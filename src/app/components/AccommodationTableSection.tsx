@@ -23,6 +23,7 @@ export interface AccommodationRecord {
     name: string;
     status: string;
   };
+  takim?: string;
   otelAdi?: string;
   kurumCari?: string;
   numberOfNights?: number;
@@ -62,6 +63,14 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
   const [pendingBulkDelete, setPendingBulkDelete] = useState(false);
   const [availableColumns, setAvailableColumns] = useState<Array<{key: string, label: string}>>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  
+  // Puantaj raporu state'leri
+  const [showPuantajFilterModal, setShowPuantajFilterModal] = useState(false);
+  const [puantajFilters, setPuantajFilters] = useState({
+    organizasyonAdi: '',
+    baslangicTarihi: '',
+    bitisTarihi: ''
+  });
   const [exportColumns, setExportColumns] = useState<Record<string, boolean>>({
     adiSoyadi: true,
     unvani: true,
@@ -74,6 +83,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
     gecelikUcret: true,
     toplamUcret: true,
     organizasyonAdi: true,
+    takim: true,
     otelAdi: true,
     kurumCari: true,
     numberOfNights: true,
@@ -87,11 +97,12 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
     sehir: '',
     girisTarihi: '',
     cikisTarihi: '',
-    odaTipi: 'Single Oda',
+    odaTipi: 'Tek Kişilik',
     konaklamaTipi: 'BB' as const,
     gecelikUcret: 0,
     toplamUcret: 0,
     organizationId: null as number | null,
+    takim: '',
     otelAdi: '',
     kurumCari: '',
     numberOfNights: 0,
@@ -424,6 +435,11 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Eğer zaten submit işlemi devam ediyorsa, yeni submit'i engelle
+    if (isSubmitting) {
+      return;
+    }
 
     // Konaklama tipi boşsa otomatik olarak 'BB' yap
     if (!formData.konaklamaTipi) {
@@ -788,11 +804,14 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
           filteredRecord['Gecelik Ücret'] = record.gecelikUcret;
         } else if (column === 'toplamUcret') {
           filteredRecord['Toplam Ücret'] = record.toplamUcret;
-        
+        } else if (column === 'organizasyonAdi') {
+          filteredRecord['Organizasyon Adı'] = record.organizasyonAdi || '';
+        } else if (column === 'takim') {
+          filteredRecord['Takım'] = record.takim || '';
         } else if (column === 'otelAdi') {
           filteredRecord['Otel Adı'] = record.otelAdi || '';
-              } else if (column === 'kurumCari') {
-        filteredRecord['Cari'] = record.kurumCari || '';
+        } else if (column === 'kurumCari') {
+          filteredRecord['Cari'] = record.kurumCari || '';
         }
       });
       return filteredRecord;
@@ -810,6 +829,165 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
     setShowExportFilterModal(false);
   };
 
+  // Puantaj raporu oluşturma fonksiyonu
+  const handlePuantajRaporu = () => {
+    // Varsayılan tarih aralığını belirle (tüm kayıtları kapsayacak şekilde)
+    if (records.length > 0) {
+      // En erken giriş tarihi ve en geç çıkış tarihini bul
+      const allDates = records.flatMap(record => [new Date(record.girisTarihi), new Date(record.cikisTarihi)]);
+      const minDate = new Date(Math.min(...allDates.map(date => date.getTime())));
+      const maxDate = new Date(Math.max(...allDates.map(date => date.getTime())));
+      
+      // Tarihleri YYYY-MM-DD formatına çevir
+      const minDateStr = minDate.toISOString().split('T')[0];
+      const maxDateStr = maxDate.toISOString().split('T')[0];
+      
+      // Filtreleme değerlerini güncelle
+      setPuantajFilters(prev => ({
+        ...prev,
+        baslangicTarihi: minDateStr,
+        bitisTarihi: maxDateStr
+      }));
+    }
+    
+    // Filtreleme modalını aç
+    setShowPuantajFilterModal(true);
+  };
+
+  // Puantaj raporu Excel dosyası oluşturma fonksiyonu
+  const generatePuantajRaporu = () => {
+    const { organizasyonAdi, baslangicTarihi, bitisTarihi } = puantajFilters;
+    
+    // Kayıtları filtrele
+    let filteredRecords = [...records];
+    
+    // Metin bazlı filtreler
+    if (organizasyonAdi) {
+      filteredRecords = filteredRecords.filter(record => 
+        record.organizasyonAdi?.toLowerCase().includes(organizasyonAdi.toLowerCase()) ||
+        record.organization?.name?.toLowerCase().includes(organizasyonAdi.toLowerCase())
+      );
+    }
+    
+    // Tarih aralığı filtresi
+    if (baslangicTarihi && bitisTarihi) {
+      const baslangicDate = new Date(baslangicTarihi);
+      const bitisDate = new Date(bitisTarihi);
+      
+      // Tarih aralığında en az bir gün kesişen kayıtları filtrele
+      filteredRecords = filteredRecords.filter(record => {
+        const recordBaslangic = new Date(record.girisTarihi);
+        const recordBitis = new Date(record.cikisTarihi);
+        
+        // İki tarih aralığının kesişimi var mı kontrol et
+        return (
+          (recordBaslangic <= bitisDate && recordBitis >= baslangicDate)
+        );
+      });
+    }
+
+    // Tüm kayıtları tarih aralıklarına göre düzenle
+    const sortedRecords = [...filteredRecords].sort((a, b) => {
+      // Önce giriş tarihine göre sırala
+      const dateA = new Date(a.girisTarihi).getTime();
+      const dateB = new Date(b.girisTarihi).getTime();
+      return dateA - dateB;
+    });
+
+    // Tüm tarihleri bul (benzersiz giriş ve çıkış tarihleri)
+    const allDatesSet = new Set<string>();
+    sortedRecords.forEach(record => {
+      // Giriş ve çıkış tarihleri arasındaki tün günleri ekle
+      const startDate = new Date(record.girisTarihi);
+      const endDate = new Date(record.cikisTarihi);
+      
+      // Her gün için döngü
+      const currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        allDatesSet.add(currentDate.toISOString().split('T')[0]); // YYYY-MM-DD formatında ekle
+        currentDate.setDate(currentDate.getDate() + 1); // Bir sonraki güne geç
+      }
+    });
+
+    // Tarihleri sırala
+    const allDates = Array.from(allDatesSet).sort();
+
+    // Başlık satırını oluştur
+    const headers = [
+      "Adı Soyadı", 
+      "Unvanı", 
+      "Cari", 
+      "Otel Adı", 
+      "Oda Tipi", 
+      "Konaklama Tipi", 
+      "Gecelik Ücret", 
+      "Toplam Ücret", 
+      ...allDates.map(date => {
+        // Tarihi daha okunabilir formata çevir (örn: 01.07.2024)
+        const [year, month, day] = date.split('-');
+        return `${day}.${month}.${year}`;
+      })
+    ];
+
+    // Her kişi için puantaj verilerini oluştur
+    const data = sortedRecords.map(record => {
+      const row: (string | number | boolean)[] = [
+        record.adiSoyadi,
+        record.unvani,
+        record.kurumCari || "",
+        record.otelAdi || "",
+        record.odaTipi,
+        record.konaklamaTipi,
+        record.gecelikUcret.toLocaleString('tr-TR'),
+        record.toplamUcret.toLocaleString('tr-TR')
+      ];
+
+      // Her tarih için kişinin o tarihte konaklamada olup olmadığını kontrol et
+      allDates.forEach(date => {
+        const checkDate = new Date(date);
+        const startDate = new Date(record.girisTarihi);
+        const endDate = new Date(record.cikisTarihi);
+        // Eğer kişi o tarihte konaklamadaysa "X" işareti koy, değilse boş bırak
+        // Çıkış günü hariç!
+        if (checkDate >= startDate && checkDate < endDate) {
+          row.push("X");
+        } else {
+          row.push("");
+        }
+      });
+
+      return row;
+    });
+
+    // Excel dosyasını oluştur
+    const ws_data = [headers, ...data];
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    
+    // Sütun genişliklerini ayarla
+    const wscols = [
+      { wch: 20 }, // Adı Soyadı
+      { wch: 15 }, // Unvanı
+      { wch: 20 }, // Cari
+      { wch: 20 }, // Otel Adı
+      { wch: 15 }, // Oda Tipi
+      { wch: 15 }, // Konaklama Tipi
+      { wch: 15 }, // Gecelik Ücret
+      { wch: 15 }, // Toplam Ücret
+      ...allDates.map(() => ({ wch: 10 })) // Tarihler için genişlik
+    ];
+    ws['!cols'] = wscols;
+    
+    // Excel dosyasını oluştur ve indir
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Puantaj Raporu");
+    
+    // Dosya adını oluştur
+    const fileName = `Otel_Konaklama_Puantaj_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    // Dosyayı indir
+    XLSX.writeFile(wb, fileName);
+  };
+
   const handleDownloadExcelTemplate = () => {
     // Örnek veri ile template oluştur
     const templateData = [
@@ -824,6 +1002,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
         'Konaklama Tipi': 'BB',
         'Gecelik Ücret': 500,
         'Organizasyon Adı': 'Örnek Organizasyon',
+        'Takım': 'Örnek Takım',
         'Otel Adı': 'Örnek Otel',
         'Kurum / Cari': 'Örnek Kurum'
       }
@@ -843,6 +1022,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
       { wch: 15 }, // Konaklama Tipi
       { wch: 15 }, // Gecelik Ücret
       { wch: 20 }, // Organizasyon Adı
+      { wch: 15 }, // Takım
       { wch: 20 }, // Otel Adı
       { wch: 20 }, // Kurum / Cari
     ];
@@ -887,8 +1067,9 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
     addComment('H1', 'Konaklama tipi (BB, HB, FB, UHD)');
     addComment('I1', 'Gecelik ücret (sayısal değer)');
     addComment('J1', 'Organizasyon adı (opsiyonel)');
-    addComment('K1', 'Otel adı (opsiyonel)');
-    addComment('L1', 'Kurum/Cari bilgisi (opsiyonel)');
+    addComment('K1', 'Takım adı (organizasyon seçildiğinde opsiyonel)');
+    addComment('L1', 'Otel adı (opsiyonel)');
+    addComment('M1', 'Kurum/Cari bilgisi (opsiyonel)');
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
@@ -1052,6 +1233,12 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
                   <SortIcon column="otelAdi" />
                 </div>
               </th>
+              <th className="w-12 py-1 hidden xl:table-cell cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('takim')}>
+                <div className="flex items-center justify-between">
+                  <span>Takım</span>
+                  <SortIcon column="takim" />
+                </div>
+              </th>
               <th className="w-20 py-1 cursor-pointer hover:bg-gray-100 transition-colors select-none" onClick={() => handleSort('adiSoyadi')}>
                 <div className="flex items-center justify-between">
                   <span>Ad Soyad</span>
@@ -1130,6 +1317,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
                 <td className="font-medium text-blue-600 whitespace-nowrap py-1">{record.id}</td>
                 <td className="truncate hidden xl:table-cell py-1">{record.kurumCari || '-'}</td>
                 <td className="truncate hidden lg:table-cell py-1">{record.otelAdi || '-'}</td>
+                <td className="truncate hidden xl:table-cell py-1">{record.takim || '-'}</td>
                 <td className="truncate py-1">
                   <span className="font-medium">{record.adiSoyadi}</span>
                 </td>
@@ -1283,6 +1471,8 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
                   <option value="">Seçiniz</option>
                   <option value="Tek Kişilik">Tek Kişilik</option>
                   <option value="Çift Kişilik">Çift Kişilik</option>
+                  <option value="Triple">Triple</option>
+                  <option value="Aile Odası">Aile Odası</option>
                   <option value="Suit">Suit</option>
                 </select>
               </div>
@@ -1319,6 +1509,21 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
                     ))}
                 </select>
               </div>
+
+              {/* Takım inputu - sadece organizasyon seçildiğinde göster */}
+              {editingRecord.organizationId && (
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Takım</label>
+                  <input 
+                    type="text" 
+                    name="takim"
+                    value={editingRecord.takim || ''}
+                    onChange={handleEditInputChange}
+                    className="input w-full border border-gray-300 rounded-md" 
+                    placeholder="Takım adını girin" 
+                  />
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Otel</label>
@@ -1500,6 +1705,8 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
                   <option value="">Seçiniz</option>
                   <option value="Tek Kişilik">Tek Kişilik</option>
                   <option value="Çift Kişilik">Çift Kişilik</option>
+                  <option value="Triple">Triple</option>
+                  <option value="Aile Odası">Aile Odası</option>
                   <option value="Suit">Suit</option>
                 </select>
               </div>
@@ -1536,6 +1743,21 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
                     ))}
                 </select>
               </div>
+
+              {/* Takım inputu - sadece organizasyon seçildiğinde göster */}
+              {formData.organizationId && (
+                <div className="form-group">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Takım</label>
+                  <input 
+                    type="text" 
+                    name="takim"
+                    value={formData.takim || ''}
+                    onChange={handleInputChange}
+                    className="input w-full border border-gray-300 rounded-md" 
+                    placeholder="Takım adını girin" 
+                  />
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Otel</label>
@@ -1650,6 +1872,75 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
           </div>
         </div>
       )}
+      
+      {/* Puantaj Raporu Filtre Modalı */}
+      {showPuantajFilterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setShowPuantajFilterModal(false); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8 relative animate-fade-in border border-yellow-100">
+            <button
+              onClick={() => setShowPuantajFilterModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+              aria-label="Kapat"
+            >
+              ×
+            </button>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Puantaj Raporu Filtrele</h2>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="organizasyonAdi" className="block text-sm font-medium text-gray-700 mb-1">Organizasyon Adı</label>
+                <input
+                  type="text"
+                  id="organizasyonAdi"
+                  className="input w-full"
+                  value={puantajFilters.organizasyonAdi}
+                  onChange={(e) => setPuantajFilters(prev => ({ ...prev, organizasyonAdi: e.target.value }))}
+                  placeholder="Organizasyon adı girin (opsiyonel)"
+                />
+              </div>
+              <div>
+                <label htmlFor="baslangicTarihi" className="block text-sm font-medium text-gray-700 mb-1">Başlangıç Tarihi</label>
+                <input
+                  type="date"
+                  id="baslangicTarihi"
+                  className="input w-full"
+                  value={puantajFilters.baslangicTarihi}
+                  onChange={(e) => setPuantajFilters(prev => ({ ...prev, baslangicTarihi: e.target.value }))}
+                  max={puantajFilters.bitisTarihi || undefined}
+                />
+              </div>
+              <div>
+                <label htmlFor="bitisTarihi" className="block text-sm font-medium text-gray-700 mb-1">Bitiş Tarihi</label>
+                <input
+                  type="date"
+                  id="bitisTarihi"
+                  className="input w-full"
+                  value={puantajFilters.bitisTarihi}
+                  onChange={(e) => setPuantajFilters(prev => ({ ...prev, bitisTarihi: e.target.value }))}
+                  min={puantajFilters.baslangicTarihi || undefined}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowPuantajFilterModal(false)}
+              >
+                İptal
+              </button>
+              <button
+                className="btn btn-warning"
+                onClick={() => {
+                  generatePuantajRaporu();
+                  setShowPuantajFilterModal(false);
+                }}
+              >
+                Rapor Oluştur
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Toplu Silme Onay Modalı */}
       {showBulkDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setShowBulkDeleteModal(false); }}>

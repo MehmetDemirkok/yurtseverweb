@@ -7,14 +7,14 @@ async function createAdminUser() {
   try {
     // Önce şirket oluştur (eğer yoksa)
     let company = await prisma.company.findFirst({
-      where: { email: 'info@yurtsever.com' }
+      where: { email: 'info@trackinn.com' }
     });
 
     if (!company) {
       company = await prisma.company.create({
         data: {
-          name: 'Yurtsever Turizm A.Ş.',
-          email: 'info@yurtsever.com',
+          name: 'TrackINN Hospitality Solutions',
+          email: 'info@trackinn.com',
           phone: '+90 212 555 0123',
           address: 'İstanbul, Türkiye',
           city: 'İstanbul',
@@ -29,9 +29,9 @@ async function createAdminUser() {
 
     // Admin kullanıcı bilgileri
     const adminData = {
-      email: 'mehmet@yurtsever.com',
-      name: 'Mehmet Admin',
-      password: 'mehmet123',
+      email: 'admin@trackinn.com',
+      name: 'TrackINN Admin',
+      password: 'admin123',
       role: 'ADMIN',
       permissions: ['dashboard', 'sales', 'statistics', 'admin', 'users', 'companies', 'logs'],
       companyId: company.id
