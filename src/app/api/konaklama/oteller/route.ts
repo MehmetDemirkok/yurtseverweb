@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
         recordId: hotel.id,
         recordData: JSON.stringify(hotel),
         userId: user.id,
+        companyId: user.companyId,
         ipAddress: request.headers.get('x-forwarded-for') || request.ip || 'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown'
       }
@@ -125,6 +126,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(hotel, { status: 201 });
   } catch (error) {
     console.error('Otel eklenirken hata:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error : undefined
+    }, { status: 500 });
   }
 }

@@ -48,6 +48,12 @@ export default function OtellerPage() {
   // Toplu seçim state'leri
   const [selectedHotelIds, setSelectedHotelIds] = useState<number[]>([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  
+  // Hata yönetimi
+  const [error, setError] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Form data
   const [newHotel, setNewHotel] = useState({
@@ -229,6 +235,14 @@ export default function OtellerPage() {
 
   const handleAddHotel = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Form validasyonu
+    if (!newHotel.adi.trim() || !newHotel.adres.trim() || !newHotel.sehir.trim() || !newHotel.ulke.trim()) {
+      setError('Lütfen tüm zorunlu alanları doldurun (Otel Adı, Adres, Şehir, Ülke)');
+      setShowErrorModal(true);
+      return;
+    }
+    
     try {
       const response = await fetch('/api/konaklama/oteller', {
         method: 'POST',
@@ -239,13 +253,19 @@ export default function OtellerPage() {
       if (response.ok) {
         closeAddModal();
         fetchHotels();
+        setError(null);
+        setSuccess('Otel başarıyla eklendi!');
+        setShowSuccessModal(true);
       } else {
-        const error = await response.json();
-        alert('Otel eklenirken hata: ' + error.message);
+        const errorData = await response.json();
+        const errorMessage = errorData.error || errorData.message || 'Bilinmeyen hata';
+        setError('Otel eklenirken hata: ' + errorMessage);
+        setShowErrorModal(true);
       }
     } catch (error) {
       console.error('Otel eklenirken hata:', error);
-      alert('Otel eklenirken hata oluştu');
+      setError('Otel eklenirken hata oluştu');
+      setShowErrorModal(true);
     }
   };
 
@@ -261,13 +281,26 @@ export default function OtellerPage() {
       if (response.ok) {
         closeEditModal();
         fetchHotels();
+        setError(null);
+        setSuccess('Otel başarıyla güncellendi!');
+        setShowSuccessModal(true);
       } else {
-        const error = await response.json();
-        alert('Otel güncellenirken hata: ' + error.message);
+        const errorData = await response.json();
+        const errorMessage = errorData.error || errorData.message || 'Bilinmeyen hata';
+        
+        // Eğer otel bulunamadıysa, listeyi yenile ve kullanıcıya bilgi ver
+        if (response.status === 404) {
+          fetchHotels();
+          setError('Otel bulunamadı. Liste yenilendi.');
+        } else {
+          setError('Otel güncellenirken hata: ' + errorMessage);
+        }
+        setShowErrorModal(true);
       }
     } catch (error) {
       console.error('Otel güncellenirken hata:', error);
-      alert('Otel güncellenirken hata oluştu');
+      setError('Otel güncellenirken hata oluştu');
+      setShowErrorModal(true);
     }
   };
 
@@ -282,13 +315,26 @@ export default function OtellerPage() {
       if (response.ok) {
         closeDeleteModal();
         fetchHotels();
+        setError(null);
+        setSuccess('Otel başarıyla silindi!');
+        setShowSuccessModal(true);
       } else {
-        const error = await response.json();
-        alert('Otel silinirken hata: ' + error.message);
+        const errorData = await response.json();
+        const errorMessage = errorData.error || errorData.message || 'Bilinmeyen hata';
+        
+        // Eğer otel bulunamadıysa, listeyi yenile ve kullanıcıya bilgi ver
+        if (response.status === 404) {
+          fetchHotels();
+          setError('Otel bulunamadı veya zaten silinmiş. Liste yenilendi.');
+        } else {
+          setError('Otel silinirken hata: ' + errorMessage);
+        }
+        setShowErrorModal(true);
       }
     } catch (error) {
       console.error('Otel silinirken hata:', error);
-      alert('Otel silinirken hata oluştu');
+      setError('Otel silinirken hata oluştu');
+      setShowErrorModal(true);
     }
   };
 
@@ -984,8 +1030,9 @@ export default function OtellerPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Adres</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Adres *</label>
                   <textarea
+                    required
                     value={newHotel.adres}
                     onChange={(e) => setNewHotel({...newHotel, adres: e.target.value})}
                     className="input w-full"
@@ -1297,6 +1344,62 @@ export default function OtellerPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Hata Modal */}
+        {showErrorModal && error && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900">Hata</h3>
+              </div>
+              <p className="text-gray-700 mb-4">{error}</p>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowErrorModal(false);
+                    setError(null);
+                  }}
+                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  Kapat
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Başarı Modal */}
+        {showSuccessModal && success && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900">Başarılı</h3>
+              </div>
+              <p className="text-gray-700 mb-4">{success}</p>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    setSuccess(null);
+                  }}
+                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  Tamam
+                </button>
+              </div>
             </div>
           </div>
         )}

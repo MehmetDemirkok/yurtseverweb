@@ -126,8 +126,7 @@ export async function PUT(
 
     const updatedHotel = await prisma.hotel.update({
       where: { 
-        id,
-        companyId: user.companyId // Şirket bazlı veri izolasyonu
+        id
       },
       data: {
         adi,
@@ -161,7 +160,18 @@ export async function PUT(
     return NextResponse.json(updatedHotel);
   } catch (error) {
     console.error('Otel güncellenirken hata:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    
+    // Prisma hata kodlarına göre özel mesajlar
+    if (error.code === 'P2025') {
+      return NextResponse.json({ 
+        error: 'Otel bulunamadı' 
+      }, { status: 404 });
+    }
+    
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error : undefined
+    }, { status: 500 });
   }
 }
 
@@ -213,17 +223,27 @@ export async function DELETE(
       }
     });
 
-    // Oteli sil (şirket bazlı)
+    // Oteli sil (sadece id ile, zaten şirket kontrolü yapıldı)
     await prisma.hotel.delete({
       where: { 
-        id,
-        companyId: user.companyId // Şirket bazlı veri izolasyonu
+        id
       }
     });
 
     return NextResponse.json({ message: 'Hotel deleted successfully' });
   } catch (error) {
     console.error('Otel silinirken hata:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    
+    // Prisma hata kodlarına göre özel mesajlar
+    if (error.code === 'P2025') {
+      return NextResponse.json({ 
+        error: 'Otel bulunamadı veya zaten silinmiş' 
+      }, { status: 404 });
+    }
+    
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error : undefined
+    }, { status: 500 });
   }
 }
