@@ -611,122 +611,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
 
 
 
-  // Excel import/export fonksiyonları
-  const handleImportExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-        if (jsonData.length < 2) {
-          alert('Excel dosyası en az bir başlık satırı ve bir veri satırı içermelidir!');
-          return;
-        }
-
-        const headers = jsonData[0] as string[];
-        const rows = jsonData.slice(1) as any[][];
-
-        const getColumnValue = (headerName: string): string => {
-          const index = headers.findIndex(h => h?.toString().toLowerCase().includes(headerName.toLowerCase()));
-          return index >= 0 ? (rows[0]?.[index]?.toString() || '') : '';
-        };
-
-        const excelDateToISO = (excelDateSerial: string): string => {
-          if (!excelDateSerial) return '';
-          try {
-            // Excel tarih serisi numarasını JavaScript tarihine çevir
-            const excelDate = parseFloat(excelDateSerial);
-            if (isNaN(excelDate)) return excelDateSerial;
-            
-            // Excel'in başlangıç tarihi (1900-01-01) ile JavaScript'in başlangıç tarihi (1970-01-01) arasındaki fark
-            const excelEpoch = new Date(1900, 0, 1);
-            const jsEpoch = new Date(1970, 0, 1);
-            const epochDiff = jsEpoch.getTime() - excelEpoch.getTime();
-            
-            // Excel tarihini JavaScript tarihine çevir
-            const jsDate = new Date(excelDate * 24 * 60 * 60 * 1000 + epochDiff);
-            
-            // YYYY-MM-DD formatına çevir
-            return jsDate.toISOString().split('T')[0];
-          } catch (error) {
-            return excelDateSerial;
-          }
-        };
-
-        const newRecords = rows.map((row, index) => {
-          const adiSoyadi = getColumnValue('Adı Soyadı') || getColumnValue('Ad Soyad') || getColumnValue('AdıSoyadı') || row[0]?.toString() || '';
-          const unvani = getColumnValue('Unvanı') || getColumnValue('Unvan') || row[1]?.toString() || '';
-          const ulke = getColumnValue('Ülke') || getColumnValue('Ulke') || row[2]?.toString() || '';
-          const sehir = getColumnValue('Şehir') || getColumnValue('Sehir') || getColumnValue('Şehir') || row[3]?.toString() || '';
-          const girisTarihi = excelDateToISO(getColumnValue('Giriş Tarihi') || getColumnValue('Giris Tarihi') || getColumnValue('GirişTarihi') || row[4]?.toString() || '');
-          const cikisTarihi = excelDateToISO(getColumnValue('Çıkış Tarihi') || getColumnValue('Cikis Tarihi') || getColumnValue('ÇıkışTarihi') || row[5]?.toString() || '');
-          const odaTipi = getColumnValue('Oda Tipi') || getColumnValue('OdaTipi') || row[6]?.toString() || 'Single Oda';
-          const konaklamaTipi = (getColumnValue('Konaklama Tipi') || getColumnValue('KonaklamaTipi') || row[7]?.toString() || 'BB') as "BB" | "HB" | "FB" | "UHD";
-          const gecelikUcret = parseFloat(getColumnValue('Gecelik Ücret') || getColumnValue('GecelikUcret') || row[8]?.toString() || '0') || 0;
-  
-          const otelAdi = getColumnValue('Otel Adı') || getColumnValue('OtelAdi') || row[10]?.toString() || '';
-          const kurumCari = getColumnValue('Cari') || getColumnValue('Kurum / Cari') || getColumnValue('Kurum Cari') || getColumnValue('KurumCari') || row[11]?.toString() || '';
-
-          if (!adiSoyadi || !girisTarihi || !cikisTarihi) {
-            console.warn(`Satır ${index + 2}: Gerekli alanlar eksik (Ad Soyad, Giriş Tarihi, Çıkış Tarihi)`);
-            return null;
-          }
-
-          const numberOfNights = calculateNumberOfNights(girisTarihi, cikisTarihi);
-          const toplamUcret = gecelikUcret * numberOfNights;
-
-          return {
-            adiSoyadi,
-            unvani,
-            ulke,
-            sehir,
-            girisTarihi,
-            cikisTarihi,
-            odaTipi,
-            konaklamaTipi,
-            gecelikUcret,
-            toplamUcret,
-            numberOfNights,
-  
-            otelAdi,
-            kurumCari,
-          };
-        }).filter(record => record !== null);
-
-        if (newRecords.length === 0) {
-          alert('Geçerli kayıt bulunamadı! Lütfen Excel dosyasını kontrol edin.');
-          return;
-        }
-
-        // API'ye toplu kayıt gönder
-        const res = await fetch('/api/accommodation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ records: newRecords }),
-        });
-
-        if (res.ok) {
-          const createdRecords = await res.json();
-          setRecords(prev => [...prev, ...createdRecords]);
-          alert(`${newRecords.length} kayıt başarıyla içe aktarıldı!`);
-        } else {
-          alert('Kayıtlar içe aktarılamadı!');
-        }
-      } catch (error) {
-        console.error('Excel import error:', error);
-        alert('Excel dosyası okunamadı!');
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    event.target.value = '';
-  };
+  // Excel içe aktarma kaldırıldı
 
   const handleExportExcel = () => {
     setAvailableColumns([
@@ -1195,11 +1080,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
           </div>
         </div>
         
-        <label className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 transition-all shadow-sm cursor-pointer">
-          <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
-          Excel'den İçe Aktar
-          <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} />
-        </label>
+        {/* Excel'den içe aktarma özelliği kaldırıldı */}
       </div>
       {/* Tablo */}
       <div className="overflow-x-auto bg-white rounded-lg shadow-md max-w-full">
