@@ -830,7 +830,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
   };
 
   // Puantaj raporu oluşturma fonksiyonu
-  const handlePuantajRaporu = () => {
+  const handleLocalPuantajRaporu = () => {
     // Varsayılan tarih aralığını belirle (tüm kayıtları kapsayacak şekilde)
     if (records.length > 0) {
       // En erken giriş tarihi ve en geç çıkış tarihini bul
@@ -1126,7 +1126,7 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
           <span className="hidden sm:inline">Excel Şablonu İndir</span>
           <span className="sm:hidden">Şablon</span>
         </button>
-        <button onClick={handlePuantajRaporu} className="btn btn-warning text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
+        <button onClick={handlePuantajRaporu || handleLocalPuantajRaporu} className="btn btn-warning text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2">
           <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
