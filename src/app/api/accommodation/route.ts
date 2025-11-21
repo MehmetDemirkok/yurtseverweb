@@ -66,6 +66,91 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await request.json();
+
+    // Toplu kayıt işlemi
+    if (data.records && Array.isArray(data.records)) {
+      const createdRecords = [];
+      const errors = [];
+
+      // Transaction ile işlemi güvenli hale getir
+      // Not: SQLite'da iç içe transaction sorun olabilir, bu yüzden döngü içinde tek tek işliyoruz
+      // veya tümünü tek bir transaction bloğuna alıyoruz.
+      
+      try {
+        const result = await prisma.$transaction(async (tx) => {
+          const results = [];
+          
+          for (const record of data.records) {
+            // organizationId boş string ise null yap
+            if (record.organizationId === '') {
+              record.organizationId = null;
+            }
+            
+            // Organizasyon ID varsa organizasyonun mevcut olduğunu kontrol et
+            if (record.organizationId) {
+              const organization = await tx.organization.findFirst({
+                where: {
+                  id: record.organizationId,
+                  companyId: user.companyId,
+                },
+              });
+              
+              if (!organization) {
+                throw new Error(`Organizasyon bulunamadı: ${record.organizationId}`);
+              }
+              
+              if (organization.status !== 'ACTIVE') {
+                throw new Error(`Organizasyon aktif değil: ${organization.name}`);
+              }
+            }
+
+            const accommodation = await tx.accommodation.create({
+              data: {
+                ...record,
+                companyId: user.companyId,
+                // Eğer organizationId varsa isMunferit false olmalı
+                isMunferit: record.organizationId ? false : (record.isMunferit || false),
+              },
+              include: {
+                organization: {
+                  select: {
+                    id: true,
+                    name: true,
+                    status: true,
+                  },
+                },
+              },
+            });
+            
+            // Log kaydı
+            await tx.log.create({
+              data: {
+                action: 'CREATE',
+                modelName: 'Accommodation',
+                recordId: accommodation.id,
+                recordData: JSON.stringify(accommodation),
+                userId: user.id,
+                companyId: user.companyId,
+                ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+                userAgent: request.headers.get('user-agent') || 'unknown'
+              }
+            });
+
+            results.push(accommodation);
+          }
+          
+          return results;
+        });
+        
+        return NextResponse.json(result);
+        
+      } catch (error: any) {
+        console.error('Bulk create transaction error:', error);
+        return NextResponse.json({ error: `Toplu kayıt sırasında hata: ${error.message}` }, { status: 400 });
+      }
+    }
+    
+    // Tekli kayıt işlemi (Mevcut kod)
     
     // organizationId boş string ise null yap
     if (data.organizationId === '') {

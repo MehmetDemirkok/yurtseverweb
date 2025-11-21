@@ -39,6 +39,8 @@
     "faker": "^5.5.3",
     "framer-motion": "^12.23.0",
     "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.517.0",
     "next": "15.3.3",

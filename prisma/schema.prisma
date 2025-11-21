@@ -32,6 +32,7 @@ model Company {
   // Relations
   users         User[]
   accommodations Accommodation[]
+  accommodationSales AccommodationSale[]
   hotels        Hotel[]
   logs          Log[]
   araclar       Arac[]
@@ -110,6 +111,62 @@ model Accommodation {
   // Relations
   company         Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  sales           AccommodationSale[] // Satış kayıtları
+}
+
+model AccommodationSale {
+  id                  Int      @id @default(autoincrement())
+  accommodationId     Int      // Alış kaydı referansı
+  adiSoyadi           String   // Misafir adı
+  unvani              String   // Misafir ünvanı
+  ulke                String
+  sehir               String
+  girisTarihi         String
+  cikisTarihi         String
+  odaTipi             String
+  konaklamaTipi       String
+  otelAdi             String?
+  
+  // Alış bilgileri
+  alisFiyati          Float    // Gecelik alış fiyatı
+  toplamAlisFiyati    Float    // Toplam alış maliyeti
+  
+  // Satış bilgileri
+  satisFiyati         Float    // Gecelik satış fiyatı
+  toplamSatisFiyati   Float    // Toplam satış tutarı
+  kar                 Float    // Kar tutarı
+  karOrani            Float    // Kar oranı (%)
+  
+  // Müşteri bilgileri
+  musteriAdi          String?  // Satış yapılan müşteri
+  musteriCariKodu     String?  // Müşteri cari kodu
+  faturaDurumu        SaleFaturaStatus @default(BEKLIYOR)
+  odemeDurumu         SalePaymentStatus @default(ODENMEDI)
+  
+  // Notlar ve detaylar
+  notlar              String?
+  odenenTutar         Float    @default(0)
+  kalanTutar          Float
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  companyId           Int
+  
+  // Relations
+  accommodation       Accommodation @relation(fields: [accommodationId], references: [id], onDelete: Cascade)
+  company             Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+enum SaleFaturaStatus {
+  BEKLIYOR
+  KESILDI
+  IPTAL
+}
+
+enum SalePaymentStatus {
+  ODENMEDI
+  KISMI_ODENDI
+  ODENDI
 }
 
 model Hotel {

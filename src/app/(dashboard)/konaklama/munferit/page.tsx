@@ -21,7 +21,7 @@ export default function MunferitKonaklamaPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Puantaj raporu için state'ler
   const [showPuantajFilterModal, setShowPuantajFilterModal] = useState<boolean>(false);
   const [puantajFilters, setPuantajFilters] = useState({
@@ -33,7 +33,7 @@ export default function MunferitKonaklamaPage() {
   const organizasyonRef = useRef<HTMLDivElement>(null);
   const [showOrganizasyonOptions, setShowOrganizasyonOptions] = useState(false);
   const [organizasyonOptions, setOrganizasyonOptions] = useState<string[]>([]);
-  
+
   // Kullanıcı bilgilerini yükle
   useEffect(() => {
     fetch('/api/user', { credentials: 'include' })
@@ -69,21 +69,21 @@ export default function MunferitKonaklamaPage() {
       if (response.ok) {
         const data = await response.json();
         setRecords(data);
-        
+
         // Organizasyon seçeneklerini güncelle
         const uniqueOrganizations = [...new Set(data.map((record: any) => record.organizasyonAdi).filter(Boolean))];
         setOrganizasyonOptions(uniqueOrganizations);
-        
+
         // En küçük giriş tarihi ve en büyük çıkış tarihini bul
         if (data.length > 0) {
           const allDates = data.flatMap((record: any) => [new Date(record.girisTarihi), new Date(record.cikisTarihi)]);
           const minDate = new Date(Math.min(...allDates.map((date: Date) => date.getTime())));
           const maxDate = new Date(Math.max(...allDates.map((date: Date) => date.getTime())));
-          
+
           // Tarihleri YYYY-MM-DD formatına çevir
           const minDateStr = minDate.toISOString().split('T')[0];
           const maxDateStr = maxDate.toISOString().split('T')[0];
-          
+
           // Filtreleme değerlerini güncelle
           setPuantajFilters(prev => ({
             ...prev,
@@ -95,7 +95,7 @@ export default function MunferitKonaklamaPage() {
     } catch (error) {
       console.error('Münferit konaklama verileri yüklenirken hata:', error);
     }
-    
+
     // Filtreleme modalını aç
     setShowPuantajFilterModal(true);
   };
@@ -103,41 +103,41 @@ export default function MunferitKonaklamaPage() {
   // Puantaj raporu Excel dosyası oluşturma fonksiyonu
   const generatePuantajRaporu = async () => {
     const { organizasyonAdi, baslangicTarihi, bitisTarihi } = puantajFilters;
-    
+
     try {
       // API'den kayıtları al
       const response = await fetch('/api/accommodation?isMunferit=true');
       if (!response.ok) {
         throw new Error('Kayıtlar alınamadı');
       }
-      
+
       let records = await response.json();
-      
+
       // Eğer tarih aralığı belirtilmemişse, en küçük ve en büyük tarihleri bul
       let startDate = baslangicTarihi ? new Date(baslangicTarihi) : null;
       let endDate = bitisTarihi ? new Date(bitisTarihi) : null;
-      
+
       if (!startDate || !endDate) {
         const allDates = records.flatMap((record: any) => [new Date(record.girisTarihi), new Date(record.cikisTarihi)]);
         const minDate = new Date(Math.min(...allDates.map((date: Date) => date.getTime())));
         const maxDate = new Date(Math.max(...allDates.map((date: Date) => date.getTime())));
-        
+
         if (!startDate) startDate = minDate;
         if (!endDate) endDate = maxDate;
       }
-      
+
       // Metin bazlı filtreler
       if (organizasyonAdi) {
-        records = records.filter((record: any) => 
+        records = records.filter((record: any) =>
           record.organizasyonAdi?.toLowerCase().includes(organizasyonAdi.toLowerCase())
         );
       }
-      
+
       // Tarih aralığında en az bir gün kesişen kayıtları filtrele
       records = records.filter((record: any) => {
         const recordBaslangic = new Date(record.girisTarihi);
         const recordBitis = new Date(record.cikisTarihi);
-        
+
         // İki tarih aralığının kesişimi var mı kontrol et
         return (
           (recordBaslangic <= endDate && recordBitis >= startDate)
@@ -158,7 +158,7 @@ export default function MunferitKonaklamaPage() {
         // Giriş ve çıkış tarihleri arasındaki tün günleri ekle
         const startDate = new Date(record.girisTarihi);
         const endDate = new Date(record.cikisTarihi);
-        
+
         // Her gün için döngü
         const currentDate = new Date(startDate);
         while (currentDate <= endDate) {
@@ -172,16 +172,16 @@ export default function MunferitKonaklamaPage() {
 
       // Başlık satırını oluştur (Otel konaklama puantajı için)
       const headers = [
-        "Adı Soyadı", 
-        "Unvanı", 
-        "Cari", 
-        "Otel Adı", 
-        "Oda Tipi", 
-        "Konaklama Tipi", 
-        "Gecelik Ücret", 
-        "Toplam Ücret", 
-        "Giriş Tarihi", 
-        "Çıkış Tarihi", 
+        "Adı Soyadı",
+        "Unvanı",
+        "Cari",
+        "Otel Adı",
+        "Oda Tipi",
+        "Konaklama Tipi",
+        "Gecelik Ücret",
+        "Toplam Ücret",
+        "Giriş Tarihi",
+        "Çıkış Tarihi",
         "Gece Sayısı"
       ];
 
@@ -192,7 +192,7 @@ export default function MunferitKonaklamaPage() {
         dateRange.push(new Date(currentDate));
         currentDate.setDate(currentDate.getDate() + 1);
       }
-      
+
       dateRange.forEach(date => {
         headers.push(date.toLocaleDateString('tr-TR'));
       });
@@ -217,7 +217,7 @@ export default function MunferitKonaklamaPage() {
         dateRange.forEach(date => {
           const recordStart = new Date(record.girisTarihi);
           const recordEnd = new Date(record.cikisTarihi);
-          
+
           // Bu tarihte konaklama var mı?
           if (date >= recordStart && date <= recordEnd) {
             row.push('✓'); // Konaklama var
@@ -254,7 +254,7 @@ export default function MunferitKonaklamaPage() {
 
       // Dosya adını oluştur
       const fileName = `Münferit_Konaklama_Puantaj_${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}.xlsx`;
-      
+
       // Dosyayı indir
       XLSX.writeFile(wb, fileName);
     } catch (error) {
@@ -298,7 +298,7 @@ export default function MunferitKonaklamaPage() {
               </div>
               <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">Erişim Kısıtlı</h2>
               <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Bu sayfaya erişim izniniz bulunmamaktadır.</p>
-              <button 
+              <button
                 onClick={() => window.history.back()}
                 className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm sm:text-base"
               >
@@ -335,8 +335,10 @@ export default function MunferitKonaklamaPage() {
         </div>
 
         {/* Münferit konaklamalar tablosu */}
-        <AccommodationTableSection 
+        <AccommodationTableSection
           handlePuantajRaporu={handlePuantajRaporu}
+          filterType="munferit"
+          action={searchParams.get('action')}
         />
 
         {/* Puantaj Filtre Modalı */}
