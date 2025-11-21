@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, LogOut, Settings, Building, ChevronDown } from 'lucide-react';
 
 interface UserData {
@@ -15,6 +16,7 @@ interface UserData {
 export default function UserHeader() {
   const [user, setUser] = useState<UserData | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -130,7 +132,7 @@ export default function UserHeader() {
             <button
               onClick={() => {
                 setIsDropdownOpen(false);
-                window.location.href = '/ayarlar';
+                router.push('/ayarlar');
               }}
               className="w-full flex items-center px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
             >

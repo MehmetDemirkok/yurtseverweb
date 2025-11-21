@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Yurtsever - Konaklama Yönetim Sistemi",
+  title: "TrackINN - Konaklama Yonetim Sistemi - Turizm Acenteleri İçin",
   description: "Profesyonel konaklama kayıt ve takip platformu",
   keywords: "konaklama, yönetim, otel, kayıt, takip",
   authors: [{ name: "Yurtsever" }],

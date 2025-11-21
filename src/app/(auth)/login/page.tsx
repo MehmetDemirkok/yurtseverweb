@@ -1,15 +1,29 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Check for registration success message
+  useEffect(() => {
+    if (searchParams.get('registered') === 'true') {
+      setSuccessMessage('Kayıt başarıyla oluşturuldu! Lütfen giriş yapın.');
+      // Clear the message after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 5000);
+    }
+  }, [searchParams]);
 
   // Floating particles effect
   useEffect(() => {
@@ -212,13 +226,13 @@ export default function LoginPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2 title-glow">Yurtsever</h1>
-            <p className="text-white/80 text-sm">Güvenli giriş yapın</p>
+            <h1 className="text-3xl font-medium text-white mb-2 title-glow">TrackINN APP</h1>
+            <p className="text-white text-sm">Güvenli giriş yapın</p>
           </div>
           
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <label htmlFor="username" className="block text-sm font-semibold text-white/90 mb-2">
+              <label htmlFor="username" className="block text-sm font-medium text-white mb-2">
                 Kullanıcı Adı
               </label>
               <div className="relative">
@@ -241,7 +255,7 @@ export default function LoginPage() {
             </div>
             
             <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-semibold text-white/90 mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
                 Şifre
               </label>
               <div className="relative">
@@ -282,6 +296,12 @@ export default function LoginPage() {
               </div>
             </div>
             
+            {successMessage && (
+              <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-3 text-green-200 text-sm font-medium animate-fade-in backdrop-blur-sm">
+                {successMessage}
+              </div>
+            )}
+            
             {error && (
               <div className="bg-red-500/20 border border-red-500/30 rounded-xl p-3 text-red-200 text-sm font-medium animate-fade-in backdrop-blur-sm">
                 {error}
@@ -291,7 +311,7 @@ export default function LoginPage() {
             <button 
               type="submit" 
               disabled={isLoading}
-              className={`login-button w-full py-3 rounded-xl text-white font-semibold text-lg transition-all duration-300 relative overflow-hidden ${
+              className={`login-button w-full py-3 rounded-xl text-white font-medium text-lg transition-all duration-300 relative overflow-hidden ${
                 isLoading ? 'opacity-70 cursor-not-allowed' : ''
               }`}
               onClick={(e) => {
@@ -325,10 +345,19 @@ export default function LoginPage() {
                 'Giriş Yap'
               )}
             </button>
+
+            <div className="text-center mt-4">
+              <p className="text-white text-sm">
+                Hesabınız yok mu?{" "}
+                <Link href="/register" className="text-white font-medium hover:text-white/80 underline transition-colors">
+                  Kayıt olun
+                </Link>
+              </p>
+            </div>
           </form>
           
           {/* Decorative elements */}
-          <div className="mt-8 flex justify-center space-x-4">
+          <div className="mt-6 flex justify-center space-x-4">
             <div className="w-2 h-2 bg-white/40 rounded-full animate-pulse"></div>
             <div className="w-2 h-2 bg-white/40 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
             <div className="w-2 h-2 bg-white/40 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>

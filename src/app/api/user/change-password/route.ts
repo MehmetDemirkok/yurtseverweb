@@ -8,6 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 type MyJwtPayload = JwtPayload & { id: number; role: string };
 
+// Kullanıcının şifresini değiştir
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
@@ -23,17 +24,19 @@ export async function POST(request: Request) {
     
     const { currentPassword, newPassword } = await request.json();
     
+    // Validasyon
     if (!currentPassword || !newPassword) {
-      return NextResponse.json({ error: 'Mevcut şifre ve yeni şifre zorunludur.' }, { status: 400 });
+      return NextResponse.json({ error: 'Mevcut şifre ve yeni şifre gereklidir.' }, { status: 400 });
     }
     
     if (newPassword.length < 6) {
       return NextResponse.json({ error: 'Yeni şifre en az 6 karakter olmalıdır.' }, { status: 400 });
     }
     
-    // Kullanıcıyı veritabanından al
+    // Kullanıcıyı bul
     const user = await prisma.user.findUnique({
-      where: { id: decoded.id }
+      where: { id: decoded.id },
+      select: { id: true, password: true }
     });
     
     if (!user) {
@@ -41,21 +44,24 @@ export async function POST(request: Request) {
     }
     
     // Mevcut şifreyi kontrol et
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isCurrentPasswordValid) {
-      return NextResponse.json({ error: 'Mevcut şifre hatalı.' }, { status: 400 });
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      return NextResponse.json({ error: 'Mevcut şifre yanlış.' }, { status: 400 });
     }
     
     // Yeni şifreyi hash'le
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
     
     // Şifreyi güncelle
     await prisma.user.update({
       where: { id: decoded.id },
-      data: { password: hashedNewPassword }
+      data: { password: hashedPassword }
     });
     
-    return NextResponse.json({ success: true, message: 'Şifre başarıyla değiştirildi.' });
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Şifre başarıyla değiştirildi.' 
+    });
   } catch (error) {
     console.error('Şifre değiştirme hatası:', error);
     return NextResponse.json({ error: 'Şifre değiştirilirken bir hata oluştu.' }, { status: 500 });
