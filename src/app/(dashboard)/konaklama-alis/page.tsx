@@ -6,6 +6,7 @@ import AccommodationTableSection from '@/app/components/AccommodationTableSectio
 import AccommodationFolderTree from '@/app/components/AccommodationFolderTree';
 import QuickAddRow from '@/app/components/QuickAddRow';
 import AccommodationStatistics from '@/app/components/AccommodationStatistics';
+import SalesPriceModal from '@/app/components/SalesPriceModal';
 import { transferToSales } from '@/lib/transferToSales';
 import {
   BedDouble,
@@ -34,6 +35,9 @@ export default function KonaklamaAlisPage() {
   const [selectedFolderId, setSelectedFolderId] = useState<string>('root');
   const [showFolders, setShowFolders] = useState(true);
   const [showStatistics, setShowStatistics] = useState(false);
+  const [showSalesPriceModal, setShowSalesPriceModal] = useState(false);
+  const [pendingTransferIds, setPendingTransferIds] = useState<number[]>([]);
+  const [transferredRecordIds, setTransferredRecordIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     // Fetch accommodation purchase statistics
@@ -43,6 +47,15 @@ export default function KonaklamaAlisPage() {
         if (res.ok) {
           const data = await res.json();
           const accommodations = Array.isArray(data) ? data : (data.accommodations || []);
+
+          // Satışa aktarılan kayıtları kontrol et
+          const salesRes = await fetch('/api/accommodation-sales');
+          if (salesRes.ok) {
+            const salesData = await salesRes.json();
+            const sales = salesData.sales || [];
+            const transferredIds = new Set(sales.map((sale: any) => sale.accommodationId));
+            setTransferredRecordIds(transferredIds);
+          }
 
           setAllRecords(accommodations);
           setFilteredRecords(accommodations);
@@ -92,15 +105,29 @@ export default function KonaklamaAlisPage() {
       return;
     }
 
-    if (!confirm(`${ids.length} kayıt satışa aktarılacak. Onaylıyor musunuz?`)) {
-      return;
-    }
+    // Seçili kayıtları getir
+    const selectedRecords = allRecords.filter(record => ids.includes(record.id));
+    
+    // Modal'ı göster
+    setPendingTransferIds(ids);
+    setShowSalesPriceModal(true);
+  };
 
+  const handleSalesPriceConfirm = async (prices: Record<number, { satisFiyati: number; toplamSatisFiyati: number }>) => {
     try {
-      const result = await transferToSales(ids);
+      const result = await transferToSales(pendingTransferIds, prices);
+      
+      // Başarılı aktarılan kayıtları işaretle
+      const newTransferredIds = new Set(transferredRecordIds);
+      pendingTransferIds.forEach(id => newTransferredIds.add(id));
+      setTransferredRecordIds(newTransferredIds);
+      
       alert(result.message || 'Kayıtlar başarıyla satışa aktarıldı!');
-      // Redirect to sales page
-      router.push('/konaklama-satis');
+      setShowSalesPriceModal(false);
+      setPendingTransferIds([]);
+      
+      // Sayfayı yenile
+      window.location.reload();
     } catch (error: any) {
       alert(error.message || 'Satışa aktarma başarısız oldu');
     }
@@ -234,7 +261,21 @@ export default function KonaklamaAlisPage() {
             ]}
             onSelectionChange={setSelectedRecordIds}
             filteredRecords={filteredRecords}
+            transferredRecordIds={transferredRecordIds}
           />
+
+          {/* Satış Fiyatı Modal */}
+          {showSalesPriceModal && (
+            <SalesPriceModal
+              isOpen={showSalesPriceModal}
+              records={allRecords.filter(record => pendingTransferIds.includes(record.id))}
+              onClose={() => {
+                setShowSalesPriceModal(false);
+                setPendingTransferIds([]);
+              }}
+              onConfirm={handleSalesPriceConfirm}
+            />
+          )}
         </div>
       </div>
     </div>

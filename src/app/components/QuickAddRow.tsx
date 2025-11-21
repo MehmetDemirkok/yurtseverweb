@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
+import DatePickerWithQuickSelect from './DatePickerWithQuickSelect';
 
 interface QuickAddRowProps {
     onAddRecord: (record: any) => void;
@@ -26,12 +27,27 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
         if (quickFormData.girisTarihi && quickFormData.cikisTarihi) {
             const checkIn = new Date(quickFormData.girisTarihi);
             const checkOut = new Date(quickFormData.cikisTarihi);
+            
+            // Tarih geçerliliğini kontrol et
+            if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
+                setQuickFormData(prev => ({
+                    ...prev,
+                    numberOfNights: 0,
+                    toplamUcret: ''
+                }));
+                return;
+            }
+
             const diffTime = checkOut.getTime() - checkIn.getTime();
             const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
             const nights = diffDays > 0 ? diffDays : 0;
 
-            if (nights > 0) {
-                const gecelikUcret = parseFloat(quickFormData.gecelikUcret) || 0;
+            // Gecelik ücreti parse et (string veya number olabilir)
+            const gecelikUcret = typeof quickFormData.gecelikUcret === 'string' 
+                ? parseFloat(quickFormData.gecelikUcret) || 0
+                : quickFormData.gecelikUcret || 0;
+
+            if (nights > 0 && gecelikUcret > 0) {
                 const total = nights * gecelikUcret;
                 setQuickFormData(prev => ({
                     ...prev,
@@ -41,8 +57,8 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
             } else {
                 setQuickFormData(prev => ({
                     ...prev,
-                    numberOfNights: 0,
-                    toplamUcret: ''
+                    numberOfNights: nights,
+                    toplamUcret: nights > 0 && gecelikUcret > 0 ? (nights * gecelikUcret).toFixed(2) : ''
                 }));
             }
         } else {
@@ -163,25 +179,27 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
 
                 {/* Giriş Tarihi */}
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Giriş Tarihi *</label>
-                    <input
-                        type="date"
-                        name="girisTarihi"
+                    <DatePickerWithQuickSelect
                         value={quickFormData.girisTarihi}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        onChange={(value) => {
+                            setQuickFormData(prev => ({ ...prev, girisTarihi: value }));
+                        }}
+                        label="Giriş Tarihi *"
+                        maxDate={quickFormData.cikisTarihi || undefined}
+                        required
                     />
                 </div>
 
                 {/* Çıkış Tarihi */}
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Çıkış Tarihi *</label>
-                    <input
-                        type="date"
-                        name="cikisTarihi"
+                    <DatePickerWithQuickSelect
                         value={quickFormData.cikisTarihi}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        onChange={(value) => {
+                            setQuickFormData(prev => ({ ...prev, cikisTarihi: value }));
+                        }}
+                        label="Çıkış Tarihi *"
+                        minDate={quickFormData.girisTarihi || undefined}
+                        required
                     />
                 </div>
 
@@ -236,13 +254,16 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
                 <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Toplam Ücret</label>
                     <input
-                        type="number"
-                        value={quickFormData.toplamUcret}
+                        type="text"
+                        value={quickFormData.toplamUcret ? `₺${parseFloat(quickFormData.toplamUcret).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '₺0,00'}
                         disabled
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 text-sm font-semibold"
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 text-sm font-semibold cursor-not-allowed"
                     />
                     {quickFormData.numberOfNights > 0 && (
-                        <p className="text-xs text-gray-500 mt-1">{quickFormData.numberOfNights} gece</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                            {quickFormData.numberOfNights} gece × ₺{parseFloat(quickFormData.gecelikUcret || '0').toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
                     )}
                 </div>
 

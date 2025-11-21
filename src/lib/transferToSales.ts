@@ -1,4 +1,7 @@
-export const transferToSales = async (accommodationIds: number[]) => {
+export const transferToSales = async (
+  accommodationIds: number[],
+  salePrices?: Record<number, { satisFiyati: number; toplamSatisFiyati: number }>
+) => {
   try {
     const res = await fetch('/api/accommodation-sales', {
       method: 'POST',
@@ -6,7 +9,10 @@ export const transferToSales = async (accommodationIds: number[]) => {
         'Content-Type': 'application/json'
       },
       credentials: 'include', // Cookie'leri göndermek için gerekli
-      body: JSON.stringify({ accommodationIds })
+      body: JSON.stringify({ 
+        accommodationIds,
+        salePrices: salePrices || {}
+      })
     });
 
     if (!res.ok) {

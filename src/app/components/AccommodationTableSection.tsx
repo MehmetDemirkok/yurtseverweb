@@ -53,6 +53,7 @@ interface AccommodationTableSectionProps {
   customBulkActions?: Array<{ label: string; onClick: () => void; icon?: React.ReactNode; color?: string }>;
   onSelectionChange?: (selectedIds: number[]) => void;
   filteredRecords?: AccommodationRecord[]; // Klasörden gelen filtrelenmiş kayıtlar
+  transferredRecordIds?: Set<number>; // Satışa aktarılan kayıt ID'leri
 }
 
 export default function AccommodationTableSection({
@@ -62,7 +63,8 @@ export default function AccommodationTableSection({
   action,
   customBulkActions = [],
   onSelectionChange,
-  filteredRecords
+  filteredRecords,
+  transferredRecordIds = new Set()
 }: AccommodationTableSectionProps) {
   const [records, setRecords] = useState<AccommodationRecord[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -453,40 +455,45 @@ export default function AccommodationTableSection({
     });
   };
 
+  // Toplam ücret hesaplama için useEffect
+  useEffect(() => {
+    if (formData.girisTarihi && formData.cikisTarihi) {
+      const nights = calculateNumberOfNights(formData.girisTarihi, formData.cikisTarihi);
+      const gecelikUcret = formData.gecelikUcret || 0;
+      const toplamUcret = nights > 0 && gecelikUcret > 0 ? nights * gecelikUcret : 0;
+      
+      setFormData(prev => {
+        // Sadece değerler değiştiyse güncelle
+        if (prev.numberOfNights !== nights || prev.toplamUcret !== toplamUcret) {
+          return {
+            ...prev,
+            numberOfNights: nights,
+            toplamUcret: toplamUcret
+          };
+        }
+        return prev;
+      });
+    } else {
+      setFormData(prev => {
+        if (prev.numberOfNights !== 0 || prev.toplamUcret !== 0) {
+          return {
+            ...prev,
+            numberOfNights: 0,
+            toplamUcret: 0
+          };
+        }
+        return prev;
+      });
+    }
+  }, [formData.girisTarihi, formData.cikisTarihi, formData.gecelikUcret]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
-    // Önce formData'yı güncelle
-    const updatedFormData = {
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: type === 'number' ? (value === '' ? 0 : parseFloat(value) || 0) : value
-    };
-
-    setFormData(updatedFormData);
-
-    // Toplam ücret hesaplama - güncellenmiş değerleri kullan
-    if (name === 'girisTarihi' || name === 'cikisTarihi' || name === 'gecelikUcret') {
-      const girisTarihi = name === 'girisTarihi' ? value : updatedFormData.girisTarihi;
-      const cikisTarihi = name === 'cikisTarihi' ? value : updatedFormData.cikisTarihi;
-      const gecelikUcret = name === 'gecelikUcret' ? (parseFloat(value) || 0) : (updatedFormData.gecelikUcret || 0);
-
-      if (girisTarihi && cikisTarihi && gecelikUcret > 0) {
-        const nights = calculateNumberOfNights(girisTarihi, cikisTarihi);
-        const toplamUcret = nights * gecelikUcret;
-
-        setFormData(prev => ({
-          ...prev,
-          numberOfNights: nights,
-          toplamUcret: toplamUcret
-        }));
-      } else {
-        setFormData(prev => ({
-          ...prev,
-          numberOfNights: 0,
-          toplamUcret: 0
-        }));
-      }
-    }
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1286,19 +1293,34 @@ export default function AccommodationTableSection({
                   </td>
                 </tr>
               ) : (
-                paginatedRecords.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50">
+                paginatedRecords.map((record) => {
+                  const isTransferred = transferredRecordIds.has(record.id);
+                  return (
+                  <tr 
+                    key={record.id} 
+                    className={`hover:bg-gray-50 ${isTransferred ? 'bg-green-50 border-l-4 border-l-green-500' : ''}`}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
                         checked={selectedRecordIds.includes(record.id)}
                         onChange={() => handleSelectRecord(record.id)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        disabled={isTransferred}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{record.adiSoyadi}</div>
-                      <div className="text-sm text-gray-500">{record.unvani}</div>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{record.adiSoyadi}</div>
+                          <div className="text-sm text-gray-500">{record.unvani}</div>
+                        </div>
+                        {isTransferred && (
+                          <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700 border border-green-300">
+                            Satışa Aktarıldı
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(record.girisTarihi)}
@@ -1310,30 +1332,44 @@ export default function AccommodationTableSection({
                       {record.otelAdi || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                        Aktif
-                      </span>
+                      {isTransferred ? (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                          Satışa Aktarıldı
+                        </span>
+                      ) : (
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                          Aktif
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      {canEdit() && (
-                        <button
-                          onClick={() => handleEditClick(record.id)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-4"
-                        >
-                          Düzenle
-                        </button>
+                      {!isTransferred && (
+                        <>
+                          {canEdit() && (
+                            <button
+                              onClick={() => handleEditClick(record.id)}
+                              className="text-indigo-600 hover:text-indigo-900 mr-4"
+                            >
+                              Düzenle
+                            </button>
+                          )}
+                          {canDelete() && (
+                            <button
+                              onClick={() => handleDeleteClick(record.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Sil
+                            </button>
+                          )}
+                        </>
                       )}
-                      {canDelete() && (
-                        <button
-                          onClick={() => handleDeleteClick(record.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Sil
-                        </button>
+                      {isTransferred && (
+                        <span className="text-xs text-gray-500 italic">Satış sayfasında görüntülenebilir</span>
                       )}
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

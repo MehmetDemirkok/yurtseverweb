@@ -60,6 +60,9 @@ export default function AccommodationSalesPage() {
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingSale, setEditingSale] = useState<AccommodationSale | null>(null);
+  const [selectedSaleIds, setSelectedSaleIds] = useState<number[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [stats, setStats] = useState({
     totalSales: 0,
     totalRevenue: 0,
@@ -137,6 +140,62 @@ export default function AccommodationSalesPage() {
     } catch (error) {
       console.error('Silme hatası:', error);
       alert('Silme işlemi başarısız');
+    }
+  };
+
+  const handleSelectSale = (id: number) => {
+    setSelectedSaleIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(saleId => saleId !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedSaleIds.length === filteredSales.length) {
+      setSelectedSaleIds([]);
+    } else {
+      setSelectedSaleIds(filteredSales.map(sale => sale.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedSaleIds.length === 0) {
+      alert('Lütfen silmek için en az bir kayıt seçin');
+      return;
+    }
+
+    setShowBulkDeleteModal(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch('/api/accommodation-sales/bulk', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ids: selectedSaleIds }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message || `${selectedSaleIds.length} kayıt başarıyla silindi`);
+        setSelectedSaleIds([]);
+        setShowBulkDeleteModal(false);
+        fetchSales();
+      } else {
+        alert(data.error || 'Toplu silme başarısız');
+      }
+    } catch (error) {
+      console.error('Toplu silme hatası:', error);
+      alert('Toplu silme sırasında bir hata oluştu');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -237,6 +296,15 @@ export default function AccommodationSalesPage() {
         </div>
 
         <div className="flex gap-3">
+          {selectedSaleIds.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Seçili Kayıtları Sil ({selectedSaleIds.length})
+            </button>
+          )}
           <button
             onClick={handleExportExcel}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -320,6 +388,14 @@ export default function AccommodationSalesPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <input
+                      type="checkbox"
+                      checked={selectedSaleIds.length === filteredSales.length && filteredSales.length > 0}
+                      onChange={handleSelectAll}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Misafir</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Otel</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
@@ -334,7 +410,7 @@ export default function AccommodationSalesPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredSales.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center">
+                  <td colSpan={10} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center">
                       <AlertCircle className="w-12 h-12 text-gray-400 mb-3" />
                       <p className="text-gray-500">Henüz satış kaydı yok</p>
@@ -345,6 +421,14 @@ export default function AccommodationSalesPage() {
                 ) : (
                 filteredSales.map((sale) => (
                   <tr key={sale.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedSaleIds.includes(sale.id)}
+                        onChange={() => handleSelectSale(sale.id)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{sale.adiSoyadi}</div>
@@ -399,6 +483,59 @@ export default function AccommodationSalesPage() {
           </div>
         </div>
       </div>
+
+      {/* Toplu Silme Onay Modal */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 relative">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Toplu Silme Onayı</h2>
+                <p className="text-sm text-gray-500">Bu işlem geri alınamaz</p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-gray-700 mb-2">
+                <span className="font-semibold text-red-600">{selectedSaleIds.length}</span> adet satış kaydını silmek istediğinizden emin misiniz?
+              </p>
+              <p className="text-sm text-gray-500">
+                Seçili tüm kayıtlar kalıcı olarak silinecektir.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={isDeleting}
+                className="px-5 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleBulkDeleteConfirm}
+                disabled={isDeleting}
+                className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Siliniyor...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Sil
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

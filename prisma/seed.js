@@ -60,81 +60,6 @@ async function createUsers(companies) {
   }
 }
 
-async function createTestAraclar(companyId) {
-  console.log('Test araçları oluşturuluyor...');
-  
-  const aracMarkalari = ['Mercedes', 'BMW', 'Audi', 'Volkswagen', 'Ford', 'Toyota', 'Honda', 'Hyundai', 'Kia', 'Renault'];
-  const aracModelleri = ['Sprinter', 'Vito', 'Transit', 'Hiace', 'Crafter', 'Ducato', 'Daily', 'Master', 'Boxer', 'Relay'];
-  const aracTipleri = ['BINEK', 'MINIBUS', 'MIDIBUS', 'OTOBUS'];
-  const durumlar = ['MUSAIT', 'TRANSFERDE', 'BAKIMDA'];
-  
-  const araclar = [];
-  
-  for (let i = 1; i <= 20; i++) {
-    const marka = aracMarkalari[Math.floor(Math.random() * aracMarkalari.length)];
-    const model = aracModelleri[Math.floor(Math.random() * aracModelleri.length)];
-    const aracTipi = aracTipleri[Math.floor(Math.random() * aracTipleri.length)];
-    const durum = durumlar[Math.floor(Math.random() * durumlar.length)];
-    
-    // Plaka formatı: 34 ABC 123
-    const plaka = `${Math.floor(Math.random() * 81) + 1} ${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))} ${Math.floor(Math.random() * 900) + 100}`;
-    
-    const arac = await prisma.arac.create({
-      data: {
-        plaka: plaka,
-        marka: marka,
-        model: model,
-        aracTipi: aracTipi,
-        yolcuKapasitesi: Math.floor(Math.random() * 50) + 4,
-        durum: durum,
-        enlem: 39.9334 + (Math.random() - 0.5) * 0.1, // Türkiye koordinatları
-        boylam: 32.8597 + (Math.random() - 0.5) * 0.1,
-        companyId: companyId
-      }
-    });
-    
-    araclar.push(arac);
-    console.log(`Araç oluşturuldu: ${arac.plaka} - ${arac.marka} ${arac.model}`);
-  }
-  
-  return araclar;
-}
-
-async function createTestSoforler(companyId) {
-  console.log('Test şoförleri oluşturuluyor...');
-  
-  const isimler = ['Ahmet', 'Mehmet', 'Ali', 'Veli', 'Hasan', 'Hüseyin', 'Mustafa', 'İbrahim', 'Ömer', 'Yusuf', 'Murat', 'Emre', 'Can', 'Burak', 'Serkan', 'Tolga', 'Erkan', 'Orhan', 'Osman', 'Kemal'];
-  const soyisimler = ['Yılmaz', 'Demir', 'Çelik', 'Şahin', 'Yıldız', 'Yıldırım', 'Özkan', 'Aydın', 'Özdemir', 'Arslan', 'Doğan', 'Kılıç', 'Aslan', 'Çetin', 'Erdoğan', 'Koç', 'Kurt', 'Özkan', 'Şen', 'Güneş'];
-  const ehliyetSiniflari = ['B', 'C', 'D', 'E'];
-  const durumlar = ['MUSAIT', 'TRANSFERDE', 'IZINLI'];
-  
-  const soforler = [];
-  
-  for (let i = 1; i <= 20; i++) {
-    const ad = isimler[Math.floor(Math.random() * isimler.length)];
-    const soyad = soyisimler[Math.floor(Math.random() * soyisimler.length)];
-    const durum = durumlar[Math.floor(Math.random() * durumlar.length)];
-    const telefon = `+90 5${Math.floor(Math.random() * 9) + 3}${Math.floor(Math.random() * 90000000) + 10000000}`;
-    
-    const sofor = await prisma.sofor.create({
-      data: {
-        ad: ad,
-        soyad: soyad,
-        telefon: telefon,
-        ehliyetSinifi: ehliyetSiniflari[Math.floor(Math.random() * ehliyetSiniflari.length)],
-        durum: durum,
-        ehliyetSiniflari: [ehliyetSiniflari[Math.floor(Math.random() * ehliyetSiniflari.length)]],
-        srcBelgeleri: ['SRC1', 'SRC2'],
-        companyId: companyId
-      }
-    });
-    
-    soforler.push(sofor);
-    console.log(`Şoför oluşturuldu: ${sofor.ad} ${sofor.soyad} - ${sofor.telefon}`);
-  }
-  
-  return soforler;
-}
 
 async function createTestOteller(companyId) {
   console.log('Test otelleri oluşturuluyor...');
@@ -175,98 +100,6 @@ async function createTestOteller(companyId) {
   return oteller;
 }
 
-async function createTestCariler(companyId) {
-  console.log('Test carileri oluşturuluyor...');
-  
-  const isimler = ['Ahmet', 'Mehmet', 'Ali', 'Veli', 'Hasan', 'Hüseyin', 'Mustafa', 'İbrahim', 'Ömer', 'Yusuf', 'Murat', 'Emre', 'Can', 'Burak', 'Serkan', 'Tolga', 'Erkan', 'Orhan', 'Osman', 'Kemal'];
-  const soyisimler = ['Yılmaz', 'Demir', 'Çelik', 'Şahin', 'Yıldız', 'Yıldırım', 'Özkan', 'Aydın', 'Özdemir', 'Arslan', 'Doğan', 'Kılıç', 'Aslan', 'Çetin', 'Erdoğan', 'Koç', 'Kurt', 'Özkan', 'Şen', 'Güneş'];
-  const sirketAdlari = ['ABC Turizm', 'XYZ Seyahat', 'Delta Tur', 'Omega Travel', 'Star Tours', 'Golden Trip', 'Silver Way', 'Blue Sky', 'Green Earth', 'Red Sun', 'White Moon', 'Black Star', 'Purple Rain', 'Orange Sky', 'Yellow Sun', 'Pink Rose', 'Brown Bear', 'Gray Wolf', 'Cyan Sea', 'Magenta Sky'];
-  const sehirler = ['İstanbul', 'Ankara', 'İzmir', 'Antalya', 'Bursa', 'Adana', 'Gaziantep', 'Konya', 'Mersin', 'Diyarbakır'];
-  const tipler = ['MUSTERI', 'BAYI', 'KURUMSAL'];
-  const durumlar = ['AKTIF', 'PASIF', 'ENGELLI'];
-  
-  const cariler = [];
-  
-  for (let i = 1; i <= 20; i++) {
-    const ad = isimler[Math.floor(Math.random() * isimler.length)];
-    const soyad = soyisimler[Math.floor(Math.random() * soyisimler.length)];
-    const sirket = sirketAdlari[Math.floor(Math.random() * sirketAdlari.length)];
-    const sehir = sehirler[Math.floor(Math.random() * sehirler.length)];
-    const tip = tipler[Math.floor(Math.random() * tipler.length)];
-    const durum = durumlar[Math.floor(Math.random() * durumlar.length)];
-    const telefon = `+90 5${Math.floor(Math.random() * 9) + 3}${Math.floor(Math.random() * 90000000) + 10000000}`;
-    const email = `${ad.toLowerCase()}.${soyad.toLowerCase()}@${sirket.toLowerCase().replace(/\s+/g, '')}.com`;
-    
-    const cari = await prisma.cari.create({
-      data: {
-        ad: ad,
-        soyad: soyad,
-        sirket: sirket,
-        email: email,
-        telefon: telefon,
-        adres: `${sehir} Merkez, ${Math.floor(Math.random() * 100) + 1}. Sokak No:${Math.floor(Math.random() * 100) + 1}`,
-        sehir: sehir,
-        ulke: 'Türkiye',
-        vergiNo: `${Math.floor(Math.random() * 900000000) + 100000000}`,
-        vergiDairesi: `${sehir} Vergi Dairesi`,
-        notlar: `${sirket} ile ${Math.floor(Math.random() * 10) + 1} yıldır çalışıyoruz`,
-        tip: tip,
-        durum: durum,
-        companyId: companyId
-      }
-    });
-    
-    cariler.push(cari);
-    console.log(`Cari oluşturuldu: ${cari.ad} ${cari.soyad} - ${cari.sirket}`);
-  }
-  
-  return cariler;
-}
-
-async function createTestTedarikciler(companyId) {
-  console.log('Test tedarikçileri oluşturuluyor...');
-  
-  const sirketAdlari = ['ABC Transfer', 'XYZ Turizm', 'Delta Seyahat', 'Omega Tours', 'Star Travel', 'Golden Way', 'Silver Trip', 'Blue Sky Tours', 'Green Earth Travel', 'Red Sun Tours', 'White Moon Travel', 'Black Star Tours', 'Purple Rain Travel', 'Orange Sky Tours', 'Yellow Sun Travel', 'Pink Rose Tours', 'Brown Bear Travel', 'Gray Wolf Tours', 'Cyan Sea Travel', 'Magenta Sky Tours'];
-  const yetkiliKisiler = ['Ahmet Yılmaz', 'Mehmet Demir', 'Ali Çelik', 'Veli Şahin', 'Hasan Yıldız', 'Hüseyin Yıldırım', 'Mustafa Özkan', 'İbrahim Aydın', 'Ömer Özdemir', 'Yusuf Arslan', 'Murat Doğan', 'Emre Kılıç', 'Can Aslan', 'Burak Çetin', 'Serkan Erdoğan', 'Tolga Koç', 'Erkan Kurt', 'Orhan Özkan', 'Osman Şen', 'Kemal Güneş'];
-  const sehirler = ['İstanbul', 'Ankara', 'İzmir', 'Antalya', 'Bursa', 'Adana', 'Gaziantep', 'Konya', 'Mersin', 'Diyarbakır'];
-  const hizmetTurleri = ['Transfer Hizmetleri', 'Tur Operatörlüğü', 'Araç Kiralama', 'Rehberlik Hizmetleri', 'Otel Rezervasyonu', 'Uçak Bileti', 'Vize Hizmetleri', 'Sigorta Hizmetleri', 'Catering Hizmetleri', 'Etkinlik Organizasyonu'];
-  const durumlar = ['AKTIF', 'PASIF', 'ENGELLI'];
-  
-  const tedarikciler = [];
-  
-  for (let i = 1; i <= 20; i++) {
-    const sirketAdi = sirketAdlari[Math.floor(Math.random() * sirketAdlari.length)];
-    const yetkiliKisi = yetkiliKisiler[Math.floor(Math.random() * yetkiliKisiler.length)];
-    const sehir = sehirler[Math.floor(Math.random() * sehirler.length)];
-    const hizmetTuru = hizmetTurleri[Math.floor(Math.random() * hizmetTurleri.length)];
-    const durum = durumlar[Math.floor(Math.random() * durumlar.length)];
-    const telefon = `+90 ${Math.floor(Math.random() * 900) + 100} ${Math.floor(Math.random() * 900) + 100} ${Math.floor(Math.random() * 9000) + 1000}`;
-    const email = `info@${sirketAdi.toLowerCase().replace(/\s+/g, '')}.com`;
-    
-    const tedarikci = await prisma.tedarikci.create({
-      data: {
-        sirketAdi: sirketAdi,
-        yetkiliKisi: yetkiliKisi,
-        email: email,
-        telefon: telefon,
-        adres: `${sehir} Merkez, ${Math.floor(Math.random() * 100) + 1}. Cadde No:${Math.floor(Math.random() * 100) + 1}`,
-        sehir: sehir,
-        ulke: 'Türkiye',
-        vergiNo: `${Math.floor(Math.random() * 900000000) + 100000000}`,
-        vergiDairesi: `${sehir} Vergi Dairesi`,
-        hizmetTuru: hizmetTuru,
-        notlar: `${hizmetTuru} konusunda uzman ${sirketAdi}`,
-        durum: durum,
-        companyId: companyId
-      }
-    });
-    
-    tedarikciler.push(tedarikci);
-    console.log(`Tedarikçi oluşturuldu: ${tedarikci.sirketAdi} - ${tedarikci.yetkiliKisi}`);
-  }
-  
-  return tedarikciler;
-}
 
 async function createTestOrganizasyonlar(companyId, oteller) {
   console.log('Test organizasyonları oluşturuluyor...');
@@ -313,54 +146,6 @@ async function createTestOrganizasyonlar(companyId, oteller) {
   return organizasyonlar;
 }
 
-async function createTestTransferler(companyId, araclar, soforler, cariler, tedarikciler) {
-  console.log('Test transferleri oluşturuluyor...');
-  
-  const kalkisYerleri = ['İstanbul Havalimanı', 'Sabiha Gökçen Havalimanı', 'Ankara Esenboğa Havalimanı', 'İzmir Adnan Menderes Havalimanı', 'Antalya Havalimanı', 'Bodrum Havalimanı', 'Dalaman Havalimanı', 'Trabzon Havalimanı', 'Adana Havalimanı', 'Gaziantep Havalimanı'];
-  const varisYerleri = ['İstanbul Şehir Merkezi', 'Ankara Şehir Merkezi', 'İzmir Şehir Merkezi', 'Antalya Şehir Merkezi', 'Bodrum Şehir Merkezi', 'Dalaman Şehir Merkezi', 'Trabzon Şehir Merkezi', 'Adana Şehir Merkezi', 'Gaziantep Şehir Merkezi', 'Bursa Şehir Merkezi'];
-  const durumlar = ['BEKLEMEDE', 'YOLDA', 'TAMAMLANDI', 'IPTAL'];
-  
-  const transferler = [];
-  
-  for (let i = 1; i <= 30; i++) {
-    const kalkisYeri = kalkisYerleri[Math.floor(Math.random() * kalkisYerleri.length)];
-    const varisYeri = varisYerleri[Math.floor(Math.random() * varisYerleri.length)];
-    const durum = durumlar[Math.floor(Math.random() * durumlar.length)];
-    const aracId = araclar.length > 0 ? araclar[Math.floor(Math.random() * araclar.length)].id : null;
-    const soforId = soforler.length > 0 ? soforler[Math.floor(Math.random() * soforler.length)].id : null;
-    const cariId = cariler.length > 0 ? cariler[Math.floor(Math.random() * cariler.length)].id : null;
-    const tedarikciId = tedarikciler.length > 0 ? tedarikciler[Math.floor(Math.random() * tedarikciler.length)].id : null;
-    
-    // Rastgele tarih (bugünden 30 gün öncesi ile 30 gün sonrası arası)
-    const kalkisTarihi = new Date();
-    kalkisTarihi.setDate(kalkisTarihi.getDate() + (Math.floor(Math.random() * 60) - 30));
-    
-    const transfer = await prisma.transfer.create({
-      data: {
-        kalkisYeri: kalkisYeri,
-        varisYeri: varisYeri,
-        kalkisSaati: `${Math.floor(Math.random() * 24).toString().padStart(2, '0')}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
-        kalkisTarihi: kalkisTarihi,
-        yolcuSayisi: Math.floor(Math.random() * 50) + 1,
-        aracId: aracId,
-        soforId: soforId,
-        durum: durum,
-        notlar: `Demo transfer ${i} - ${kalkisYeri} → ${varisYeri}`,
-        fiyat: Math.floor(Math.random() * 1000) + 100,
-        tahsisli: Math.random() > 0.5,
-        cariId: cariId,
-        tedarikciId: tedarikciId,
-        tedarikciyeYaptirilacak: Math.random() > 0.7,
-        companyId: companyId
-      }
-    });
-    
-    transferler.push(transfer);
-    console.log(`Transfer oluşturuldu: ${transfer.kalkisYeri} → ${transfer.varisYeri} - ${transfer.kalkisSaati}`);
-  }
-  
-  return transferler;
-}
 
 async function createTestMunferitKonaklamalar(companyId) {
   console.log('Test münferit konaklamaları oluşturuluyor...');
@@ -405,7 +190,6 @@ async function createTestMunferitKonaklamalar(companyId) {
         cikisTarihi: cikisTarihi.toISOString().split('T')[0],
         odaTipi: odaTipi,
         konaklamaTipi: konaklamaTipi,
-        faturaEdildi: Math.random() > 0.3,
         gecelikUcret: gecelikUcret,
         toplamUcret: toplamUcret,
         otelAdi: otelAdi,
@@ -464,7 +248,6 @@ async function createTestOrganizasyonKonaklamalari(companyId, organizasyonlar) {
         cikisTarihi: cikisTarihi.toISOString().split('T')[0],
         odaTipi: odaTipi,
         konaklamaTipi: konaklamaTipi,
-        faturaEdildi: Math.random() > 0.3,
         gecelikUcret: gecelikUcret,
         toplamUcret: toplamUcret,
         otelAdi: otelAdi,
@@ -488,15 +271,10 @@ async function clearAllTestData() {
   
   try {
     // İlişkili verileri önce sil
-    await prisma.yolcu.deleteMany();
-    await prisma.transfer.deleteMany();
-    await prisma.sofor.deleteMany();
-    await prisma.arac.deleteMany();
+    await prisma.accommodationSale.deleteMany();
     await prisma.accommodation.deleteMany();
     await prisma.organization.deleteMany();
     await prisma.hotel.deleteMany();
-    await prisma.cari.deleteMany();
-    await prisma.tedarikci.deleteMany();
     await prisma.log.deleteMany();
     await prisma.user.deleteMany();
     await prisma.company.deleteMany();
@@ -523,13 +301,8 @@ async function main() {
     await createUsers(companies);
 
     // Test verilerini oluştur
-    const araclar = await createTestAraclar(companies[0].id);
-    const soforler = await createTestSoforler(companies[0].id);
     const oteller = await createTestOteller(companies[0].id);
-    const cariler = await createTestCariler(companies[0].id);
-    const tedarikciler = await createTestTedarikciler(companies[0].id);
     const organizasyonlar = await createTestOrganizasyonlar(companies[0].id, oteller);
-    const transferler = await createTestTransferler(companies[0].id, araclar, soforler, cariler, tedarikciler);
     const munferitKonaklamalar = await createTestMunferitKonaklamalar(companies[0].id);
     const organizasyonKonaklamalari = await createTestOrganizasyonKonaklamalari(companies[0].id, organizasyonlar);
 
@@ -537,13 +310,8 @@ async function main() {
     console.log('Oluşturulan kullanıcılar:');
     console.log('1. Yurtsever Admin (yurtsever@yurtsever.com) - ADMIN');
     console.log('\nOluşturulan test verileri:');
-    console.log(`- ${araclar.length} adet araç`);
-    console.log(`- ${soforler.length} adet şoför`);
     console.log(`- ${oteller.length} adet otel`);
-    console.log(`- ${cariler.length} adet cari`);
-    console.log(`- ${tedarikciler.length} adet tedarikçi`);
     console.log(`- ${organizasyonlar.length} adet organizasyon`);
-    console.log(`- ${transferler.length} adet transfer`);
     console.log(`- ${munferitKonaklamalar.length} adet münferit konaklama`);
     console.log(`- ${organizasyonKonaklamalari.length} adet organizasyon konaklaması`);
     console.log('\nTest verilerini temizlemek için: npm run seed:clear');

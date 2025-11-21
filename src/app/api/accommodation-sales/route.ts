@@ -89,11 +89,17 @@ export async function POST(request: NextRequest) {
                   continue;
                 }
 
-                // Varsayılan satış fiyatı %20 kar marjı ile
-                const satisFiyati = accommodation.gecelikUcret * 1.2;
-                const toplamSatisFiyati = accommodation.toplamUcret * 1.2;
-                const kar = toplamSatisFiyati - accommodation.toplamUcret;
-                const karOrani = (kar / accommodation.toplamUcret) * 100;
+                // Satış fiyatları opsiyonel - kullanıcıdan gelen fiyatları kullan veya boş bırak
+                const salePrices = data.salePrices && data.salePrices[accommodation.id] 
+                  ? data.salePrices[accommodation.id]
+                  : { satisFiyati: 0, toplamSatisFiyati: 0 };
+
+                const satisFiyati = salePrices.satisFiyati || 0;
+                const toplamSatisFiyati = salePrices.toplamSatisFiyati || 0;
+                const kar = toplamSatisFiyati > 0 ? (toplamSatisFiyati - accommodation.toplamUcret) : 0;
+                const karOrani = accommodation.toplamUcret > 0 && toplamSatisFiyati > 0 
+                  ? (kar / accommodation.toplamUcret) * 100 
+                  : 0;
 
                 // Satış kaydı oluştur
                 const sale = await tx.accommodationSale.create({

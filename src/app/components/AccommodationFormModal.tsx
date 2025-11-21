@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Plus, X } from 'lucide-react';
+import DatePickerWithQuickSelect from './DatePickerWithQuickSelect';
 
 interface AccommodationFormModalProps {
   isOpen: boolean;
@@ -82,27 +83,33 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
 
               {/* Giriş Tarihi */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Giriş Tarihi *</label>
-                <input
-                  type="date"
-                  name="girisTarihi"
+                <DatePickerWithQuickSelect
                   value={formData.girisTarihi}
-                  onChange={onChange}
+                  onChange={(value) => {
+                    const event = {
+                      target: { name: 'girisTarihi', value, type: 'text' }
+                    } as React.ChangeEvent<HTMLInputElement>;
+                    onChange(event);
+                  }}
+                  label="Giriş Tarihi *"
+                  maxDate={formData.cikisTarihi || undefined}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 />
               </div>
 
               {/* Çıkış Tarihi */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Çıkış Tarihi *</label>
-                <input
-                  type="date"
-                  name="cikisTarihi"
+                <DatePickerWithQuickSelect
                   value={formData.cikisTarihi}
-                  onChange={onChange}
+                  onChange={(value) => {
+                    const event = {
+                      target: { name: 'cikisTarihi', value, type: 'text' }
+                    } as React.ChangeEvent<HTMLInputElement>;
+                    onChange(event);
+                  }}
+                  label="Çıkış Tarihi *"
+                  minDate={formData.girisTarihi || undefined}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 />
               </div>
 
@@ -158,13 +165,16 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Toplam Ücret</label>
                 <input
-                  type="number"
-                  value={formData.toplamUcret || 0}
+                  type="text"
+                  value={formData.toplamUcret > 0 ? `₺${formData.toplamUcret.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '₺0,00'}
                   disabled
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 text-sm font-semibold"
+                  readOnly
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 text-sm font-semibold cursor-not-allowed"
                 />
                 {formData.numberOfNights > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">{formData.numberOfNights} gece</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formData.numberOfNights} gece × ₺{(formData.gecelikUcret || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
                 )}
               </div>
 
