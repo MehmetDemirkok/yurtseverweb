@@ -86,9 +86,12 @@ export default function DashboardLayout({
             <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                  Y
+                  T
                 </div>
-                <span className="font-bold text-gray-800 text-lg">Yurtsever</span>
+                <div className="flex flex-col">
+                  <span className="font-bold text-gray-800 text-sm leading-tight">TrackINN</span>
+                  <span className="text-xs text-gray-500 leading-tight">Web APP</span>
+                </div>
               </div>
               <button
                 onClick={toggleSidebar}
