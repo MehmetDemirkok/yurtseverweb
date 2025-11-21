@@ -1,0 +1,295 @@
+# Yurtsever Konaklama Yönetim Sistemi - Cursor Rules
+
+## 🏗️ Proje Genel Bakış
+Bu proje, Next.js 15.3.3 tabanlı, TypeScript ile geliştirilmiş, çok kiracılı (multi-tenant) bir konaklama ve transfer yönetim sistemidir. Türkçe dil desteği ile geliştirilmiştir.
+
+## 🛠️ Teknoloji Stack
+- **Frontend**: Next.js 15.3.3, React 19, TypeScript 5
+- **Backend**: Next.js API Routes
+- **Veritabanı**: PostgreSQL (Prisma ORM 6.11.1)
+- **Styling**: Tailwind CSS 4, Radix UI, Material-UI
+- **Kimlik Doğrulama**: JWT
+- **Harita**: Leaflet, React-Leaflet
+- **Excel**: ExcelJS, XLSX
+- **Grafikler**: Recharts
+- **Form**: React Hook Form
+- **State Management**: React useState/useEffect
+- **Deployment**: Vercel
+
+## 📁 Proje Yapısı Kuralları
+
+### Dosya Organizasyonu
+```
+src/
+├── app/                          # Next.js App Router
+│   ├── (auth)/                   # Kimlik doğrulama sayfaları
+│   ├── (dashboard)/              # Ana uygulama sayfaları
+│   ├── (admin)/                  # Admin paneli
+│   ├── api/                      # API Routes
+│   └── components/               # Sayfa özel componentleri
+├── components/                   # Shared Components
+│   ├── ui/                       # UI Components (Radix UI tabanlı)
+│   ├── layout/                   # Layout Components
+│   └── forms/                    # Form Components
+├── lib/                          # Utility Libraries
+│   ├── utils/                    # Utility Functions
+│   ├── constants/                # Constants
+│   ├── validations/              # Validation Schemas
+│   ├── auth.ts                   # Authentication
+│   ├── permissions.ts            # Permissions
+│   └── prisma.ts                 # Database
+└── types/                        # TypeScript Types
+```
+
+### Component Naming Conventions
+- **Sayfa Componentleri**: PascalCase, `Page` suffix (örn: `CarilerPage`)
+- **UI Componentleri**: PascalCase (örn: `Button`, `Card`, `Input`)
+- **Layout Componentleri**: PascalCase, `Layout` suffix (örn: `SidebarLayout`)
+- **Modal Componentleri**: PascalCase, `Modal` suffix (örn: `AccommodationFormModal`)
+
+## 🔐 Kimlik Doğrulama ve Yetkilendirme
+
+### Kullanıcı Rolleri
+- **ADMIN**: Sistem sahibi, tüm yetkilere sahip
+- **MUDUR**: Şirket müdürü, kendi şirketini yönetir
+- **OPERATOR**: Veri girişi yapabilir
+- **KULLANICI**: Sadece görüntüleme yetkisi
+
+### Güvenlik Kuralları
+- Her API isteğinde JWT token doğrulanmalı
+- Şirket bazlı veri izolasyonu zorunlu
+- Rol bazlı erişim kontrolü (RBAC) uygulanmalı
+- Hassas veriler environment variables'da saklanmalı
+
+## 🗄️ Veritabanı Kuralları
+
+### Prisma Schema Kuralları
+- Tüm modellerde `companyId` alanı zorunlu (multi-tenant)
+- Enum değerleri Türkçe olmalı (örn: `AKTIF`, `PASIF`)
+- İlişkiler `onDelete: Cascade` ile tanımlanmalı
+- Timestamp alanları (`createdAt`, `updatedAt`) zorunlu
+- Soft delete yerine `durum` enum'u kullanılmalı
+
+### Model Naming Conventions
+- Türkçe model isimleri kullanılmalı (örn: `Cari`, `Tedarikci`)
+- İngilizce field isimleri kullanılmalı (örn: `createdAt`, `updatedAt`)
+- Enum isimleri PascalCase (örn: `CariDurum`, `TransferDurum`)
+
+## 🌐 API Kuralları
+
+### API Route Yapısı
+```
+/api/
+├── auth/                         # Kimlik doğrulama
+├── user/                         # Kullanıcı işlemleri
+├── accommodation/                # Konaklama
+├── konaklama/                    # Konaklama modülü
+├── moduller/                     # Modüller
+│   └── transfer/                 # Transfer modülü
+├── arvento/                      # Arvento entegrasyonu
+└── admin/                        # Admin işlemleri
+```
+
+### API Response Format
+```typescript
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+```
+
+### Error Handling
+- Tüm API'lerde try-catch kullanılmalı
+- Hata mesajları Türkçe olmalı
+- HTTP status kodları doğru kullanılmalı
+- Validation hataları detaylı döndürülmeli
+
+## 🎨 UI/UX Kuralları
+
+### Styling Kuralları
+- **Primary**: Tailwind CSS kullanılmalı
+- **UI Components**: Radix UI tabanlı componentler
+- **Icons**: Lucide React kullanılmalı
+- **Responsive**: Mobile-first yaklaşım
+- **Dark Mode**: next-themes ile desteklenmeli
+
+### Component Kuralları
+- Her component TypeScript ile yazılmalı
+- Props interface'leri tanımlanmalı
+- Error boundary'ler kullanılmalı
+- Loading state'leri gösterilmeli
+- Accessibility (a11y) standartları uygulanmalı
+
+### Form Kuralları
+- Form validation zorunlu
+- Error mesajları Türkçe olmalı
+- Loading state'leri gösterilmeli
+- Success feedback verilmeli
+
+## 📊 Veri Yönetimi Kuralları
+
+### State Management
+- React useState/useEffect kullanılmalı
+- Global state için Context API
+- Server state için SWR veya React Query
+- Optimistic updates uygulanmalı
+
+### Data Fetching
+- API calls için axios kullanılmalı
+- Error handling zorunlu
+- Loading states gösterilmeli
+- Cache stratejileri uygulanmalı
+
+## 🔧 Development Kuralları
+
+### Code Quality
+- **ESLint**: Next.js core-web-vitals config
+- **TypeScript**: Strict mode aktif
+- **Prettier**: Code formatting
+- **Git Hooks**: Pre-commit hooks
+
+### Performance
+- **Image Optimization**: Next.js Image component
+- **Code Splitting**: Dynamic imports
+- **Bundle Analysis**: Webpack bundle analyzer
+- **Caching**: API response caching
+
+### Testing
+- **Unit Tests**: Jest + React Testing Library
+- **Integration Tests**: API route testing
+- **E2E Tests**: Playwright (opsiyonel)
+
+## 🌍 Dil ve Lokalizasyon
+
+### Türkçe Dil Kuralları
+- Tüm kullanıcı arayüzü metinleri Türkçe olmalı
+- Error mesajları Türkçe olmalı
+- Success mesajları Türkçe olmalı
+- Form validation mesajları Türkçe olmalı
+
+### Tarih ve Saat Formatları
+- Türkiye timezone (Europe/Istanbul) kullanılmalı
+- Tarih formatı: `dd.MM.yyyy`
+- Saat formatı: `HH:mm`
+- `date-fns` kütüphanesi kullanılmalı
+
+## 📈 Raporlama ve Export
+
+### Excel Export Kuralları
+- ExcelJS kütüphanesi kullanılmalı
+- Türkçe başlıklar kullanılmalı
+- Tarih formatları Türkçe standartlara uygun
+- Dosya isimleri Türkçe olmalı
+
+### Grafik ve İstatistikler
+- Recharts kütüphanesi kullanılmalı
+- Responsive grafikler
+- Türkçe etiketler
+- Color scheme tutarlı olmalı
+
+## 🚀 Deployment ve Production
+
+### Environment Variables
+```env
+# Veritabanı
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
+
+# JWT
+JWT_SECRET="your_secret_key"
+
+# API Keys
+ARVENTO_API_KEY="..."
+GOOGLE_PLACES_API_KEY="..."
+```
+
+### Build ve Deploy
+- **Build Command**: `npm run build`
+- **Start Command**: `npm start`
+- **Environment**: Vercel
+- **Database**: PostgreSQL (Supabase/PlanetScale)
+
+## 🔍 Debugging ve Logging
+
+### Logging Kuralları
+- Console.log yerine structured logging
+- Error logging zorunlu
+- Performance monitoring
+- User action logging
+
+### Debug Tools
+- React Developer Tools
+- Prisma Studio
+- Network tab monitoring
+- Error boundary logging
+
+## 📝 Documentation
+
+### Code Documentation
+- JSDoc comments zorunlu
+- README dosyaları güncel tutulmalı
+- API documentation
+- Component documentation
+
+### Git Commit Messages
+- Conventional commits kullanılmalı
+- Türkçe commit mesajları
+- Issue number referansları
+
+## 🧪 Testing Stratejisi
+
+### Test Coverage
+- **Unit Tests**: %80+ coverage
+- **Integration Tests**: API routes
+- **Component Tests**: UI components
+- **E2E Tests**: Critical user flows
+
+### Test Naming
+- Test dosyaları: `*.test.ts` veya `*.spec.ts`
+- Test isimleri açıklayıcı olmalı
+- Türkçe test açıklamaları
+
+## 🔄 Code Review Checklist
+
+### Genel Kontroller
+- [ ] TypeScript strict mode uyumlu
+- [ ] ESLint kuralları geçiyor
+- [ ] Türkçe dil desteği
+- [ ] Responsive design
+- [ ] Accessibility standartları
+- [ ] Performance optimizasyonu
+- [ ] Security best practices
+- [ ] Error handling
+- [ ] Loading states
+- [ ] Success feedback
+
+### API Kontrolleri
+- [ ] JWT authentication
+- [ ] Company-based data isolation
+- [ ] Role-based access control
+- [ ] Input validation
+- [ ] Error responses
+- [ ] HTTP status codes
+
+### UI Kontrolleri
+- [ ] Component reusability
+- [ ] Props interface
+- [ ] Error boundaries
+- [ ] Loading states
+- [ ] Form validation
+- [ ] Mobile responsiveness
+
+## 🚨 Önemli Notlar
+
+1. **Türkçe Dil Desteği**: Tüm kullanıcı arayüzü Türkçe olmalı
+2. **Multi-Tenant**: Her veri kaydında companyId zorunlu
+3. **Security First**: JWT ve RBAC her zaman aktif
+4. **Performance**: Lazy loading ve caching kullanılmalı
+5. **Accessibility**: WCAG standartları uygulanmalı
+6. **Mobile First**: Responsive design zorunlu
+7. **Error Handling**: Kullanıcı dostu hata mesajları
+8. **Documentation**: Kod dokümantasyonu güncel tutulmalı
+
+Bu kurallar, projenin tutarlı, güvenli ve sürdürülebilir olmasını sağlar.

@@ -1,0 +1,426 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Company {
+  id            Int      @id @default(autoincrement())
+  name          String
+  email         String   @unique
+  phone         String?
+  address       String?
+  city          String?
+  country       String   @default("Türkiye")
+  taxNumber     String?
+  taxOffice     String?
+  logo          String?
+  status        CompanyStatus @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Arvento entegrasyonu
+  arventoApiKey       String?
+  arventoBaseUrl      String?   @default("https://api.arvento.com")
+  arventoLastTest     DateTime?
+  arventoIsConnected  Boolean   @default(false)
+  
+  // Relations
+  users         User[]
+  accommodations Accommodation[]
+  hotels        Hotel[]
+  logs          Log[]
+  araclar       Arac[]
+  soforler      Sofor[]
+  transferler   Transfer[]
+  cariler       Cari[]
+  tedarikciler  Tedarikci[]
+  organizations Organization[]
+  aracBakimlar  AracBakim[]
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  name        String?
+  createdAt   DateTime @default(now())
+  password    String
+  role        Role     @default(KULLANICI)
+  permissions String[] @default([])
+  companyId   Int
+  logs        Log[]
+  aracBakimlar AracBakim[]
+  
+  // Relations
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@unique([email, companyId])
+}
+
+model Organization {
+  id            Int      @id @default(autoincrement())
+  name          String
+  description   String?
+  contactPerson String?
+  contactEmail  String?
+  contactPhone  String?
+  baslangicTarihi DateTime?
+  bitisTarihi   DateTime?
+  lokasyon      String?
+  sehir         String?
+  ulke          String?
+  status        OrganizationStatus @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  companyId     Int
+  hotelId       Int?
+  
+  // Relations
+  company       Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  hotel         Hotel?  @relation(fields: [hotelId], references: [id], onDelete: SetNull)
+  accommodations Accommodation[]
+  
+  @@unique([name, companyId])
+}
+
+model Accommodation {
+  id              Int     @id @default(autoincrement())
+  adiSoyadi       String
+  unvani          String
+  ulke            String
+  sehir           String
+  girisTarihi     String
+  cikisTarihi     String
+  odaTipi         String
+  konaklamaTipi   String
+  gecelikUcret    Float
+  toplamUcret     Float
+  organizasyonAdi String? // Eski alan - geriye uyumluluk için
+  otelAdi         String?
+  kurumCari       String?
+  numberOfNights  Int?
+  companyId       Int
+  organizationId  Int? // Yeni alan - organizasyon ilişkisi
+  isMunferit      Boolean @default(false) // Münferit konaklama kontrolü
+  
+  // Relations
+  company         Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+}
+
+model Hotel {
+  id           Int        @id @default(autoincrement())
+  adi          String
+  adres        String
+  sehir        String
+  ulke         String
+  telefon      String?
+  email        String?
+  website      String?
+  yildizSayisi Int        @default(0)
+  puan         Float      @default(0.0)
+  aciklama     String?
+  durum        HotelDurum @default(AKTIF)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  companyId    Int
+  
+  // Relations
+  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  organizations Organization[]
+}
+
+model Log {
+  id         Int      @id @default(autoincrement())
+  action     String
+  modelName  String
+  recordId   Int
+  recordData String
+  userId     Int?
+  companyId  Int
+  createdAt  DateTime @default(now())
+  ipAddress  String?
+  userAgent  String?
+  
+  // Relations
+  user       User?    @relation(fields: [userId], references: [id])
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model Arac {
+  id              String     @id @default(cuid())
+  plaka           String
+  marka           String
+  model           String
+  aracTipi        AracTipi   @default(BINEK)
+  yolcuKapasitesi Int
+  durum           AracDurum  @default(MUSAIT)
+  enlem           Float      @default(0)
+  boylam          Float      @default(0)
+  sonGuncelleme   DateTime   @default(now())
+  sigortaTarihi   DateTime?  // Sigorta bitiş tarihi
+  muayeneTarihi   DateTime?  // Muayene bitiş tarihi
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  companyId       Int
+  
+  // Arvento entegrasyonu
+  arventoId       String?    // Arvento araç ID'si
+  arventoData     Json?      // Arvento'dan gelen veriler (JSON formatında)
+  
+  // Relations
+  company         Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  soforler        Sofor[]
+  transferler     Transfer[]
+  bakimlar        AracBakim[]
+  
+  @@unique([plaka, companyId])
+}
+
+model Sofor {
+  id               String     @id @default(cuid())
+  ad               String
+  soyad            String
+  telefon          String
+  ehliyetSinifi    String
+  atananAracId     String?
+  durum            SoforDurum @default(MUSAIT)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  ehliyetSiniflari String[]
+  srcBelgeleri     String[]
+  companyId        Int
+  
+  // Relations
+  company          Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  atananArac       Arac?      @relation(fields: [atananAracId], references: [id])
+  transferler      Transfer[]
+  
+  @@unique([telefon, companyId])
+}
+
+model Transfer {
+  id           String        @id @default(cuid())
+  kalkisYeri   String
+  varisYeri    String
+  kalkisSaati  String
+  kalkisTarihi DateTime
+  yolcuSayisi  Int
+  aracId       String?
+  soforId      String?
+  durum        TransferDurum @default(BEKLEMEDE)
+  notlar       String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  fiyat        Float?
+  tahsisli     Boolean       @default(false)
+  companyId    Int
+  
+  // Cari ve Tedarikçi ilişkileri
+  cariId       String?
+  tedarikciId  String?
+  tedarikciyeYaptirilacak Boolean @default(false)
+  
+  // Manuel araç bilgileri (tedarikçiye yaptırılacaksa)
+  manuelAracMarka    String?
+  manuelAracModel    String?
+  manuelAracTip      String?
+  manuelAracPlaka    String?
+  manuelSoforAdi     String?
+  
+  // Relations
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  arac         Arac?         @relation(fields: [aracId], references: [id])
+  sofor        Sofor?        @relation(fields: [soforId], references: [id])
+  cari         Cari?         @relation(fields: [cariId], references: [id])
+  tedarikci    Tedarikci?    @relation(fields: [tedarikciId], references: [id])
+  yolcular     Yolcu[]
+}
+
+model Yolcu {
+  id         String   @id @default(cuid())
+  ad         String
+  soyad      String
+  telefon    String?
+  ucusSaati  String?
+  ucusTkKodu String?
+  transferId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+}
+
+model Cari {
+  id           String    @id @default(cuid())
+  ad           String
+  soyad        String?
+  sirket       String?
+  email        String?
+  telefon      String?
+  adres        String?
+  sehir        String?
+  ulke         String    @default("Türkiye")
+  vergiNo      String?
+  vergiDairesi String?
+  notlar       String?
+  tip          CariTip   @default(MUSTERI)
+  durum        CariDurum @default(AKTIF)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  companyId    Int
+  
+  // Relations
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  transferler  Transfer[]
+}
+
+model Tedarikci {
+  id           String         @id @default(cuid())
+  sirketAdi    String
+  yetkiliKisi  String?
+  email        String?
+  telefon      String?
+  adres        String?
+  sehir        String?
+  ulke         String         @default("Türkiye")
+  vergiNo      String?
+  vergiDairesi String?
+  hizmetTuru   String?
+  notlar       String?
+  durum        TedarikciDurum @default(AKTIF)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  companyId    Int
+  
+  // Relations
+  company      Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  transferler  Transfer[]
+}
+
+model AracBakim {
+  id              String          @id @default(cuid())
+  aracId          String
+  bakimTipi       AracBakimTipi
+  durum           AracBakimDurum  @default(PLANLANDI)
+  baslik          String
+  aciklama        String?
+  planlananTarih  DateTime
+  baslamaTarihi   DateTime?
+  bitisTarihi     DateTime?
+  maliyet         Float?
+  odemeDurumu     Boolean         @default(false)
+  odemeTarihi     DateTime?
+  tedarikci       String?
+  tedarikciTelefon String?
+  tedarikciAdres  String?
+  notlar          String?
+  dosyalar        String[]        @default([]) // Dosya URL'leri
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  createdBy       Int
+  companyId       Int
+  
+  // Relations
+  arac            Arac            @relation(fields: [aracId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [createdBy], references: [id])
+  company         Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Role {
+  ADMIN
+  MUDUR
+  OPERATOR
+  KULLANICI
+}
+
+enum HotelDurum {
+  AKTIF
+  PASIF
+  TAMAMEN_DOLU
+  BAKIM
+}
+
+enum AracDurum {
+  MUSAIT
+  TRANSFERDE
+  BAKIMDA
+  CALISMA
+  BAKIM
+  ARIZA
+  PASIF
+}
+
+enum AracTipi {
+  BINEK
+  MINIBUS
+  MIDIBUS
+  OTOBUS
+  KAMYON
+  PICKUP
+}
+
+enum AracBakimTipi {
+  BAKIM
+  ONARIM
+  SIGORTA
+  MUAYENE
+  LASTIK
+  YAKIT
+  DIGER
+}
+
+enum AracBakimDurum {
+  PLANLANDI
+  DEVAM_EDIYOR
+  TAMAMLANDI
+  IPTAL
+}
+
+enum SoforDurum {
+  MUSAIT
+  TRANSFERDE
+  IZINLI
+}
+
+enum TransferDurum {
+  BEKLEMEDE
+  YOLDA
+  TAMAMLANDI
+  IPTAL
+}
+
+enum CariTip {
+  MUSTERI
+  BAYI
+  KURUMSAL
+}
+
+enum CariDurum {
+  AKTIF
+  PASIF
+  ENGELLI
+}
+
+enum TedarikciDurum {
+  AKTIF
+  PASIF
+  ENGELLI
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}

@@ -1,0 +1,7 @@
+node_modules/
+.next/
+build/
+src/generated/**
+src/generated/prisma/**
+src/generated/prisma/runtime/
+src/generated/prisma/runtime/** 
