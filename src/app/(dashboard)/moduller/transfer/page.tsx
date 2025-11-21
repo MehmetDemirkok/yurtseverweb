@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  Car, 
-  Users, 
-  MapPin, 
-  Calendar, 
-  Clock, 
+import {
+  Car,
+  Users,
+  MapPin,
+  Calendar,
+  Clock,
   TrendingUp,
   Plus,
   Eye
@@ -37,7 +37,7 @@ interface TransferStats {
 
 export default function TransferDashboard() {
 
-  
+
   const [yaklasanTransferler, setYaklasanTransferler] = useState<YaklasanTransfer[]>([]);
   const [loading, setLoading] = useState(true);
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
@@ -88,7 +88,7 @@ export default function TransferDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       // Paralel API çağrıları
       const [araclarRes, soforlerRes, transferlerRes] = await Promise.all([
         fetch('/api/moduller/transfer/araclar'),
@@ -106,35 +106,35 @@ export default function TransferDashboard() {
       yarin.setDate(yarin.getDate() + 1);
       const yarinStr = yarin.toISOString().split('T')[0];
 
-      const yaklasanTransferler = Array.isArray(transferler) 
+      const yaklasanTransferler = Array.isArray(transferler)
         ? transferler
-            .filter((t: any) => {
-              const transferTarihi = new Date(t.kalkisTarihi).toISOString().split('T')[0];
-              return (transferTarihi === bugun || transferTarihi === yarinStr) && 
-                     t.durum !== 'TAMAMLANDI' && t.durum !== 'IPTAL';
-            })
-            .slice(0, 5) // En fazla 5 transfer göster
-            .map((t: any) => ({
-              id: t.id,
-              kalkisYeri: t.kalkisYeri,
-              varisYeri: t.varisYeri,
-              kalkisSaati: t.kalkisSaati,
-              yolcuSayisi: t.yolcuSayisi,
-              aracPlaka: t.arac?.plaka || 'Atanmamış',
-              soforAdi: t.sofor ? `${t.sofor.ad} ${t.sofor.soyad}` : 'Atanmamış',
-              durum: t.durum.toLowerCase()
-            }))
+          .filter((t: any) => {
+            const transferTarihi = new Date(t.kalkisTarihi).toISOString().split('T')[0];
+            return (transferTarihi === bugun || transferTarihi === yarinStr) &&
+              t.durum !== 'TAMAMLANDI' && t.durum !== 'IPTAL';
+          })
+          .slice(0, 5) // En fazla 5 transfer göster
+          .map((t: any) => ({
+            id: t.id,
+            kalkisYeri: t.kalkisYeri,
+            varisYeri: t.varisYeri,
+            kalkisSaati: t.kalkisSaati,
+            yolcuSayisi: t.yolcuSayisi,
+            aracPlaka: t.arac?.plaka || 'Atanmamış',
+            soforAdi: t.sofor ? `${t.sofor.ad} ${t.sofor.soyad}` : 'Atanmamış',
+            durum: t.durum.toLowerCase()
+          }))
         : [];
 
       // İstatistikleri hesapla
       const buHafta = new Date();
       buHafta.setDate(buHafta.getDate() + 7);
 
-      const bugunTransferler = transferler.filter((t: any) => 
+      const bugunTransferler = transferler.filter((t: any) =>
         new Date(t.kalkisTarihi).toISOString().split('T')[0] === bugun
       );
 
-      const buHaftaTransferler = transferler.filter((t: any) => 
+      const buHaftaTransferler = transferler.filter((t: any) =>
         new Date(t.kalkisTarihi) <= buHafta
       );
 
@@ -185,7 +185,7 @@ export default function TransferDashboard() {
           </div>
           <h2 className="text-xl font-bold text-gray-800 mb-2">Erişim Kısıtlı</h2>
           <p className="text-gray-600 mb-4">Bu sayfaya erişim izniniz bulunmamaktadır.</p>
-          <button 
+          <button
             onClick={() => window.history.back()}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
           >
@@ -209,13 +209,13 @@ export default function TransferDashboard() {
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex space-x-3">
-          <Link
+          {/* <Link
             href="/moduller/transfer/araclar"
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <Car className="h-4 w-4 mr-2" />
             Araçlar
-          </Link>
+          </Link> */}
           <Link
             href="/moduller/transfer/soforler"
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
@@ -235,7 +235,7 @@ export default function TransferDashboard() {
 
       {/* İstatistik Kartları */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+        {/* <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -273,7 +273,7 @@ export default function TransferDashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">

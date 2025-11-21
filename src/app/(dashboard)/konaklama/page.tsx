@@ -4,6 +4,19 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthGuard from "@/components/layout/AuthGuard";
 import { canViewModule } from '@/lib/permissions';
+import {
+  Users,
+  LogIn,
+  LogOut,
+  Building,
+  Search,
+  Plus,
+  FileDown,
+  FileUp,
+  Calendar,
+  ChevronRight,
+  BedDouble
+} from 'lucide-react';
 
 interface User {
   id: number;
@@ -28,7 +41,18 @@ interface Organization {
   };
 }
 
-
+interface Accommodation {
+  id: number;
+  adiSoyadi: string;
+  girisTarihi: string;
+  cikisTarihi: string;
+  odaTipi: string;
+  otelAdi?: string;
+  isMunferit: boolean;
+  organization?: {
+    name: string;
+  };
+}
 
 export default function AccommodationPage() {
   const router = useRouter();
@@ -36,8 +60,16 @@ export default function AccommodationPage() {
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [accommodations, setAccommodations] = useState<Accommodation[]>([]);
+  const [stats, setStats] = useState({
+    inHouse: 0,
+    arrivals: 0,
+    departures: 0,
+    activeOrgs: 0
+  });
+  const [activeTab, setActiveTab] = useState<'arrivals' | 'departures'>('arrivals');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  
   // Kullanıcı bilgilerini yükle
   useEffect(() => {
     fetch('/api/user', { credentials: 'include' })
@@ -53,14 +85,41 @@ export default function AccommodationPage() {
       });
   }, []);
 
-  // Organizasyonları yükle
+  // Verileri yükle
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Organizasyonları çek
-        const orgRes = await fetch('/api/organizations');
+        // Organizasyonları ve Konaklamaları paralel çek
+        const [orgRes, accRes] = await Promise.all([
+          fetch('/api/organizations'),
+          fetch('/api/accommodation')
+        ]);
+
         const orgData = await orgRes.json();
-        setOrganizations(Array.isArray(orgData) ? orgData : []);
+        const accData = await accRes.json();
+
+        const orgs = Array.isArray(orgData) ? orgData : [];
+        const accs = Array.isArray(accData) ? accData : [];
+
+        setOrganizations(orgs);
+        setAccommodations(accs);
+
+        // İstatistikleri Hesapla
+        const today = new Date().toISOString().split('T')[0];
+
+        const arrivals = accs.filter((a: Accommodation) => a.girisTarihi === today).length;
+        const departures = accs.filter((a: Accommodation) => a.cikisTarihi === today).length;
+        // In-house: Giriş yapmış (<= bugün) ve henüz çıkmamış (>= bugün)
+        const inHouse = accs.filter((a: Accommodation) => a.girisTarihi <= today && a.cikisTarihi >= today).length;
+        const activeOrgs = orgs.filter((o: Organization) => o.status === 'ACTIVE').length;
+
+        setStats({
+          inHouse,
+          arrivals,
+          departures,
+          activeOrgs
+        });
+
       } catch (error) {
         console.error('Veri yüklenirken hata:', error);
       }
@@ -71,15 +130,8 @@ export default function AccommodationPage() {
     }
   }, [isLoading]);
 
-  // İzin kontrolü fonksiyonları
-  const hasPermission = (permission: string): boolean => {
-    return userPermissions.includes(permission) || currentUser?.role === 'ADMIN';
-  };
-
   const hasPageAccess = (): boolean => {
-    if (currentUser?.role === 'ADMIN') {
-      return true;
-    }
+    if (currentUser?.role === 'ADMIN') return true;
     return canViewModule(currentUser?.role || '', 'accommodation');
   };
 
@@ -89,245 +141,309 @@ export default function AccommodationPage() {
     return date.toLocaleDateString('tr-TR');
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE': return 'bg-green-100 text-green-800';
-      case 'INACTIVE': return 'bg-gray-100 text-gray-800';
-      case 'SUSPENDED': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Filtrelenmiş listeler
+  const today = new Date().toISOString().split('T')[0];
 
-  // Loading durumu
+  const todaysMovements = accommodations.filter(acc => {
+    const matchesSearch = acc.adiSoyadi.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (acc.otelAdi || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch) return false;
+
+    if (activeTab === 'arrivals') {
+      return acc.girisTarihi === today;
+    } else {
+      return acc.cikisTarihi === today;
+    }
+  });
+
   if (isLoading) {
     return (
-      <AuthGuard>
-        <main className="w-full px-2 sm:px-4 py-4 sm:py-8 max-w-full overflow-hidden">
-          <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-            <div className="bg-white rounded-lg shadow-lg p-4 sm:p-8 text-center max-w-sm sm:max-w-md mx-4">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 bg-blue-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-              </div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">Yükleniyor...</h2>
-              <p className="text-sm sm:text-base text-gray-600">Kullanıcı bilgileri kontrol ediliyor.</p>
-            </div>
-          </div>
-        </main>
-      </AuthGuard>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
     );
   }
 
-  // Sayfa erişim kontrolü
-  if (!isLoading && !hasPageAccess()) {
+  if (!hasPageAccess()) {
     return (
-      <AuthGuard>
-        <main className="w-full px-2 sm:px-4 py-4 sm:py-8 max-w-full overflow-hidden">
-          <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-            <div className="bg-white rounded-lg shadow-lg p-4 sm:p-8 text-center max-w-sm sm:max-w-md mx-4">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 bg-red-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">Erişim Kısıtlı</h2>
-              <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Bu sayfaya erişim izniniz bulunmamaktadır.</p>
-              <button 
-                onClick={() => window.history.back()}
-                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm sm:text-base"
-              >
-                Geri Dön
-              </button>
-            </div>
-          </div>
-        </main>
-      </AuthGuard>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Erişim Kısıtlı</h2>
+          <button onClick={() => window.history.back()} className="text-blue-600 hover:underline">Geri Dön</button>
+        </div>
+      </div>
     );
   }
 
   return (
     <AuthGuard>
-      <div className="w-full mx-auto px-2 sm:px-4 py-4 sm:py-8">
-        {/* Başlık ve İstatistikler */}
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">Konaklama Yönetimi</h1>
-        </div>
-
-        {/* Ana Kategoriler */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Münferit Konaklamalar */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="bg-green-500 text-white p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                  <h2 className="text-xl font-bold">Münferit Konaklamalar</h2>
-                </div>
-
-              </div>
-            </div>
-            <div className="p-6">
-              <p className="text-gray-600 mb-4">
-                Organizasyona bağlı olmayan, bireysel konaklama kayıtları.
-              </p>
-              <button
-                onClick={() => router.push('/konaklama/munferit')}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                Münferit Konaklamaları Görüntüle
-              </button>
-            </div>
+      <div className="min-h-screen bg-gray-50/50 p-4 sm:p-6 lg:p-8 space-y-8">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+              Konaklama Operasyon
+            </h1>
+            <p className="text-gray-500 mt-1">
+              Günlük operasyon ve misafir takibi
+            </p>
           </div>
-
-          {/* Organizasyonlar */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="bg-purple-500 text-white p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                  <h2 className="text-xl font-bold">Organizasyonlar</h2>
-                </div>
-                <span className="bg-purple-600 px-3 py-1 rounded-full text-sm font-medium">
-                  {organizations.length} organizasyon
-                </span>
-              </div>
-            </div>
-            <div className="p-6">
-              <p className="text-gray-600 mb-4">
-                Organizasyonlara bağlı konaklama kayıtları.
-              </p>
-              <button
-                onClick={() => router.push('/konaklama/organizasyonlar')}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                Organizasyonları Görüntüle
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Aktif Organizasyonlar Listesi */}
-        {organizations.filter(org => org.status === 'ACTIVE').length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Aktif Organizasyonlar</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {organizations
-                .filter(org => org.status === 'ACTIVE')
-                .slice(0, 6) // İlk 6 organizasyonu göster
-                .map((org) => (
-                  <div key={org.id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200 hover:shadow-lg transition-shadow">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-gray-800 truncate">{org.name}</h4>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(org.status)}`}>
-                        {org.status === 'ACTIVE' ? 'Aktif' : org.status}
-                      </span>
-                    </div>
-                    
-                    {org.description && (
-                      <p className="text-sm text-gray-600 mb-2 line-clamp-2">{org.description}</p>
-                    )}
-                    
-                    <div className="text-xs text-gray-500 mb-3">
-                      {org.baslangicTarihi && org.bitisTarihi && (
-                        <div className="mb-1">
-                          <span className="font-medium">Tarih:</span> {formatDate(org.baslangicTarihi)} - {formatDate(org.bitisTarihi)}
-                        </div>
-                      )}
-                      {org.lokasyon && (
-                        <div className="mb-1">
-                          <span className="font-medium">Lokasyon:</span> {org.lokasyon}
-                        </div>
-                      )}
-                      {org.sehir && (
-                        <div>
-                          <span className="font-medium">Şehir:</span> {org.sehir}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">
-                        {org._count?.accommodations || 0} konaklama kaydı
-                      </span>
-                      <button
-                        onClick={() => router.push(`/konaklama/organizasyonlar/${org.id}`)}
-                        className="text-purple-600 hover:text-purple-700 text-sm font-medium"
-                      >
-                        Detayları Gör →
-                      </button>
-                    </div>
-                  </div>
-                ))}
-            </div>
-            
-            {organizations.filter(org => org.status === 'ACTIVE').length > 6 && (
-              <div className="text-center mt-4">
-                <button
-                  onClick={() => router.push('/konaklama/organizasyonlar')}
-                  className="text-purple-600 hover:text-purple-700 font-medium"
-                >
-                  Tüm organizasyonları görüntüle →
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Hızlı İşlemler */}
-        <div className="mt-8">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Hızlı İşlemler</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => router.push('/konaklama/munferit?action=add')}
-              className="bg-green-600 hover:bg-green-700 text-white p-4 rounded-lg transition-colors flex items-center justify-center"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
             >
-              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Münferit Kayıt Ekle
+              <Plus className="w-4 h-4 mr-2" />
+              Yeni Kayıt
             </button>
-            
-            <button
-              onClick={() => router.push('/konaklama/organizasyonlar?action=add')}
-              className="bg-purple-600 hover:bg-purple-700 text-white p-4 rounded-lg transition-colors flex items-center justify-center"
-            >
-              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Organizasyon Kaydı Ekle
-            </button>
-            
-            <button
-              onClick={() => router.push('/konaklama/munferit?action=import')}
-              className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg transition-colors flex items-center justify-center"
-            >
-              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              Excel İçe Aktar
-            </button>
-            
-            <button
-              onClick={() => router.push('/konaklama/munferit?action=export')}
-              className="bg-orange-600 hover:bg-orange-700 text-white p-4 rounded-lg transition-colors flex items-center justify-center"
-            >
-              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Excel Dışa Aktar
-            </button>
+          </div>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                <BedDouble className="w-6 h-6" />
+              </div>
+              <span className="text-xs font-medium text-gray-400 uppercase">Konaklayan</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-3xl font-bold text-gray-900">{stats.inHouse}</h3>
+              <span className="text-sm text-gray-500">Misafir</span>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-green-50 text-green-600 rounded-lg">
+                <LogIn className="w-6 h-6" />
+              </div>
+              <span className="text-xs font-medium text-gray-400 uppercase">Bugün Giriş</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-3xl font-bold text-gray-900">{stats.arrivals}</h3>
+              <span className="text-sm text-gray-500">Misafir</span>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
+                <LogOut className="w-6 h-6" />
+              </div>
+              <span className="text-xs font-medium text-gray-400 uppercase">Bugün Çıkış</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-3xl font-bold text-gray-900">{stats.departures}</h3>
+              <span className="text-sm text-gray-500">Misafir</span>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                <Building className="w-6 h-6" />
+              </div>
+              <span className="text-xs font-medium text-gray-400 uppercase">Aktif Org.</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-3xl font-bold text-gray-900">{stats.activeOrgs}</h3>
+              <span className="text-sm text-gray-500">Organizasyon</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Operations Column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Today's Movements */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <h2 className="text-lg font-bold text-gray-900">Bugünün Hareketleri</h2>
+                  <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+                    <button
+                      onClick={() => setActiveTab('arrivals')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'arrivals'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                      Girişler
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('departures')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'departures'
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                    >
+                      Çıkışlar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Search within movements */}
+                <div className="mt-4 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Misafir veya otel ara..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-gray-50 text-gray-500 font-medium">
+                    <tr>
+                      <th className="px-6 py-3">Misafir</th>
+                      <th className="px-6 py-3">Otel</th>
+                      <th className="px-6 py-3">Oda Tipi</th>
+                      <th className="px-6 py-3">Durum</th>
+                      <th className="px-6 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {todaysMovements.length > 0 ? (
+                      todaysMovements.map((acc) => (
+                        <tr key={acc.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-gray-900">{acc.adiSoyadi}</div>
+                            <div className="text-xs text-gray-500">
+                              {acc.isMunferit ? 'Münferit' : acc.organization?.name}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600">{acc.otelAdi || '-'}</td>
+                          <td className="px-6 py-4 text-gray-600">{acc.odaTipi}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${activeTab === 'arrivals'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-orange-100 text-orange-800'
+                              }`}>
+                              {activeTab === 'arrivals' ? 'Giriş Yapacak' : 'Çıkış Yapacak'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button className="text-gray-400 hover:text-blue-600 transition-colors">
+                              <ChevronRight className="w-5 h-5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                          <div className="flex flex-col items-center justify-center">
+                            <Calendar className="w-12 h-12 text-gray-300 mb-3" />
+                            <p>Bugün için {activeTab === 'arrivals' ? 'giriş' : 'çıkış'} kaydı bulunamadı.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar Column */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <h3 className="font-bold text-gray-900 mb-4">Hızlı İşlemler</h3>
+              <div className="space-y-3">
+                <button
+                  onClick={() => router.push('/konaklama/munferit?action=add')}
+                  className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 text-gray-700 hover:text-blue-700 transition-all group"
+                >
+                  <span className="flex items-center gap-3">
+                    <Users className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
+                    Münferit Ekle
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500" />
+                </button>
+
+                <button
+                  onClick={() => router.push('/konaklama/organizasyonlar?action=add')}
+                  className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-purple-500 hover:bg-purple-50 text-gray-700 hover:text-purple-700 transition-all group"
+                >
+                  <span className="flex items-center gap-3">
+                    <Building className="w-5 h-5 text-gray-400 group-hover:text-purple-500" />
+                    Organizasyon Ekle
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-purple-500" />
+                </button>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button
+                    onClick={() => router.push('/konaklama/munferit?action=import')}
+                    className="flex flex-col items-center justify-center p-3 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors text-sm"
+                  >
+                    <FileUp className="w-5 h-5 mb-1" />
+                    İçe Aktar
+                  </button>
+                  <button
+                    onClick={() => router.push('/konaklama/munferit?action=export')}
+                    className="flex flex-col items-center justify-center p-3 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors text-sm"
+                  >
+                    <FileDown className="w-5 h-5 mb-1" />
+                    Dışa Aktar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Active Organizations */}
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-gray-900">Aktif Organizasyonlar</h3>
+                <button
+                  onClick={() => router.push('/konaklama/organizasyonlar')}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                >
+                  Tümü
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {organizations
+                  .filter(org => org.status === 'ACTIVE')
+                  .slice(0, 4)
+                  .map(org => (
+                    <div
+                      key={org.id}
+                      onClick={() => router.push(`/konaklama/organizasyonlar/${org.id}`)}
+                      className="group cursor-pointer"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-100 transition-colors">
+                          <Building className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-medium text-gray-900 truncate group-hover:text-purple-700 transition-colors">
+                            {org.name}
+                          </h4>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {formatDate(org.baslangicTarihi || '')} - {formatDate(org.bitisTarihi || '')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                {organizations.filter(org => org.status === 'ACTIVE').length === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    Aktif organizasyon bulunmuyor.
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

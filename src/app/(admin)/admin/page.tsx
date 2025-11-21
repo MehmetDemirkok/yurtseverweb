@@ -46,15 +46,15 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const router = useRouter();
-  
+
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  
+
   // Selected user for edit/delete
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  
+
   // Form data
   const [newUser, setNewUser] = useState<NewUser>({
     email: '',
@@ -92,8 +92,8 @@ export default function AdminPage() {
   // İzinler listesi - Dashboard modüllerine göre
   const PERMISSIONS = [
     { key: 'home', label: 'Otel Yönetimi' },
-    { key: 'transfer', label: 'Araç Takip' },
-    { key: 'transfer-sales', label: 'Transfer Satışları' },
+    // { key: 'transfer', label: 'Araç Takip' },
+    // { key: 'transfer-sales', label: 'Transfer Satışları' },
     { key: 'accommodation', label: 'Konaklama Satışları' },
     { key: 'user-management', label: 'Kullanıcı Yönetimi' },
     { key: 'logs', label: 'Sistem Logları' },
@@ -144,7 +144,7 @@ export default function AdminPage() {
     const mudur = users?.filter(u => u.role === 'MUDUR').length || 0;
     const operator = users?.filter(u => u.role === 'OPERATOR').length || 0;
     const kullanici = users?.filter(u => u.role === 'KULLANICI').length || 0;
-    
+
     setStats({ total, admin, mudur, operator, kullanici });
   }, [users]);
 
@@ -154,7 +154,7 @@ export default function AdminPage() {
 
     // Arama filtresi
     if (searchTerm) {
-      filtered = filtered.filter(user => 
+      filtered = filtered.filter(user =>
         user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -174,7 +174,7 @@ export default function AdminPage() {
     filtered.sort((a, b) => {
       let aValue: string | Date;
       let bValue: string | Date;
-      
+
       switch (sortBy) {
         case 'name':
           aValue = a.name || '';
@@ -210,13 +210,13 @@ export default function AdminPage() {
       if (res.ok) {
         const data = await res.json();
         let user = data.user;
-        
+
         // Eğer companyId eksikse, token'ı güncelle
         if (!user.companyId && user.role === 'MUDUR') {
           console.log('MUDUR kullanıcısının companyId bilgisi eksik, token güncelleniyor...');
-          const refreshRes = await fetch('/api/user/refresh-token', { 
+          const refreshRes = await fetch('/api/user/refresh-token', {
             method: 'POST',
-            credentials: 'include' 
+            credentials: 'include'
           });
           if (refreshRes.ok) {
             const refreshData = await refreshRes.json();
@@ -233,7 +233,7 @@ export default function AdminPage() {
             }
           }
         }
-        
+
         setCurrentUser(user);
       } else {
         console.error('Kullanıcı bilgisi alınamadı:', res.status);
@@ -268,7 +268,7 @@ export default function AdminPage() {
     if (currentUser?.role === 'MUDUR') {
       return;
     }
-    
+
     try {
       const res = await fetch('/api/companies', { credentials: 'include' });
       if (res.ok) {
@@ -287,13 +287,13 @@ export default function AdminPage() {
   // Modal handlers
   const openAddModal = () => {
     const initialCompanyId = currentUser?.role === 'MUDUR' ? (currentUser.companyId || 0) : 0;
-    setNewUser({ 
-      email: '', 
-      name: '', 
-      password: '', 
-      role: 'KULLANICI', 
-      permissions: [], 
-      companyId: initialCompanyId 
+    setNewUser({
+      email: '',
+      name: '',
+      password: '',
+      role: 'KULLANICI',
+      permissions: [],
+      companyId: initialCompanyId
     });
     setShowAddModal(true);
   };
@@ -305,10 +305,10 @@ export default function AdminPage() {
     if (user.role === 'ADMIN') {
       permissions = PERMISSIONS.map(p => p.key);
     }
-    setEditUser({ 
-      id: user.id, 
-      name: user.name || '', 
-      role: user.role, 
+    setEditUser({
+      id: user.id,
+      name: user.name || '',
+      role: user.role,
       permissions: permissions,
       companyId: user.companyId || 0
     });
@@ -392,9 +392,9 @@ export default function AdminPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ 
-          name: editUser.name, 
-          role: editUser.role, 
+        body: JSON.stringify({
+          name: editUser.name,
+          role: editUser.role,
           permissions: permissions,
           companyId: editUser.companyId === 0 ? null : editUser.companyId
         })
@@ -403,11 +403,11 @@ export default function AdminPage() {
       if (res.ok) {
         const updatedUser = await res.json();
 
-        setUsers(prev => prev.map(user => 
+        setUsers(prev => prev.map(user =>
           user.id === editUser.id ? updatedUser : user
         ));
         closeEditModal();
-        
+
         // Başarı mesajı göster
         alert('Kullanıcı izinleri başarıyla güncellendi! Değişikliklerin etkili olması için dashboard sayfasını yenileyin (F5).');
       } else {
@@ -477,7 +477,7 @@ export default function AdminPage() {
         </svg>
       );
     }
-    
+
     if (sortOrder === 'asc') {
       return (
         <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -485,7 +485,7 @@ export default function AdminPage() {
         </svg>
       );
     }
-    
+
     return (
       <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -510,7 +510,7 @@ export default function AdminPage() {
           <div className="text-red-600 text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Kullanıcı Bilgisi Alınamadı</h1>
           <p className="text-gray-600 mb-4">Lütfen sayfayı yenileyin veya tekrar giriş yapın.</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -529,7 +529,7 @@ export default function AdminPage() {
           <div className="text-red-600 text-6xl mb-4">🚫</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Erişim Kısıtlı</h1>
           <p className="text-gray-600 mb-4">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-          <Link 
+          <Link
             href="/dashboard"
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -539,7 +539,7 @@ export default function AdminPage() {
       </div>
     );
   }
-  
+
 
 
   return (
@@ -721,7 +721,7 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -877,7 +877,7 @@ export default function AdminPage() {
                   </button>
                 </div>
               </div>
-              
+
               <form onSubmit={handleAddUser} className="p-6 space-y-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">
@@ -892,7 +892,7 @@ export default function AdminPage() {
                     placeholder="kullanici@ornek.com"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">
                     Ad Soyad
@@ -905,7 +905,7 @@ export default function AdminPage() {
                     placeholder="Ad Soyad"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">
                     Şifre *
@@ -919,7 +919,7 @@ export default function AdminPage() {
                     placeholder="Güçlü bir şifre girin"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">
                     Role
@@ -929,12 +929,12 @@ export default function AdminPage() {
                     onChange={(e) => {
                       const newRole = e.target.value as 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
                       let newPermissions = newUser.permissions;
-                      
+
                       // Admin rolü seçilirse tüm izinleri ekle
                       if (newRole === 'ADMIN') {
                         newPermissions = PERMISSIONS.map(p => p.key);
                       }
-                      
+
                       setNewUser(prev => ({ ...prev, role: newRole, permissions: newPermissions }));
                     }}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -976,7 +976,7 @@ export default function AdminPage() {
                     </p>
                   )}
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Erişim İzinleri</label>
                   <div className="grid grid-cols-2 gap-3 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
@@ -999,7 +999,7 @@ export default function AdminPage() {
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
@@ -1064,12 +1064,12 @@ export default function AdminPage() {
                     onChange={(e) => {
                       const newRole = e.target.value as 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
                       let newPermissions = editUser.permissions;
-                      
+
                       // Admin rolü seçilirse tüm izinleri ekle
                       if (newRole === 'ADMIN') {
                         newPermissions = PERMISSIONS.map(p => p.key);
                       }
-                      
+
                       setEditUser(prev => ({ ...prev, role: newRole, permissions: newPermissions }));
                     }}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -1192,7 +1192,7 @@ export default function AdminPage() {
                     <div className="bg-red-100 text-red-700 font-bold text-sm mb-2 rounded-lg px-3 py-2 inline-block">Dikkat: Kendi hesabınızı silmek üzeresiniz! Bu işlemden sonra sistemden çıkış yapacaksınız.</div>
                   )}
                 </div>
-                
+
                 <div className="flex gap-3">
                   <button
                     onClick={handleDeleteUser}

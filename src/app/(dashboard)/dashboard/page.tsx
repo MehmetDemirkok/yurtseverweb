@@ -15,9 +15,9 @@ export default function DashboardPage() {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        
+
         // Güncel kullanıcı bilgilerini al
-        const res = await fetch('/api/user', { 
+        const res = await fetch('/api/user', {
           credentials: 'include',
           cache: 'no-store' // Cache'i devre dışı bırak
         });
@@ -42,12 +42,12 @@ export default function DashboardPage() {
     if (userRole === 'ADMIN') {
       return true;
     }
-    
+
     // Kullanıcı Yönetimi modülü için özel kontrol
     if (module === 'admin') {
       return userRole === 'MUDUR' || userRole === 'ADMIN';
     }
-    
+
     const hasAccess = canViewModule(userRole, module as any);
     return hasAccess;
   };
@@ -67,22 +67,22 @@ export default function DashboardPage() {
       color: 'blue',
       path: '/konaklama'
     },
-    {
-      key: 'vehicles',
-      title: 'Araç Takip',
-      description: 'Araç takip ve yönetim sistemine erişin',
-      icon: '🚗',
-      color: 'green',
-      path: '/moduller/transfer/araclar'
-    },
-    {
-      key: 'transfer_sales',
-      title: 'Transfer Satışları',
-      description: 'Transfer satış işlemlerini yönetin',
-      icon: '📊',
-      color: 'orange',
-      path: '/transfer-sales'
-    },
+    // {
+    //   key: 'vehicles',
+    //   title: 'Araç Takip',
+    //   description: 'Araç takip ve yönetim sistemine erişin',
+    //   icon: '🚗',
+    //   color: 'green',
+    //   path: '/moduller/transfer/araclar'
+    // },
+    // {
+    //   key: 'transfer_sales',
+    //   title: 'Transfer Satışları',
+    //   description: 'Transfer satış işlemlerini yönetin',
+    //   icon: '📊',
+    //   color: 'orange',
+    //   path: '/transfer-sales'
+    // },
     {
       key: 'accommodation_sales',
       title: 'Konaklama Satışları',
@@ -165,7 +165,7 @@ export default function DashboardPage() {
                 <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
                   Henüz size herhangi bir modül için izin verilmemiş. Lütfen sistem yöneticinizle iletişime geçin.
                 </p>
-                <Link 
+                <Link
                   href="/login"
                   className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base inline-block"
                 >
