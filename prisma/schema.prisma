@@ -34,8 +34,9 @@ model Company {
   hotels             Hotel[]
   logs               Log[]
   organizations      Organization[]
-  payments           Payment[]
-  users              User[]
+  payments                Payment[]
+  users                   User[]
+  financialTransactions   FinancialTransaction[]
 }
 
 model User {
@@ -49,6 +50,7 @@ model User {
   companyId   Int
   logs        Log[]
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  financialTransactions FinancialTransaction[]
 
   @@unique([email, companyId])
 }
@@ -237,4 +239,40 @@ enum PaymentStatus {
   FAILED
   CANCELLED
   REFUNDED
+}
+
+enum FinancialTransactionType {
+  GELIR
+  GIDER
+}
+
+enum FinancialTransactionCategory {
+  KONAKLAMA
+  TRANSFER
+  OFIS_GIDERLERI
+  TEDARIKCI_ODEMESI
+  MAAŞ
+  VERGI
+  DİĞER
+}
+
+model FinancialTransaction {
+  id          Int                        @id @default(autoincrement())
+  type        FinancialTransactionType
+  category    FinancialTransactionCategory
+  description String
+  amount      Float
+  date        DateTime
+  companyId   Int
+  userId      Int?
+  notes       String?
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+
+  company     Company                    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user        User?                      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([date])
+  @@index([type])
 }
