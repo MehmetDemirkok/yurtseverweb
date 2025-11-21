@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import SalesFolderTree from '@/app/components/SalesFolderTree';
 import {
   TrendingUp,
   DollarSign,
@@ -53,6 +54,9 @@ export default function AccommodationSalesPage() {
   const router = useRouter();
 
   const [sales, setSales] = useState<AccommodationSale[]>([]);
+  const [filteredSales, setFilteredSales] = useState<AccommodationSale[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('root');
+  const [showFolders, setShowFolders] = useState(true);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingSale, setEditingSale] = useState<AccommodationSale | null>(null);
@@ -72,8 +76,10 @@ export default function AccommodationSalesPage() {
       const res = await fetch('/api/accommodation-sales');
       if (res.ok) {
         const data = await res.json();
-        setSales(data.sales || []);
-        calculateStats(data.sales || []);
+        const salesData = data.sales || [];
+        setSales(salesData);
+        setFilteredSales(salesData);
+        calculateStats(salesData);
       }
     } catch (error) {
       console.error('Satış verileri yüklenemedi:', error);
@@ -95,6 +101,20 @@ export default function AccommodationSalesPage() {
       totalProfit,
       avgProfitMargin
     });
+  };
+
+  const handleFolderSelect = (folder: any) => {
+    setSelectedFolderId(folder.id);
+    if (folder.records) {
+      setFilteredSales(folder.records);
+      calculateStats(folder.records);
+    } else if (folder.id === 'root') {
+      setFilteredSales(sales);
+      calculateStats(sales);
+    } else {
+      setFilteredSales(sales);
+      calculateStats(sales);
+    }
   };
 
   const handleEdit = (sale: AccommodationSale) => {
@@ -121,7 +141,7 @@ export default function AccommodationSalesPage() {
   };
 
   const handleExportExcel = () => {
-    const exportData = sales.map(sale => ({
+    const exportData = filteredSales.map(sale => ({
       'Misafir': sale.adiSoyadi,
       'Ünvan': sale.unvani,
       'Otel': sale.otelAdi || '-',
@@ -149,7 +169,7 @@ export default function AccommodationSalesPage() {
     doc.setFontSize(18);
     doc.text('Konaklama Satış Listesi', 14, 22);
 
-    const tableData = sales.map(sale => [
+    const tableData = filteredSales.map(sale => [
       sale.adiSoyadi,
       sale.otelAdi || '-',
       `₺${sale.toplamAlisFiyati.toFixed(0)}`,
@@ -266,25 +286,53 @@ export default function AccommodationSalesPage() {
         />
       </div>
 
-      {/* Sales Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Misafir</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Otel</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alış</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kar</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödeme</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {sales.length === 0 ? (
+      {/* Main Content - Folder Tree + Table */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Folder Tree Sidebar */}
+        {showFolders && (
+          <div className="lg:col-span-1">
+            <SalesFolderTree
+              records={sales}
+              onFolderSelect={handleFolderSelect}
+              selectedFolderId={selectedFolderId}
+              viewMode="combined"
+            />
+          </div>
+        )}
+
+        {/* Sales Table */}
+        <div className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden ${showFolders ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
+          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {selectedFolderId === 'root' ? 'Tüm Satışlar' : `Seçili Klasör (${filteredSales.length} kayıt)`}
+              </h2>
+            </div>
+            <button
+              onClick={() => setShowFolders(!showFolders)}
+              className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors"
+            >
+              {showFolders ? 'Klasörleri Gizle' : 'Klasörleri Göster'}
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Misafir</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Otel</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alış</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satış</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kar</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödeme</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredSales.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center">
@@ -294,8 +342,8 @@ export default function AccommodationSalesPage() {
                     </div>
                   </td>
                 </tr>
-              ) : (
-                sales.map((sale) => (
+                ) : (
+                filteredSales.map((sale) => (
                   <tr key={sale.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
@@ -346,8 +394,9 @@ export default function AccommodationSalesPage() {
                   </tr>
                 ))
               )}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

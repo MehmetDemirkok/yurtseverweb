@@ -1,8 +1,8 @@
 // API Endpoints
 export const API_ENDPOINTS = {
   // Auth
-  LOGIN: '/api/user/login',
-  LOGOUT: '/api/user/logout',
+  LOGIN: '/api/auth/login',
+  LOGOUT: '/api/auth/logout',
   USERS: '/api/users',
   
   // Accommodation

@@ -5,13 +5,15 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import AccommodationTableSection from '@/app/components/AccommodationTableSection';
 import AccommodationFolderTree from '@/app/components/AccommodationFolderTree';
 import QuickAddRow from '@/app/components/QuickAddRow';
+import AccommodationStatistics from '@/app/components/AccommodationStatistics';
 import { transferToSales } from '@/lib/transferToSales';
 import {
   BedDouble,
   TrendingUp,
   DollarSign,
   Users,
-  ArrowRightCircle
+  ArrowRightCircle,
+  BarChart3
 } from 'lucide-react';
 import { AccommodationRecord } from '@/app/components/AccommodationTableSection';
 
@@ -31,6 +33,7 @@ export default function KonaklamaAlisPage() {
   const [filteredRecords, setFilteredRecords] = useState<AccommodationRecord[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string>('root');
   const [showFolders, setShowFolders] = useState(true);
+  const [showStatistics, setShowStatistics] = useState(false);
 
   useEffect(() => {
     // Fetch accommodation purchase statistics
@@ -157,6 +160,28 @@ export default function KonaklamaAlisPage() {
         />
       </div>
 
+      {/* İstatistikler Toggle */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowStatistics(!showStatistics)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+            showStatistics
+              ? 'bg-blue-600 text-white border-blue-600'
+              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          <span>{showStatistics ? 'İstatistikleri Gizle' : 'İstatistikleri Göster'}</span>
+        </button>
+      </div>
+
+      {/* İstatistikler */}
+      {showStatistics && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <AccommodationStatistics records={allRecords} />
+        </div>
+      )}
+
       {/* Main Content - Folder Tree + Table */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Folder Tree Sidebar */}
@@ -187,6 +212,14 @@ export default function KonaklamaAlisPage() {
             </button>
           </div>
 
+          {/* Quick Add Row - Tablonun Üstünde */}
+          <QuickAddRow
+            onAddRecord={(newRecord) => {
+              // Refresh the page to show new record
+              window.location.reload();
+            }}
+          />
+
           <AccommodationTableSection
             filterType="all"
             organizationId={undefined}
@@ -201,14 +234,6 @@ export default function KonaklamaAlisPage() {
             ]}
             onSelectionChange={setSelectedRecordIds}
             filteredRecords={filteredRecords}
-          />
-
-          {/* Quick Add Row */}
-          <QuickAddRow
-            onAddRecord={(newRecord) => {
-              // Refresh the page to show new record
-              window.location.reload();
-            }}
           />
         </div>
       </div>

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import * as XLSX from 'xlsx';
 import BulkActionsMenu from "./BulkActionsMenu";
 import AccommodationFormModal from "./AccommodationFormModal";
+import AdvancedFilters, { FilterState } from "./AdvancedFilters";
+import Pagination from "./Pagination";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -97,6 +99,11 @@ export default function AccommodationTableSection({
   const [filterOrg, setFilterOrg] = useState('');
   const [filterName, setFilterName] = useState('');
   const [filterTitle, setFilterTitle] = useState('');
+  const [advancedFilters, setAdvancedFilters] = useState<FilterState | null>(null);
+
+  // Sayfalama state'leri
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
 
   // Organizasyon state'leri
   const [organizations, setOrganizations] = useState<Array<{ id: number, name: string, status: string }>>([]);
@@ -567,15 +574,106 @@ export default function AccommodationTableSection({
     setSortDirection(null);
   };
 
-  // Filtrelenmiş kayıtlar (prop ile çakışmaması için displayRecords kullanıyoruz)
-  const displayRecords = records.filter((record) => {
-    const orgMatch = filterOrg ? record.organization?.name?.toLowerCase().includes(filterOrg.toLowerCase()) : true;
-    const nameMatch = filterName ? record.adiSoyadi?.toLowerCase().includes(filterName.toLowerCase()) : true;
-    const titleMatch = filterTitle ? record.unvani?.toLowerCase().includes(filterTitle.toLowerCase()) : true;
-    return orgMatch && nameMatch && titleMatch;
-  });
+  // Gelişmiş filtreleme mantığı
+  const advancedFilteredRecords = useMemo(() => {
+    return records.filter((record) => {
+      // Temel filtreler
+      const orgMatch = filterOrg ? record.organization?.name?.toLowerCase().includes(filterOrg.toLowerCase()) : true;
+      const nameMatch = filterName ? record.adiSoyadi?.toLowerCase().includes(filterName.toLowerCase()) : true;
+      const titleMatch = filterTitle ? record.unvani?.toLowerCase().includes(filterTitle.toLowerCase()) : true;
 
-  // Sıralanmış kayıtlar
+      if (!orgMatch || !nameMatch || !titleMatch) return false;
+
+      // Gelişmiş filtreler
+      if (advancedFilters) {
+        // Tarih aralığı
+        if (advancedFilters.dateRange.startDate) {
+          const checkIn = new Date(record.girisTarihi);
+          const startDate = new Date(advancedFilters.dateRange.startDate);
+          if (checkIn < startDate) return false;
+        }
+        if (advancedFilters.dateRange.endDate) {
+          const checkOut = new Date(record.cikisTarihi);
+          const endDate = new Date(advancedFilters.dateRange.endDate);
+          if (checkOut > endDate) return false;
+        }
+
+        // Fiyat aralığı
+        if (advancedFilters.priceRange.minPrice && record.toplamUcret < advancedFilters.priceRange.minPrice) {
+          return false;
+        }
+        if (advancedFilters.priceRange.maxPrice && record.toplamUcret > advancedFilters.priceRange.maxPrice) {
+          return false;
+        }
+
+        // Otel seçimi
+        if (advancedFilters.selectedHotels.length > 0) {
+          // Otel adı ile eşleştirme (Accommodation modelinde otelAdi string olarak saklanıyor)
+          const selectedHotelNames = hotels
+            .filter(h => advancedFilters.selectedHotels.includes(h.id))
+            .map(h => h.adi.toLowerCase());
+          
+          const recordHotelName = (record.otelAdi || '').toLowerCase();
+          if (!selectedHotelNames.includes(recordHotelName)) {
+            return false;
+          }
+        }
+
+        // Oda tipi
+        if (advancedFilters.roomType && record.odaTipi !== advancedFilters.roomType) {
+          return false;
+        }
+
+        // Konaklama tipi
+        if (advancedFilters.accommodationType && record.konaklamaTipi !== advancedFilters.accommodationType) {
+          return false;
+        }
+
+        // Gece sayısı
+        if (advancedFilters.nightsRange.minNights && (record.numberOfNights || 0) < advancedFilters.nightsRange.minNights) {
+          return false;
+        }
+        if (advancedFilters.nightsRange.maxNights && (record.numberOfNights || 0) > advancedFilters.nightsRange.maxNights) {
+          return false;
+        }
+
+        // Durum
+        if (advancedFilters.status !== 'all') {
+          const today = new Date();
+          const checkIn = new Date(record.girisTarihi);
+          const checkOut = new Date(record.cikisTarihi);
+          
+          if (advancedFilters.status === 'active') {
+            if (!(checkIn <= today && checkOut >= today)) return false;
+          } else if (advancedFilters.status === 'past') {
+            if (checkOut >= today) return false;
+          } else if (advancedFilters.status === 'upcoming') {
+            if (checkIn <= today) return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  }, [records, filterOrg, filterName, filterTitle, advancedFilters, hotels]);
+
+  // Filtrelenmiş kayıtlar (prop ile çakışmaması için displayRecords kullanıyoruz)
+  const displayRecords = advancedFilteredRecords;
+
+  // Sayfalama hesaplamaları
+  const totalPages = Math.ceil(displayRecords.length / itemsPerPage);
+  const paginatedRecords = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return displayRecords.slice(startIndex, endIndex);
+  }, [displayRecords, currentPage, itemsPerPage]);
+
+  // Sayfa değiştiğinde scroll to top
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterOrg, filterName, filterTitle, advancedFilters]);
+
+  // Sıralanmış kayıtlar (sayfalama öncesi)
   const sortedRecords = [...displayRecords].sort((a, b) => {
     if (!sortColumn || !sortDirection) return 0;
 
@@ -663,10 +761,10 @@ export default function AccommodationTableSection({
   };
 
   const handleSelectAll = () => {
-    if (selectedRecordIds.length === sortedRecords.length) {
+    if (selectedRecordIds.length === paginatedRecords.length) {
       setSelectedRecordIds([]);
     } else {
-      setSelectedRecordIds(sortedRecords.map(record => record.id));
+      setSelectedRecordIds(paginatedRecords.map(record => record.id));
     }
   };
 
@@ -692,48 +790,101 @@ export default function AccommodationTableSection({
         const headers = jsonData[0] as string[];
         const rows = jsonData.slice(1) as any[][];
 
-        const getColumnValue = (headerName: string): string => {
-          const index = headers.findIndex(h => h?.toString().toLowerCase().includes(headerName.toLowerCase()));
-          return index >= 0 ? (rows[0]?.[index]?.toString() || '') : '';
+        // Header indexlerini bul
+        const getHeaderIndex = (headerName: string): number => {
+          return headers.findIndex(h => h?.toString().toLowerCase().includes(headerName.toLowerCase()));
         };
 
-        const excelDateToISO = (excelDateSerial: string): string => {
-          if (!excelDateSerial) return '';
+        const headerIndices = {
+          adiSoyadi: getHeaderIndex('Adı Soyadı') >= 0 ? getHeaderIndex('Adı Soyadı') : 
+                     (getHeaderIndex('Ad Soyad') >= 0 ? getHeaderIndex('Ad Soyad') : 
+                     (getHeaderIndex('AdıSoyadı') >= 0 ? getHeaderIndex('AdıSoyadı') : 0)),
+          unvani: getHeaderIndex('Unvanı') >= 0 ? getHeaderIndex('Unvanı') : 
+                  (getHeaderIndex('Unvan') >= 0 ? getHeaderIndex('Unvan') : 1),
+          ulke: getHeaderIndex('Ülke') >= 0 ? getHeaderIndex('Ülke') : 
+                (getHeaderIndex('Ulke') >= 0 ? getHeaderIndex('Ulke') : 2),
+          sehir: getHeaderIndex('Şehir') >= 0 ? getHeaderIndex('Şehir') : 
+                 (getHeaderIndex('Sehir') >= 0 ? getHeaderIndex('Sehir') : 3),
+          girisTarihi: getHeaderIndex('Giriş Tarihi') >= 0 ? getHeaderIndex('Giriş Tarihi') : 
+                       (getHeaderIndex('Giris Tarihi') >= 0 ? getHeaderIndex('Giris Tarihi') : 
+                       (getHeaderIndex('GirişTarihi') >= 0 ? getHeaderIndex('GirişTarihi') : 4)),
+          cikisTarihi: getHeaderIndex('Çıkış Tarihi') >= 0 ? getHeaderIndex('Çıkış Tarihi') : 
+                       (getHeaderIndex('Cikis Tarihi') >= 0 ? getHeaderIndex('Cikis Tarihi') : 
+                       (getHeaderIndex('ÇıkışTarihi') >= 0 ? getHeaderIndex('ÇıkışTarihi') : 5)),
+          odaTipi: getHeaderIndex('Oda Tipi') >= 0 ? getHeaderIndex('Oda Tipi') : 
+                   (getHeaderIndex('OdaTipi') >= 0 ? getHeaderIndex('OdaTipi') : 6),
+          konaklamaTipi: getHeaderIndex('Konaklama Tipi') >= 0 ? getHeaderIndex('Konaklama Tipi') : 
+                        (getHeaderIndex('KonaklamaTipi') >= 0 ? getHeaderIndex('KonaklamaTipi') : 7),
+          gecelikUcret: getHeaderIndex('Gecelik Ücret') >= 0 ? getHeaderIndex('Gecelik Ücret') : 
+                        (getHeaderIndex('GecelikUcret') >= 0 ? getHeaderIndex('GecelikUcret') : 8),
+          otelAdi: getHeaderIndex('Otel Adı') >= 0 ? getHeaderIndex('Otel Adı') : 
+                   (getHeaderIndex('OtelAdi') >= 0 ? getHeaderIndex('OtelAdi') : 10),
+          kurumCari: getHeaderIndex('Cari') >= 0 ? getHeaderIndex('Cari') : 
+                     (getHeaderIndex('Kurum / Cari') >= 0 ? getHeaderIndex('Kurum / Cari') : 
+                     (getHeaderIndex('Kurum Cari') >= 0 ? getHeaderIndex('Kurum Cari') : 
+                     (getHeaderIndex('KurumCari') >= 0 ? getHeaderIndex('KurumCari') : 11)))
+        };
+
+        const excelDateToISO = (value: any): string => {
+          if (!value) return '';
+          
+          // Eğer zaten ISO formatında ise (YYYY-MM-DD)
+          if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            return value;
+          }
+          
+          // Eğer tarih string formatında ise (DD/MM/YYYY veya DD.MM.YYYY)
+          if (typeof value === 'string') {
+            const dateStr = value.trim();
+            // DD/MM/YYYY veya DD.MM.YYYY formatını kontrol et
+            const dateMatch = dateStr.match(/(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})/);
+            if (dateMatch) {
+              const [, day, month, year] = dateMatch;
+              return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+            
+            // Tarih objesi olarak parse et
+            const parsedDate = new Date(dateStr);
+            if (!isNaN(parsedDate.getTime())) {
+              return parsedDate.toISOString().split('T')[0];
+            }
+          }
+          
+          // Excel tarih serisi numarasını JavaScript tarihine çevir
           try {
-            // Excel tarih serisi numarasını JavaScript tarihine çevir
-            const excelDate = parseFloat(excelDateSerial);
-            if (isNaN(excelDate)) return excelDateSerial;
-
+            const excelDate = typeof value === 'number' ? value : parseFloat(value);
+            if (isNaN(excelDate)) return '';
+            
             // Excel'in başlangıç tarihi (1900-01-01) ile JavaScript'in başlangıç tarihi (1970-01-01) arasındaki fark
-            const excelEpoch = new Date(1900, 0, 1);
-            const jsEpoch = new Date(1970, 0, 1);
-            const epochDiff = jsEpoch.getTime() - excelEpoch.getTime();
-
-            // Excel tarihini JavaScript tarihine çevir
-            const jsDate = new Date(excelDate * 24 * 60 * 60 * 1000 + epochDiff);
-
+            const excelEpoch = new Date(1899, 11, 30); // Excel 1900-01-01 = 1, ama JavaScript'te 1899-12-30
+            const jsDate = new Date(excelEpoch.getTime() + (excelDate - 1) * 24 * 60 * 60 * 1000);
+            
             // YYYY-MM-DD formatına çevir
             return jsDate.toISOString().split('T')[0];
           } catch (error) {
-            return excelDateSerial;
+            return '';
           }
         };
 
-        const newRecords = rows.map((row, index) => {
-          const adiSoyadi = getColumnValue('Adı Soyadı') || getColumnValue('Ad Soyad') || getColumnValue('AdıSoyadı') || row[0]?.toString() || '';
-          const unvani = getColumnValue('Unvanı') || getColumnValue('Unvan') || row[1]?.toString() || '';
-          const ulke = getColumnValue('Ülke') || getColumnValue('Ulke') || row[2]?.toString() || '';
-          const sehir = getColumnValue('Şehir') || getColumnValue('Sehir') || getColumnValue('Şehir') || row[3]?.toString() || '';
-          const girisTarihi = excelDateToISO(getColumnValue('Giriş Tarihi') || getColumnValue('Giris Tarihi') || getColumnValue('GirişTarihi') || row[4]?.toString() || '');
-          const cikisTarihi = excelDateToISO(getColumnValue('Çıkış Tarihi') || getColumnValue('Cikis Tarihi') || getColumnValue('ÇıkışTarihi') || row[5]?.toString() || '');
-          const odaTipi = getColumnValue('Oda Tipi') || getColumnValue('OdaTipi') || row[6]?.toString() || 'Single Oda';
-          const konaklamaTipi = (getColumnValue('Konaklama Tipi') || getColumnValue('KonaklamaTipi') || row[7]?.toString() || 'BB') as "BB" | "HB" | "FB" | "UHD";
-          const gecelikUcret = parseFloat(getColumnValue('Gecelik Ücret') || getColumnValue('GecelikUcret') || row[8]?.toString() || '0') || 0;
+        const newRecords = rows.map((row, rowIndex) => {
+          const getValue = (index: number, defaultValue: string = '') => {
+            return row[index]?.toString().trim() || defaultValue;
+          };
 
-          const otelAdi = getColumnValue('Otel Adı') || getColumnValue('OtelAdi') || row[10]?.toString() || '';
-          const kurumCari = getColumnValue('Cari') || getColumnValue('Kurum / Cari') || getColumnValue('Kurum Cari') || getColumnValue('KurumCari') || row[11]?.toString() || '';
+          const adiSoyadi = getValue(headerIndices.adiSoyadi);
+          const unvani = getValue(headerIndices.unvani);
+          const ulke = getValue(headerIndices.ulke, 'Türkiye');
+          const sehir = getValue(headerIndices.sehir);
+          const girisTarihi = excelDateToISO(row[headerIndices.girisTarihi]);
+          const cikisTarihi = excelDateToISO(row[headerIndices.cikisTarihi]);
+          const odaTipi = getValue(headerIndices.odaTipi, 'Single Oda');
+          const konaklamaTipi = (getValue(headerIndices.konaklamaTipi, 'BB') as "BB" | "HB" | "FB" | "UHD");
+          const gecelikUcret = parseFloat(getValue(headerIndices.gecelikUcret, '0')) || 0;
+          const otelAdi = getValue(headerIndices.otelAdi);
+          const kurumCari = getValue(headerIndices.kurumCari);
 
           if (!adiSoyadi || !girisTarihi || !cikisTarihi) {
+            console.warn(`Satır ${rowIndex + 2} atlandı: Eksik zorunlu alanlar`, { adiSoyadi, girisTarihi, cikisTarihi });
             return null;
           }
 
@@ -776,12 +927,15 @@ export default function AccommodationTableSection({
           setRecords(prev => [...prev, ...createdRecords]);
           alert(`${newRecords.length} kayıt başarıyla içe aktarıldı!`);
           setShowImportModal(false);
+          // Sayfayı yenile
+          window.location.reload();
         } else {
-          alert('Kayıtlar içe aktarılamadı!');
+          const errorData = await res.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+          alert(`Kayıtlar içe aktarılamadı: ${errorData.error || 'Bilinmeyen hata'}`);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Excel import error:', error);
-        alert('Excel dosyası okunamadı!');
+        alert(`Excel dosyası okunamadı: ${error.message || 'Bilinmeyen hata'}`);
       }
     };
     reader.readAsArrayBuffer(file);
@@ -834,7 +988,7 @@ export default function AccommodationTableSection({
     }
 
     // Seçili sütunlara göre veriyi filtrele
-    const exportData = sortedRecords.map(record => {
+    const exportData = displayRecords.map(record => {
       const filteredRecord: any = {};
       selectedColumns.forEach(column => {
         const colDef = availableColumns.find(c => c.key === column);
@@ -864,13 +1018,25 @@ export default function AccommodationTableSection({
       return;
     }
 
-    const doc = new jsPDF();
+    const doc = new jsPDF({
+      orientation: 'landscape', // Yatay yönlendirme daha geniş tablo için
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Türkçe karakter desteği için font ayarları
+    doc.setFont('helvetica', 'normal');
 
     // Başlık
     doc.setFontSize(18);
-    doc.text("Konaklama Listesi", 14, 22);
-    doc.setFontSize(11);
-    doc.text(`Oluşturulma Tarihi: ${new Date().toLocaleDateString('tr-TR')}`, 14, 30);
+    doc.text("Konaklama Listesi", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Oluşturulma Tarihi: ${new Date().toLocaleDateString('tr-TR', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    })}`, 14, 22);
+    doc.text(`Toplam Kayıt: ${displayRecords.length}`, 14, 27);
 
     // Tablo başlıkları ve verileri
     const tableHeaders = selectedColumns.map(col => {
@@ -878,23 +1044,95 @@ export default function AccommodationTableSection({
       return colDef ? colDef.label : col;
     });
 
-    const tableData = sortedRecords.map(record => {
+    const tableData = displayRecords.map(record => {
       return selectedColumns.map(column => {
         let value: any = record[column as keyof AccommodationRecord];
+        
+        // Veri formatlama
         if (column === 'girisTarihi' || column === 'cikisTarihi') {
           value = formatDate(value as string);
+        } else if (column === 'gecelikUcret' || column === 'toplamUcret') {
+          // Para birimi formatı
+          value = typeof value === 'number' ? `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (value || '₺0,00');
+        } else if (column === 'numberOfNights') {
+          // Gece sayısı formatı
+          value = value ? `${value} gece` : '0 gece';
+        } else if (column === 'id') {
+          // ID formatı
+          value = value ? `#${value}` : '';
+        } else if (value === null || value === undefined) {
+          value = '-';
+        } else {
+          // String değerleri temizle
+          value = String(value).trim();
         }
-        return value || '';
+        
+        return value || '-';
       });
+    });
+
+    // Tablo genişliklerini ayarla
+    const columnWidths = selectedColumns.map(col => {
+      // Sütun tipine göre genişlik belirle
+      if (col === 'id') return 15;
+      if (col === 'adiSoyadi' || col === 'unvani') return 35;
+      if (col === 'girisTarihi' || col === 'cikisTarihi') return 25;
+      if (col === 'gecelikUcret' || col === 'toplamUcret') return 30;
+      if (col === 'otelAdi') return 40;
+      if (col === 'ulke' || col === 'sehir') return 25;
+      if (col === 'odaTipi' || col === 'konaklamaTipi') return 25;
+      if (col === 'numberOfNights') return 20;
+      return 30; // Varsayılan genişlik
     });
 
     autoTable(doc, {
       head: [tableHeaders],
       body: tableData,
-      startY: 40,
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [66, 139, 202] }, // Mavi başlık
+      startY: 32,
+      styles: { 
+        fontSize: 7, 
+        cellPadding: 2,
+        font: 'helvetica',
+        textColor: [0, 0, 0],
+        overflow: 'linebreak',
+        cellWidth: 'wrap'
+      },
+      headStyles: { 
+        fillColor: [66, 139, 202],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 8
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245]
+      },
+      columnStyles: selectedColumns.reduce((acc, col, index) => {
+        acc[index] = { 
+          cellWidth: columnWidths[index],
+          halign: col === 'gecelikUcret' || col === 'toplamUcret' || col === 'numberOfNights' || col === 'id' ? 'right' : 
+                  col === 'girisTarihi' || col === 'cikisTarihi' ? 'center' : 'left'
+        };
+        return acc;
+      }, {} as any),
+      margin: { top: 32, right: 10, bottom: 10, left: 10 },
+      tableWidth: 'wrap',
+      showHead: 'everyPage',
+      pageBreak: 'auto',
+      theme: 'striped',
     });
+
+    // Her sayfaya sayfa numarası ekle
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.text(
+        `Sayfa ${i} / ${pageCount}`,
+        doc.internal.pageSize.getWidth() / 2,
+        doc.internal.pageSize.getHeight() - 5,
+        { align: 'center' }
+      );
+    }
 
     doc.save("Konaklama_Listesi.pdf");
     setShowExportFilterModal(false);
@@ -924,6 +1162,17 @@ export default function AccommodationTableSection({
             className="px-3 py-2 border rounded-md text-sm"
             value={filterOrg}
             onChange={(e) => setFilterOrg(e.target.value)}
+          />
+          
+          {/* Gelişmiş Filtreler */}
+          <AdvancedFilters
+            hotels={hotels.map(h => ({ id: h.id, adi: h.adi }))}
+            onFilterChange={(filters) => {
+              setAdvancedFilters(filters);
+            }}
+            onReset={() => {
+              setAdvancedFilters(null);
+            }}
           />
           
           {/* Bulk Actions Menu */}
@@ -980,7 +1229,7 @@ export default function AccommodationTableSection({
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <input
                     type="checkbox"
-                    checked={selectedRecordIds.length === sortedRecords.length && sortedRecords.length > 0}
+                    checked={selectedRecordIds.length === paginatedRecords.length && paginatedRecords.length > 0}
                     onChange={handleSelectAll}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
@@ -1030,14 +1279,14 @@ export default function AccommodationTableSection({
                     Yükleniyor...
                   </td>
                 </tr>
-              ) : sortedRecords.length === 0 ? (
+              ) : paginatedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
                     Kayıt bulunamadı.
                   </td>
                 </tr>
               ) : (
-                sortedRecords.map((record) => (
+                paginatedRecords.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
@@ -1089,6 +1338,21 @@ export default function AccommodationTableSection({
             </tbody>
           </table>
         </div>
+        
+        {/* Sayfalama */}
+        {displayRecords.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={displayRecords.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={(newItemsPerPage) => {
+              setItemsPerPage(newItemsPerPage);
+              setCurrentPage(1);
+            }}
+          />
+        )}
       </div>
 
       {/* Import Modal */}
