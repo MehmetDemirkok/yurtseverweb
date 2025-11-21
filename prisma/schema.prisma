@@ -8,44 +8,34 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// ============================================
-// CORE MODELS
-// ============================================
-
 model Company {
-  id            Int      @id @default(autoincrement())
-  name          String
-  email         String   @unique
-  phone         String?
-  address       String?
-  city          String?
-  country       String   @default("Türkiye")
-  taxNumber     String?
-  taxOffice     String?
-  logo          String?
-  status        CompanyStatus @default(ACTIVE)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  // Arvento entegrasyonu (gelecekte kullanılabilir)
-  arventoApiKey       String?
-  arventoBaseUrl      String?   @default("https://api.arvento.com")
-  arventoLastTest     DateTime?
-  arventoIsConnected  Boolean   @default(false)
-  
-  // Ödeme sistemi
-  plan                CompanyPlan @default(FREE)
-  planExpiresAt       DateTime?
-  freeLimitReached    Boolean   @default(false)
-  
-  // Relations
-  users              User[]
+  id                 Int                 @id @default(autoincrement())
+  name               String
+  email              String              @unique
+  phone              String?
+  address            String?
+  city               String?
+  country            String              @default("Türkiye")
+  taxNumber          String?
+  taxOffice          String?
+  logo               String?
+  status             CompanyStatus       @default(ACTIVE)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  arventoApiKey      String?
+  arventoBaseUrl     String?             @default("https://api.arvento.com")
+  arventoIsConnected Boolean             @default(false)
+  arventoLastTest    DateTime?
+  plan               CompanyPlan         @default(FREE)
+  planExpiresAt      DateTime?
+  freeLimitReached   Boolean             @default(false)
   accommodations     Accommodation[]
   accommodationSales AccommodationSale[]
   hotels             Hotel[]
   logs               Log[]
   organizations      Organization[]
   payments           Payment[]
+  users              User[]
 }
 
 model User {
@@ -58,45 +48,37 @@ model User {
   permissions String[] @default([])
   companyId   Int
   logs        Log[]
-  
-  // Relations
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  
+
   @@unique([email, companyId])
 }
 
-// ============================================
-// ACCOMMODATION MODELS
-// ============================================
-
 model Organization {
-  id            Int      @id @default(autoincrement())
-  name          String
-  description   String?
-  contactPerson String?
-  contactEmail  String?
-  contactPhone  String?
+  id              Int                @id @default(autoincrement())
+  name            String
+  description     String?
+  contactPerson   String?
+  contactEmail    String?
+  contactPhone    String?
+  status          OrganizationStatus @default(ACTIVE)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  companyId       Int
   baslangicTarihi DateTime?
-  bitisTarihi   DateTime?
-  lokasyon      String?
-  sehir         String?
-  ulke          String?
-  status        OrganizationStatus @default(ACTIVE)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  companyId     Int
-  hotelId       Int?
-  
-  // Relations
-  company       Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  hotel         Hotel?  @relation(fields: [hotelId], references: [id], onDelete: SetNull)
-  accommodations Accommodation[]
-  
+  bitisTarihi     DateTime?
+  hotelId         Int?
+  lokasyon        String?
+  sehir           String?
+  ulke            String?
+  accommodations  Accommodation[]
+  company         Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  hotel           Hotel?             @relation(fields: [hotelId], references: [id])
+
   @@unique([name, companyId])
 }
 
 model Accommodation {
-  id              Int     @id @default(autoincrement())
+  id              Int                 @id @default(autoincrement())
   adiSoyadi       String
   unvani          String
   ulke            String
@@ -107,120 +89,91 @@ model Accommodation {
   konaklamaTipi   String
   gecelikUcret    Float
   toplamUcret     Float
+  organizasyonAdi String?
   otelAdi         String?
+  kurumCari       String?
   numberOfNights  Int?
   companyId       Int
-  organizationId  Int? // Organizasyon ilişkisi
-  
-  // Geriye uyumluluk için eski alanlar (deprecated)
-  organizasyonAdi String? // Eski alan - organizationId kullanılmalı
-  kurumCari       String? // Cari bilgisi (string olarak)
-  
-  isMunferit      Boolean @default(false) // Münferit konaklama kontrolü
-  isTransferred   Boolean @default(false) // Satışa aktarıldı mı?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  company         Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-  sales           AccommodationSale[] // Satış kayıtları
+  isMunferit      Boolean             @default(false)
+  organizationId  Int?
+  createdAt       DateTime            @default(now())
+  isTransferred   Boolean             @default(false)
+  updatedAt       DateTime            @updatedAt
+  company         Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  organization    Organization?       @relation(fields: [organizationId], references: [id])
+  sales           AccommodationSale[]
 }
 
 model AccommodationSale {
-  id                  Int      @id @default(autoincrement())
-  accommodationId     Int      // Alış kaydı referansı
-  adiSoyadi           String   // Misafir adı
-  unvani              String   // Misafir ünvanı
-  ulke                String
-  sehir               String
-  girisTarihi         String
-  cikisTarihi         String
-  odaTipi             String
-  konaklamaTipi       String
-  otelAdi             String?
-  
-  // Alış bilgileri
-  alisFiyati          Float    // Gecelik alış fiyatı
-  toplamAlisFiyati    Float    // Toplam alış maliyeti
-  
-  // Satış bilgileri
-  satisFiyati         Float    @default(0) // Gecelik satış fiyatı (opsiyonel)
-  toplamSatisFiyati   Float    @default(0) // Toplam satış tutarı (opsiyonel)
-  kar                 Float    @default(0) // Kar tutarı
-  karOrani            Float    @default(0) // Kar oranı (%)
-  
-  // Müşteri bilgileri
-  musteriAdi          String?  // Satış yapılan müşteri
-  musteriCariKodu    String?  // Müşteri cari kodu
-  faturaDurumu       SaleFaturaStatus @default(BEKLIYOR)
-  odemeDurumu        SalePaymentStatus @default(ODENMEDI)
-  
-  // Notlar ve detaylar
-  notlar              String?
-  odenenTutar         Float    @default(0)
-  kalanTutar          Float    @default(0)
-  
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  companyId           Int
-  
-  // Relations
-  accommodation       Accommodation @relation(fields: [accommodationId], references: [id], onDelete: Cascade)
-  company             Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id                Int               @id @default(autoincrement())
+  accommodationId   Int
+  adiSoyadi         String
+  unvani            String
+  ulke              String
+  sehir             String
+  girisTarihi       String
+  cikisTarihi       String
+  odaTipi           String
+  konaklamaTipi     String
+  otelAdi           String?
+  alisFiyati        Float
+  toplamAlisFiyati  Float
+  satisFiyati       Float             @default(0)
+  toplamSatisFiyati Float             @default(0)
+  kar               Float             @default(0)
+  karOrani          Float             @default(0)
+  musteriAdi        String?
+  musteriCariKodu   String?
+  faturaDurumu      SaleFaturaStatus  @default(BEKLIYOR)
+  odemeDurumu       SalePaymentStatus @default(ODENMEDI)
+  notlar            String?
+  odenenTutar       Float             @default(0)
+  kalanTutar        Float             @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  companyId         Int
+  accommodation     Accommodation     @relation(fields: [accommodationId], references: [id], onDelete: Cascade)
+  company           Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
 model Hotel {
-  id           Int        @id @default(autoincrement())
-  adi          String
-  adres        String
-  sehir        String
-  ulke         String
-  telefon      String?
-  email        String?
-  website      String?
-  yildizSayisi Int        @default(0)
-  puan         Float      @default(0.0)
-  aciklama     String?
-  durum        HotelDurum @default(AKTIF)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  companyId    Int
-  
-  // Relations
-  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id            Int            @id @default(autoincrement())
+  adi           String
+  adres         String
+  sehir         String
+  ulke          String
+  telefon       String?
+  email         String?
+  website       String?
+  yildizSayisi  Int            @default(0)
+  puan          Float          @default(0.0)
+  aciklama      String?
+  durum         HotelDurum     @default(AKTIF)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  companyId     Int
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   organizations Organization[]
 }
 
-// ============================================
-// PAYMENT MODELS
-// ============================================
-
 model Payment {
-  id              Int         @id @default(autoincrement())
-  companyId       Int
-  amount          Float       // Ödeme tutarı (USD)
-  currency        String      @default("USD")
-  plan            CompanyPlan // Hangi plan için ödeme yapıldı
-  status          PaymentStatus @default(PENDING)
-  paymentMethod   String?     // Ödeme yöntemi (stripe, paypal, vb.)
-  transactionId   String?     // Ödeme işlem ID'si
-  notes           String?     // Notlar
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime   @updatedAt
-  paidAt          DateTime?   // Ödeme yapıldığı tarih
-  
-  // Relations
-  company         Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  
+  id            Int           @id @default(autoincrement())
+  companyId     Int
+  amount        Float
+  currency      String        @default("USD")
+  plan          CompanyPlan
+  status        PaymentStatus @default(PENDING)
+  paymentMethod String?
+  transactionId String?
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  paidAt        DateTime?
+  company       Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
   @@index([companyId])
   @@index([status])
 }
-
-// ============================================
-// SYSTEM MODELS
-// ============================================
 
 model Log {
   id         Int      @id @default(autoincrement())
@@ -229,19 +182,13 @@ model Log {
   recordId   Int
   recordData String
   userId     Int?
-  companyId  Int
   createdAt  DateTime @default(now())
   ipAddress  String?
   userAgent  String?
-  
-  // Relations
-  user       User?    @relation(fields: [userId], references: [id])
+  companyId  Int
   company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id])
 }
-
-// ============================================
-// ENUMS
-// ============================================
 
 enum CompanyStatus {
   ACTIVE

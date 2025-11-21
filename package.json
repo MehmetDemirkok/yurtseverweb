@@ -11,6 +11,8 @@
     "seed:clear": "node prisma/seed.js --clear",
     "seed:test": "node prisma/seed.js",
     "seed:accommodations": "node scripts/createTestAccommodations.js",
+    "add-test-accommodations": "node scripts/addTestAccommodations.js",
+    "reset-accommodations": "node scripts/resetAccommodationsForTest.js",
     "clear-demo": "node scripts/clearDemoData.js",
     "create-admin": "node scripts/createAdmin.js"
   },
