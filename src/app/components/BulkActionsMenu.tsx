@@ -160,33 +160,64 @@ export default function BulkActionsMenu({
             )}
 
             {/* Özel İşlemler */}
-            {customActions.map((action, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  action.onClick();
-                  setIsOpen(false);
-                }}
-                className={`w-full px-4 py-3 text-left transition-colors duration-150 flex items-center gap-3 group ${
-                  action.color === 'red' ? 'hover:bg-red-50' : 'hover:bg-gray-50'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                  action.color === 'red' 
-                    ? 'bg-red-100 group-hover:bg-red-200' 
-                    : 'bg-gray-100 group-hover:bg-gray-200'
-                }`}>
-                  {action.icon || (
-                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )}
-                </div>
-                <div>
-                  <div className="font-medium text-gray-800">{action.label}</div>
-                </div>
-              </button>
-            ))}
+            {customActions.map((action, index) => {
+              const getColorClasses = (color?: string) => {
+                switch (color) {
+                  case 'red':
+                    return {
+                      hover: 'hover:bg-red-50',
+                      bg: 'bg-red-100 group-hover:bg-red-200',
+                      text: 'text-red-600'
+                    };
+                  case 'green':
+                    return {
+                      hover: 'hover:bg-green-50',
+                      bg: 'bg-green-100 group-hover:bg-green-200',
+                      text: 'text-green-600'
+                    };
+                  case 'blue':
+                    return {
+                      hover: 'hover:bg-blue-50',
+                      bg: 'bg-blue-100 group-hover:bg-blue-200',
+                      text: 'text-blue-600'
+                    };
+                  default:
+                    return {
+                      hover: 'hover:bg-gray-50',
+                      bg: 'bg-gray-100 group-hover:bg-gray-200',
+                      text: 'text-gray-600'
+                    };
+                }
+              };
+              
+              const colors = getColorClasses(action.color);
+              
+              return (
+                <button
+                  key={index}
+                  onClick={() => {
+                    action.onClick();
+                    setIsOpen(false);
+                  }}
+                  className={`w-full px-4 py-3 text-left transition-colors duration-150 flex items-center gap-3 group ${colors.hover}`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${colors.bg}`}>
+                    {action.icon ? (
+                      <div className={colors.text}>
+                        {action.icon}
+                      </div>
+                    ) : (
+                      <svg className={`w-4 h-4 ${colors.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-800">{action.label}</div>
+                  </div>
+                </button>
+              );
+            })}
 
             {/* Ayırıcı */}
             <div className="border-t border-gray-200 my-2"></div>

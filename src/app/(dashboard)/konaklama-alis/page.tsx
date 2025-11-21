@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import AccommodationTableSection from '@/app/components/AccommodationTableSection';
+import AccommodationFolderTree from '@/app/components/AccommodationFolderTree';
 import QuickAddRow from '@/app/components/QuickAddRow';
 import { transferToSales } from '@/lib/transferToSales';
 import {
@@ -12,6 +13,7 @@ import {
   Users,
   ArrowRightCircle
 } from 'lucide-react';
+import { AccommodationRecord } from '@/app/components/AccommodationTableSection';
 
 export default function KonaklamaAlisPage() {
   const searchParams = useSearchParams();
@@ -25,6 +27,10 @@ export default function KonaklamaAlisPage() {
     suppliers: 0
   });
   const [selectedRecordIds, setSelectedRecordIds] = useState<number[]>([]);
+  const [allRecords, setAllRecords] = useState<AccommodationRecord[]>([]);
+  const [filteredRecords, setFilteredRecords] = useState<AccommodationRecord[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('root');
+  const [showFolders, setShowFolders] = useState(true);
 
   useEffect(() => {
     // Fetch accommodation purchase statistics
@@ -33,17 +39,20 @@ export default function KonaklamaAlisPage() {
         const res = await fetch('/api/accommodation?isMunferit=false');
         if (res.ok) {
           const data = await res.json();
-          const accommodations = data.accommodations || [];
+          const accommodations = Array.isArray(data) ? data : (data.accommodations || []);
+
+          setAllRecords(accommodations);
+          setFilteredRecords(accommodations);
 
           // Calculate stats
           const totalCost = accommodations.reduce((sum: number, acc: any) => {
-            return sum + (parseFloat(acc.ucret) || 0);
+            return sum + (parseFloat(acc.toplamUcret) || 0);
           }, 0);
 
           const activeGuests = accommodations.filter((acc: any) => {
             const today = new Date();
-            const checkIn = new Date(acc.giris);
-            const checkOut = new Date(acc.cikis);
+            const checkIn = new Date(acc.girisTarihi);
+            const checkOut = new Date(acc.cikisTarihi);
             return checkIn <= today && checkOut >= today;
           }).length;
 
@@ -51,7 +60,7 @@ export default function KonaklamaAlisPage() {
             totalRecords: accommodations.length,
             totalCost: totalCost,
             activeGuests: activeGuests,
-            suppliers: new Set(accommodations.map((acc: any) => acc.otel)).size
+            suppliers: new Set(accommodations.map((acc: any) => acc.otelAdi).filter(Boolean)).size
           });
         }
       } catch (error) {
@@ -61,6 +70,18 @@ export default function KonaklamaAlisPage() {
 
     fetchStats();
   }, []);
+
+  const handleFolderSelect = (folder: any) => {
+    setSelectedFolderId(folder.id);
+    if (folder.records) {
+      setFilteredRecords(folder.records);
+    } else if (folder.id === 'root') {
+      setFilteredRecords(allRecords);
+    } else {
+      // Eğer klasörün kayıtları yoksa, tüm kayıtları göster
+      setFilteredRecords(allRecords);
+    }
+  };
 
   const handleTransferToSales = async (ids: number[]) => {
     if (ids.length === 0) {
@@ -76,7 +97,7 @@ export default function KonaklamaAlisPage() {
       const result = await transferToSales(ids);
       alert(result.message || 'Kayıtlar başarıyla satışa aktarıldı!');
       // Redirect to sales page
-      router.push('/accommodation-sales');
+      router.push('/konaklama-satis');
     } catch (error: any) {
       alert(error.message || 'Satışa aktarma başarısız oldu');
     }
@@ -136,21 +157,60 @@ export default function KonaklamaAlisPage() {
         />
       </div>
 
-      {/* Main Data Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <AccommodationTableSection
-          filterType="all"
-          organizationId={undefined}
-          action={action}
-        />
+      {/* Main Content - Folder Tree + Table */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Folder Tree Sidebar */}
+        {showFolders && (
+          <div className="lg:col-span-1">
+            <AccommodationFolderTree
+              records={allRecords}
+              onFolderSelect={handleFolderSelect}
+              selectedFolderId={selectedFolderId}
+              viewMode="combined"
+            />
+          </div>
+        )}
 
-        {/* Quick Add Row */}
-        <QuickAddRow
-          onAddRecord={(newRecord) => {
-            // Refresh the page to show new record
-            window.location.reload();
-          }}
-        />
+        {/* Main Data Table */}
+        <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 ${showFolders ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {selectedFolderId === 'root' ? 'Tüm Kayıtlar' : `Seçili Klasör (${filteredRecords.length} kayıt)`}
+              </h2>
+            </div>
+            <button
+              onClick={() => setShowFolders(!showFolders)}
+              className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors"
+            >
+              {showFolders ? 'Klasörleri Gizle' : 'Klasörleri Göster'}
+            </button>
+          </div>
+
+          <AccommodationTableSection
+            filterType="all"
+            organizationId={undefined}
+            action={action}
+            customBulkActions={[
+              {
+                label: 'Satışa Aktar',
+                onClick: () => handleTransferToSales(selectedRecordIds),
+                icon: <ArrowRightCircle className="w-4 h-4" />,
+                color: 'green'
+              }
+            ]}
+            onSelectionChange={setSelectedRecordIds}
+            filteredRecords={filteredRecords}
+          />
+
+          {/* Quick Add Row */}
+          <QuickAddRow
+            onAddRecord={(newRecord) => {
+              // Refresh the page to show new record
+              window.location.reload();
+            }}
+          />
+        </div>
       </div>
     </div>
   );

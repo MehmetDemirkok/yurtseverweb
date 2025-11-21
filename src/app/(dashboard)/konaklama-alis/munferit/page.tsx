@@ -319,7 +319,7 @@ export default function MunferitKonaklamaPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
               <button
-                onClick={() => router.push('/konaklama')}
+                onClick={() => router.push('/konaklama-alis')}
                 className="mr-4 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

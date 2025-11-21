@@ -13,8 +13,8 @@ import {
   Shield,
   Home
 } from 'lucide-react';
-import UserHeader from '@/app/components/UserHeader';
-import AuthGuard from '@/app/components/AuthGuard';
+import UserHeader from '@/components/layout/UserHeader';
+import AuthGuard from '@/components/layout/AuthGuard';
 
 interface AdminLayoutProps {
   children: ReactNode;

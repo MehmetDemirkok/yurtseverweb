@@ -5,6 +5,7 @@ export const transferToSales = async (accommodationIds: number[]) => {
       headers: {
         'Content-Type': 'application/json'
       },
+      credentials: 'include', // Cookie'leri göndermek için gerekli
       body: JSON.stringify({ accommodationIds })
     });
 

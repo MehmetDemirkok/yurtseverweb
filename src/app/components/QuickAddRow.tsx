@@ -27,7 +27,8 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
             const checkIn = new Date(quickFormData.girisTarihi);
             const checkOut = new Date(quickFormData.cikisTarihi);
             const diffTime = checkOut.getTime() - checkIn.getTime();
-            const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            const nights = diffDays > 0 ? diffDays : 0;
 
             if (nights > 0) {
                 const gecelikUcret = parseFloat(quickFormData.gecelikUcret) || 0;
@@ -37,7 +38,19 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
                     numberOfNights: nights,
                     toplamUcret: total.toFixed(2)
                 }));
+            } else {
+                setQuickFormData(prev => ({
+                    ...prev,
+                    numberOfNights: 0,
+                    toplamUcret: ''
+                }));
             }
+        } else {
+            setQuickFormData(prev => ({
+                ...prev,
+                numberOfNights: 0,
+                toplamUcret: ''
+            }));
         }
     }, [quickFormData.girisTarihi, quickFormData.cikisTarihi, quickFormData.gecelikUcret]);
 
@@ -102,7 +115,8 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
                     numberOfNights: 0,
                 });
 
-                alert('Kayıt başarıyla eklendi!');
+                // Sayfayı yenile
+                window.location.reload();
             } else {
                 const error = await response.json();
                 alert(`Hata: ${error.error || 'Kayıt eklenemedi'}`);

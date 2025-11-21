@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import * as XLSX from 'xlsx';
 import BulkActionsMenu from "./BulkActionsMenu";
+import AccommodationFormModal from "./AccommodationFormModal";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -49,6 +50,7 @@ interface AccommodationTableSectionProps {
   action?: string | null; // 'add', 'import', 'export'
   customBulkActions?: Array<{ label: string; onClick: () => void; icon?: React.ReactNode; color?: string }>;
   onSelectionChange?: (selectedIds: number[]) => void;
+  filteredRecords?: AccommodationRecord[]; // Klasörden gelen filtrelenmiş kayıtlar
 }
 
 export default function AccommodationTableSection({
@@ -57,7 +59,8 @@ export default function AccommodationTableSection({
   organizationId,
   action,
   customBulkActions = [],
-  onSelectionChange
+  onSelectionChange,
+  filteredRecords
 }: AccommodationTableSectionProps) {
   const [records, setRecords] = useState<AccommodationRecord[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -80,19 +83,14 @@ export default function AccommodationTableSection({
   const [formData, setFormData] = useState({
     adiSoyadi: '',
     unvani: '',
-    ulke: 'Türkiye',
-    sehir: '',
     girisTarihi: '',
     cikisTarihi: '',
     odaTipi: 'Single Oda',
     konaklamaTipi: 'BB' as const,
     gecelikUcret: 0,
     toplamUcret: 0,
-    organizationId: null as number | null,
     otelAdi: '',
-    kurumCari: '',
     numberOfNights: 0,
-    isMunferit: false,
   });
 
   // Filtre state'leri
@@ -146,6 +144,14 @@ export default function AccommodationTableSection({
 
   // currentUser değiştiğinde kayıtları çek
   useEffect(() => {
+    // Eğer filteredRecords prop'u varsa, onu kullan (klasörden gelen)
+    if (filteredRecords !== undefined) {
+      setRecords(filteredRecords);
+      setLoading(false);
+      return;
+    }
+
+    // Normal fetch işlemi
     if (!currentUser) return;
 
     const fetchRecords = () => {
@@ -209,7 +215,7 @@ export default function AccommodationTableSection({
     // Carileri çek
     const fetchCariler = async () => {
       try {
-        const res = await fetch('/api/cariler'); // Varsayılan endpoint
+        const res = await fetch('/api/cariler');
         if (res.ok) {
           const data = await res.json();
           setCariler(Array.isArray(data) ? data : []);
@@ -220,8 +226,35 @@ export default function AccommodationTableSection({
     };
     fetchCariler();
 
+    // filteredRecords değiştiğinde kayıtları güncelle
+  }, [currentUser, action, filterType, organizationId, filteredRecords]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'visible' && filteredRecords === undefined) {
+        // Sadece filteredRecords yoksa refresh yap
+        const fetchRecords = () => {
+          let url = '/api/accommodation';
+          const params = new URLSearchParams();
+          if (filterType === 'munferit') {
+            params.append('isMunferit', 'true');
+          } else if (filterType === 'organization' && organizationId) {
+            params.append('organizationId', organizationId.toString());
+          }
+          if (params.toString()) {
+            url += `?${params.toString()}`;
+          }
+          fetch(url)
+            .then(res => res.json())
+            .then(data => {
+              setRecords(Array.isArray(data) ? data : []);
+            })
+            .catch(error => {
+              console.error('Records fetch error:', error);
+            });
+        };
         fetchRecords();
       }
     };
@@ -385,19 +418,14 @@ export default function AccommodationTableSection({
     setFormData({
       adiSoyadi: '',
       unvani: '',
-      ulke: 'Türkiye',
-      sehir: '',
       girisTarihi: '',
       cikisTarihi: '',
       odaTipi: 'Single Oda',
       konaklamaTipi: 'BB',
       gecelikUcret: 0,
       toplamUcret: 0,
-      organizationId: null as number | null,
       otelAdi: '',
-      kurumCari: '',
       numberOfNights: 0,
-      isMunferit: false,
     });
     setShowAddModal(true);
   };
@@ -407,37 +435,35 @@ export default function AccommodationTableSection({
     setFormData({
       adiSoyadi: '',
       unvani: '',
-      ulke: 'Türkiye',
-      sehir: '',
       girisTarihi: '',
       cikisTarihi: '',
       odaTipi: 'Single Oda',
       konaklamaTipi: 'BB',
       gecelikUcret: 0,
       toplamUcret: 0,
-      organizationId: null as number | null,
       otelAdi: '',
-      kurumCari: '',
       numberOfNights: 0,
-      isMunferit: false,
     });
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
-    setFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? null : (type === 'number' ? parseFloat(value) || 0 : (name === 'organizationId' ? (value ? parseInt(value) : null) : value))
-    }));
+    // Önce formData'yı güncelle
+    const updatedFormData = {
+      ...formData,
+      [name]: type === 'number' ? (value === '' ? 0 : parseFloat(value) || 0) : value
+    };
 
-    // Toplam ücret hesaplama
+    setFormData(updatedFormData);
+
+    // Toplam ücret hesaplama - güncellenmiş değerleri kullan
     if (name === 'girisTarihi' || name === 'cikisTarihi' || name === 'gecelikUcret') {
-      const girisTarihi = name === 'girisTarihi' ? value : formData.girisTarihi;
-      const cikisTarihi = name === 'cikisTarihi' ? value : formData.cikisTarihi;
-      const gecelikUcret = name === 'gecelikUcret' ? parseFloat(value) || 0 : formData.gecelikUcret || 0;
+      const girisTarihi = name === 'girisTarihi' ? value : updatedFormData.girisTarihi;
+      const cikisTarihi = name === 'cikisTarihi' ? value : updatedFormData.cikisTarihi;
+      const gecelikUcret = name === 'gecelikUcret' ? (parseFloat(value) || 0) : (updatedFormData.gecelikUcret || 0);
 
-      if (girisTarihi && cikisTarihi) {
+      if (girisTarihi && cikisTarihi && gecelikUcret > 0) {
         const nights = calculateNumberOfNights(girisTarihi, cikisTarihi);
         const toplamUcret = nights * gecelikUcret;
 
@@ -445,6 +471,12 @@ export default function AccommodationTableSection({
           ...prev,
           numberOfNights: nights,
           toplamUcret: toplamUcret
+        }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          numberOfNights: 0,
+          toplamUcret: 0
         }));
       }
     }
@@ -458,8 +490,20 @@ export default function AccommodationTableSection({
       formData.konaklamaTipi = 'BB';
     }
 
+    // Toplam ücreti tekrar hesapla (güvenlik için)
+    if (formData.girisTarihi && formData.cikisTarihi && formData.gecelikUcret > 0) {
+      const nights = calculateNumberOfNights(formData.girisTarihi, formData.cikisTarihi);
+      formData.numberOfNights = nights;
+      formData.toplamUcret = nights * formData.gecelikUcret;
+    }
+
     if (!formData.adiSoyadi || !formData.girisTarihi || !formData.cikisTarihi || !formData.odaTipi || !formData.konaklamaTipi) {
       alert('Lütfen zorunlu alanları doldurunuz.');
+      return;
+    }
+
+    if (!formData.gecelikUcret || formData.gecelikUcret <= 0) {
+      alert('Gecelik ücret 0\'dan büyük olmalıdır!');
       return;
     }
 
@@ -471,7 +515,12 @@ export default function AccommodationTableSection({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          ulke: 'Türkiye',
+          sehir: '',
+          isMunferit: false,
+        }),
       });
 
       if (response.ok) {
@@ -480,6 +529,8 @@ export default function AccommodationTableSection({
         setRecords(prev => [...prev, data]);
 
         closeAddModal();
+        // Sayfayı yenile
+        window.location.reload();
       } else {
         const errorData = await response.json();
         alert(`Hata: ${errorData.error || errorData.message || 'Bir hata oluştu'}`);
@@ -516,8 +567,8 @@ export default function AccommodationTableSection({
     setSortDirection(null);
   };
 
-  // Filtrelenmiş kayıtlar
-  const filteredRecords = records.filter((record) => {
+  // Filtrelenmiş kayıtlar (prop ile çakışmaması için displayRecords kullanıyoruz)
+  const displayRecords = records.filter((record) => {
     const orgMatch = filterOrg ? record.organization?.name?.toLowerCase().includes(filterOrg.toLowerCase()) : true;
     const nameMatch = filterName ? record.adiSoyadi?.toLowerCase().includes(filterName.toLowerCase()) : true;
     const titleMatch = filterTitle ? record.unvani?.toLowerCase().includes(filterTitle.toLowerCase()) : true;
@@ -525,7 +576,7 @@ export default function AccommodationTableSection({
   });
 
   // Sıralanmış kayıtlar
-  const sortedRecords = [...filteredRecords].sort((a, b) => {
+  const sortedRecords = [...displayRecords].sort((a, b) => {
     if (!sortColumn || !sortDirection) return 0;
 
     let aValue: any = a[sortColumn];
@@ -852,7 +903,7 @@ export default function AccommodationTableSection({
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           <input
             type="text"
             placeholder="İsim Ara..."
@@ -874,6 +925,15 @@ export default function AccommodationTableSection({
             value={filterOrg}
             onChange={(e) => setFilterOrg(e.target.value)}
           />
+          
+          {/* Bulk Actions Menu */}
+          {selectedRecordIds.length > 0 && (
+            <BulkActionsMenu
+              selectedCount={selectedRecordIds.length}
+              onBulkDelete={handleBulkDeleteRequest}
+              customActions={customBulkActions}
+            />
+          )}
         </div>
 
         <div className="flex gap-2">
@@ -1122,65 +1182,15 @@ export default function AccommodationTableSection({
         </div>
       )}
 
-      {/* Add/Edit Modals (Simplified for brevity, assuming they exist or are handled similarly) */}
-      {/* ... Add Modal ... */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold mb-4">Yeni Konaklama Kaydı</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Form fields here - using existing formData state */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Adı Soyadı</label>
-                  <input type="text" name="adiSoyadi" value={formData.adiSoyadi} onChange={handleInputChange} className="mt-1 block w-full border rounded-md shadow-sm p-2" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Unvanı</label>
-                  <input type="text" name="unvani" value={formData.unvani} onChange={handleInputChange} className="mt-1 block w-full border rounded-md shadow-sm p-2" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Giriş Tarihi</label>
-                  <input type="date" name="girisTarihi" value={formData.girisTarihi} onChange={handleInputChange} className="mt-1 block w-full border rounded-md shadow-sm p-2" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Çıkış Tarihi</label>
-                  <input type="date" name="cikisTarihi" value={formData.cikisTarihi} onChange={handleInputChange} className="mt-1 block w-full border rounded-md shadow-sm p-2" required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Oda Tipi</label>
-                  <select name="odaTipi" value={formData.odaTipi} onChange={handleInputChange} className="mt-1 block w-full border rounded-md shadow-sm p-2">
-                    <option value="Single Oda">Single Oda</option>
-                    <option value="Double Oda">Double Oda</option>
-                    <option value="Triple Oda">Triple Oda</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Konaklama Tipi</label>
-                  <select name="konaklamaTipi" value={formData.konaklamaTipi} onChange={handleInputChange} className="mt-1 block w-full border rounded-md shadow-sm p-2">
-                    <option value="BB">BB (Oda Kahvaltı)</option>
-                    <option value="HB">HB (Yarım Pansiyon)</option>
-                    <option value="FB">FB (Tam Pansiyon)</option>
-                    <option value="UHD">UHD (Ultra Her Şey Dahil)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Gecelik Ücret</label>
-                  <input type="number" name="gecelikUcret" value={formData.gecelikUcret} onChange={handleInputChange} className="mt-1 block w-full border rounded-md shadow-sm p-2" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Toplam Ücret</label>
-                  <input type="number" name="toplamUcret" value={formData.toplamUcret} readOnly className="mt-1 block w-full border rounded-md shadow-sm p-2 bg-gray-100" />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <button type="button" onClick={closeAddModal} className="px-4 py-2 bg-gray-200 rounded-md">İptal</button>
-                <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Kaydet</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Add Modal */}
+      <AccommodationFormModal
+        isOpen={showAddModal}
+        onClose={closeAddModal}
+        formData={formData}
+        onChange={handleInputChange}
+        onSubmit={handleSubmit}
+        isSubmitting={isSubmitting}
+      />
 
       {/* Edit Modal */}
       {showEditModal && editingRecord && (

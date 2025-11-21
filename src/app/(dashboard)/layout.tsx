@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import UserHeader from '@/app/components/UserHeader';
-import AuthGuard from '@/app/components/AuthGuard';
-import PermissionGuard from '@/app/components/PermissionGuard';
+import UserHeader from '@/components/layout/UserHeader';
+import AuthGuard from '@/components/layout/AuthGuard';
+import PermissionGuard from '@/components/layout/PermissionGuard';
 import {
   Home,
   BedDouble,
@@ -45,12 +45,12 @@ export default function DashboardLayout({
     },
     {
       name: 'Konaklama Alış',
-      path: '/konaklama',
+      path: '/konaklama-alis',
       icon: <BedDouble className="w-5 h-5" />,
     },
     {
       name: 'Konaklama Satış',
-      path: '/accommodation-sales',
+      path: '/konaklama-satis',
       icon: <Banknote className="w-5 h-5" />,
     },
     {

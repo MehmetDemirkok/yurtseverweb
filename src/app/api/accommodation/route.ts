@@ -152,16 +152,21 @@ export async function POST(request: NextRequest) {
     
     // Tekli kayıt işlemi (Mevcut kod)
     
-    // organizationId boş string ise null yap
-    if (data.organizationId === '') {
-      data.organizationId = null;
-    }
+    // Varsayılan değerleri ayarla
+    const accommodationData = {
+      ...data,
+      ulke: data.ulke || 'Türkiye',
+      sehir: data.sehir || '',
+      organizationId: data.organizationId || null,
+      isMunferit: data.organizationId ? false : (data.isMunferit || false),
+      companyId: user.companyId,
+    };
     
     // Organizasyon ID varsa organizasyonun mevcut olduğunu kontrol et
-    if (data.organizationId) {
+    if (accommodationData.organizationId) {
       const organization = await prisma.organization.findFirst({
         where: {
-          id: data.organizationId,
+          id: accommodationData.organizationId,
           companyId: user.companyId,
         },
       });
@@ -177,12 +182,7 @@ export async function POST(request: NextRequest) {
     }
 
     const accommodation = await prisma.accommodation.create({
-      data: {
-        ...data,
-        companyId: user.companyId,
-        // Eğer organizationId varsa isMunferit false olmalı
-        isMunferit: data.organizationId ? false : (data.isMunferit || false),
-      },
+      data: accommodationData,
       include: {
         organization: {
           select: {
