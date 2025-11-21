@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 import DatePickerWithQuickSelect from './DatePickerWithQuickSelect';
+import AutocompleteInput from './AutocompleteInput';
 
 interface AccommodationFormModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface AccommodationFormModalProps {
     gecelikUcret: number | string;
     toplamUcret: number;
     otelAdi: string;
+    kurumCari?: string;
     numberOfNights: number;
   };
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
@@ -32,6 +34,48 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
   onSubmit,
   isSubmitting = false,
 }) => {
+  const [hotelNames, setHotelNames] = useState<string[]>([]);
+  const [cariNames, setCariNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchHotelNames = async () => {
+      try {
+        const res = await fetch('/api/accommodation/hotel-names');
+        if (res.ok) {
+          const data = await res.json();
+          setHotelNames(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error('Otel isimleri yüklenirken hata:', error);
+      }
+    };
+
+    const fetchCariNames = async () => {
+      try {
+        const res = await fetch('/api/cariler');
+        if (res.ok) {
+          const data = await res.json();
+          const cariler = Array.isArray(data) ? data : [];
+          // Cari isimlerini formatla (ad soyad veya şirket adı)
+          const names = cariler.map((cari: any) => {
+            if (cari.sirket) return cari.sirket;
+            if (cari.ad && cari.soyad) return `${cari.ad} ${cari.soyad}`;
+            if (cari.ad) return cari.ad;
+            return cari.id;
+          }).filter(Boolean);
+          setCariNames(names);
+        }
+      } catch (error) {
+        console.error('Cari isimleri yüklenirken hata:', error);
+      }
+    };
+
+    fetchHotelNames();
+    fetchCariNames();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -52,7 +96,7 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
           </div>
 
           <form onSubmit={onSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
               {/* Adı Soyadı */}
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Adı Soyadı *</label>
@@ -180,15 +224,36 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
 
               {/* Otel Adı */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Otel Adı *</label>
-                <input
-                  type="text"
-                  name="otelAdi"
+                <AutocompleteInput
                   value={formData.otelAdi}
-                  onChange={onChange}
+                  onChange={(value) => {
+                    const event = {
+                      target: { name: 'otelAdi', value, type: 'text' }
+                    } as React.ChangeEvent<HTMLInputElement>;
+                    onChange(event);
+                  }}
+                  suggestions={hotelNames}
                   placeholder="Otel Adı"
+                  label="Otel Adı"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  name="otelAdi"
+                />
+              </div>
+
+              {/* Cari */}
+              <div>
+                <AutocompleteInput
+                  value={formData.kurumCari || ''}
+                  onChange={(value) => {
+                    const event = {
+                      target: { name: 'kurumCari', value, type: 'text' }
+                    } as React.ChangeEvent<HTMLInputElement>;
+                    onChange(event);
+                  }}
+                  suggestions={cariNames}
+                  placeholder="Cari Seçin"
+                  label="Cari"
+                  name="kurumCari"
                 />
               </div>
 

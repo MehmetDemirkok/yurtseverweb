@@ -94,6 +94,7 @@ export default function AccommodationTableSection({
     gecelikUcret: 0,
     toplamUcret: 0,
     otelAdi: '',
+    kurumCari: '',
     numberOfNights: 0,
   });
 
@@ -451,6 +452,7 @@ export default function AccommodationTableSection({
       gecelikUcret: 0,
       toplamUcret: 0,
       otelAdi: '',
+      kurumCari: '',
       numberOfNights: 0,
     });
   };

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import DatePickerWithQuickSelect from './DatePickerWithQuickSelect';
+import AutocompleteInput from './AutocompleteInput';
 
 interface QuickAddRowProps {
     onAddRecord: (record: any) => void;
@@ -19,8 +20,51 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
         gecelikUcret: '',
         toplamUcret: '',
         otelAdi: '',
+        kurumCari: '',
         numberOfNights: 0,
     });
+
+    // Autocomplete suggestions
+    const [hotelNames, setHotelNames] = useState<string[]>([]);
+    const [cariNames, setCariNames] = useState<string[]>([]);
+
+    // Otel isimlerini ve cari isimlerini yükle
+    useEffect(() => {
+        const fetchHotelNames = async () => {
+            try {
+                const res = await fetch('/api/accommodation/hotel-names');
+                if (res.ok) {
+                    const data = await res.json();
+                    setHotelNames(Array.isArray(data) ? data : []);
+                }
+            } catch (error) {
+                console.error('Otel isimleri yüklenirken hata:', error);
+            }
+        };
+
+        const fetchCariNames = async () => {
+            try {
+                const res = await fetch('/api/cariler');
+                if (res.ok) {
+                    const data = await res.json();
+                    const cariler = Array.isArray(data) ? data : [];
+                    // Cari isimlerini formatla (ad soyad veya şirket adı)
+                    const names = cariler.map((cari: any) => {
+                        if (cari.sirket) return cari.sirket;
+                        if (cari.ad && cari.soyad) return `${cari.ad} ${cari.soyad}`;
+                        if (cari.ad) return cari.ad;
+                        return cari.id;
+                    }).filter(Boolean);
+                    setCariNames(names);
+                }
+            } catch (error) {
+                console.error('Cari isimleri yüklenirken hata:', error);
+            }
+        };
+
+        fetchHotelNames();
+        fetchCariNames();
+    }, []);
 
     // Gece sayısını ve toplam ücreti hesapla
     useEffect(() => {
@@ -106,6 +150,7 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
                     gecelikUcret: parseFloat(quickFormData.gecelikUcret),
                     toplamUcret: parseFloat(quickFormData.toplamUcret),
                     otelAdi: quickFormData.otelAdi,
+                    kurumCari: quickFormData.kurumCari || undefined,
                     numberOfNights: quickFormData.numberOfNights,
                     ulke: 'Türkiye',
                     sehir: '',
@@ -128,6 +173,7 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
                     gecelikUcret: '',
                     toplamUcret: '',
                     otelAdi: '',
+                    kurumCari: '',
                     numberOfNights: 0,
                 });
 
@@ -150,7 +196,7 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
                 <h3 className="font-semibold text-gray-800">Hızlı Kayıt Ekle</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
                 {/* Adı Soyadı */}
                 <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Adı Soyadı *</label>
@@ -269,14 +315,26 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
 
                 {/* Otel Adı */}
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Otel Adı *</label>
-                    <input
-                        type="text"
-                        name="otelAdi"
+                    <AutocompleteInput
                         value={quickFormData.otelAdi}
-                        onChange={handleInputChange}
+                        onChange={(value) => setQuickFormData(prev => ({ ...prev, otelAdi: value }))}
+                        suggestions={hotelNames}
                         placeholder="Otel Adı"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        label="Otel Adı"
+                        required
+                        name="otelAdi"
+                    />
+                </div>
+
+                {/* Cari */}
+                <div>
+                    <AutocompleteInput
+                        value={quickFormData.kurumCari}
+                        onChange={(value) => setQuickFormData(prev => ({ ...prev, kurumCari: value }))}
+                        suggestions={cariNames}
+                        placeholder="Cari Seçin"
+                        label="Cari"
+                        name="kurumCari"
                     />
                 </div>
 
