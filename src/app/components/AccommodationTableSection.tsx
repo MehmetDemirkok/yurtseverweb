@@ -47,9 +47,18 @@ interface AccommodationTableSectionProps {
   filterType?: 'all' | 'munferit' | 'organization';
   organizationId?: number;
   action?: string | null; // 'add', 'import', 'export'
+  customBulkActions?: Array<{ label: string; onClick: () => void; icon?: React.ReactNode; color?: string }>;
+  onSelectionChange?: (selectedIds: number[]) => void;
 }
 
-export default function AccommodationTableSection({ handlePuantajRaporu, filterType = 'all', organizationId, action }: AccommodationTableSectionProps) {
+export default function AccommodationTableSection({
+  handlePuantajRaporu,
+  filterType = 'all',
+  organizationId,
+  action,
+  customBulkActions = [],
+  onSelectionChange
+}: AccommodationTableSectionProps) {
   const [records, setRecords] = useState<AccommodationRecord[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -221,7 +230,14 @@ export default function AccommodationTableSection({ handlePuantajRaporu, filterT
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [currentUser, filterType, organizationId]);
+  }, [currentUser, action, filterType, organizationId]);
+
+  // Seçim değiştiğinde parent'ı bilgilendir
+  useEffect(() => {
+    if (onSelectionChange) {
+      onSelectionChange(selectedRecordIds);
+    }
+  }, [selectedRecordIds, onSelectionChange]);
 
   // Doğru gün sayısı hesaplama fonksiyonu (çıkış günü hariç)
   function calculateNumberOfNights(girisTarihi: string, cikisTarihi: string): number {

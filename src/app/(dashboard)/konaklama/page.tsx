@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import AccommodationTableSection from '@/app/components/AccommodationTableSection';
+import QuickAddRow from '@/app/components/QuickAddRow';
 import { transferToSales } from '@/lib/transferToSales';
 import {
   BedDouble,
@@ -141,6 +142,14 @@ export default function KonaklamaAlisPage() {
           filterType="all"
           organizationId={undefined}
           action={action}
+        />
+
+        {/* Quick Add Row */}
+        <QuickAddRow
+          onAddRecord={(newRecord) => {
+            // Refresh the page to show new record
+            window.location.reload();
+          }}
         />
       </div>
     </div>
