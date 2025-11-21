@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromToken } from '@/lib/auth';
+import { checkPaymentRequired, getAccommodationCount, FREE_PLAN_LIMITS } from '@/lib/utils/payment';
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,15 +61,50 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Yetkilendirme gerekli' }, { status: 401 });
     }
 
-    // Kullanıcının ekleme yetkisi kontrol et
-    if (!['ADMIN', 'MUDUR', 'OPERATOR'].includes(user.role)) {
+    // Kullanıcının ekleme yetkisi kontrol et - ADMIN ve ŞİRKET_YÖNETİCİSİ ekleyebilir
+    if (!['ADMIN', 'SIRKET_YONETICISI'].includes(user.role)) {
       return NextResponse.json({ error: 'Kayıt ekleme yetkiniz yok' }, { status: 403 });
+    }
+
+    // Plan limit kontrolü
+    const paymentCheck = await checkPaymentRequired(user.companyId, 'accommodation');
+    if (paymentCheck.paymentRequired) {
+      return NextResponse.json(
+        {
+          error: 'PAYMENT_REQUIRED',
+          message: paymentCheck.message,
+          accommodationCount: paymentCheck.accommodationCount,
+          accommodationSaleCount: paymentCheck.accommodationSaleCount,
+        },
+        { status: 402 } // 402 Payment Required
+      );
     }
 
     const data = await request.json();
 
     // Toplu kayıt işlemi
     if (data.records && Array.isArray(data.records)) {
+      // Limit kontrolü - kaç tane yeni kayıt eklenecek?
+      const currentCount = await getAccommodationCount(user.companyId);
+      const newRecordsCount = data.records.length;
+      const totalAfterAdd = currentCount + newRecordsCount;
+
+      // Eğer limit aşılacaksa kontrol et
+      if (totalAfterAdd > FREE_PLAN_LIMITS.ACCOMMODATION) {
+        const paymentCheck = await checkPaymentRequired(user.companyId, 'accommodation');
+        if (paymentCheck.paymentRequired) {
+          return NextResponse.json(
+            {
+              error: 'PAYMENT_REQUIRED',
+              message: paymentCheck.message,
+              accommodationCount: paymentCheck.accommodationCount,
+              accommodationSaleCount: paymentCheck.accommodationSaleCount,
+              willExceedLimit: true,
+            },
+            { status: 402 } // 402 Payment Required
+          );
+        }
+      }
       const createdRecords = [];
       const errors = [];
 

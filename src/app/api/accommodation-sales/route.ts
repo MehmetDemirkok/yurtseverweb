@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getUserFromToken } from '@/lib/auth';
+import { checkPaymentRequired, getAccommodationSaleCount, FREE_PLAN_LIMITS } from '@/lib/utils/payment';
 
 // GET - Satış kayıtlarını getir
 export async function GET(request: NextRequest) {
@@ -51,6 +52,27 @@ export async function POST(request: NextRequest) {
 
     // Toplu satışa aktarma
     if (data.accommodationIds && Array.isArray(data.accommodationIds)) {
+      // Limit kontrolü - kaç tane yeni satış kaydı oluşturulacak?
+      const currentSaleCount = await getAccommodationSaleCount(user.companyId);
+      const newSalesCount = data.accommodationIds.length;
+      const totalAfterAdd = currentSaleCount + newSalesCount;
+
+      // Eğer limit aşılacaksa kontrol et
+      if (totalAfterAdd > FREE_PLAN_LIMITS.ACCOMMODATION_SALE) {
+        const paymentCheck = await checkPaymentRequired(user.companyId, 'accommodationSale');
+        if (paymentCheck.paymentRequired) {
+          return NextResponse.json(
+            {
+              error: 'PAYMENT_REQUIRED',
+              message: paymentCheck.message,
+              accommodationCount: paymentCheck.accommodationCount,
+              accommodationSaleCount: paymentCheck.accommodationSaleCount,
+              willExceedLimit: true,
+            },
+            { status: 402 } // 402 Payment Required
+          );
+        }
+      }
       if (data.accommodationIds.length === 0) {
         return NextResponse.json({ error: 'En az bir kayıt seçmelisiniz' }, { status: 400 });
       }
@@ -178,7 +200,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Tekli satış kaydı oluşturma
+    // Tekli satış kaydı oluşturma - Limit kontrolü
+    const paymentCheck = await checkPaymentRequired(user.companyId, 'accommodationSale');
+    if (paymentCheck.paymentRequired) {
+      return NextResponse.json(
+        {
+          error: 'PAYMENT_REQUIRED',
+          message: paymentCheck.message,
+          accommodationCount: paymentCheck.accommodationCount,
+          accommodationSaleCount: paymentCheck.accommodationSaleCount,
+        },
+        { status: 402 } // 402 Payment Required
+      );
+    }
+
     const sale = await prisma.accommodationSale.create({
       data: {
         ...data,

@@ -33,15 +33,15 @@ export default function PermissionGuard({ children, requiredPermission }: Permis
             return;
           }
 
-          // MUDUR rolü için şirket bazlı erişim kontrolü
-          if (user.role === 'MUDUR') {
+          // ŞİRKET_YÖNETİCİSİ rolü için şirket bazlı erişim kontrolü
+          if (user.role === 'SIRKET_YONETICISI') {
             // Şirket yönetimi sayfalarına sadece ADMIN erişebilir
             if (pathname.startsWith('/admin/companies')) {
               router.replace("/no-access");
               return;
             }
             
-            // Kullanıcı yönetimi sayfasına MUDUR erişebilir (sadece kendi şirketindeki kullanıcılar)
+            // Kullanıcı yönetimi sayfasına ŞİRKET_YÖNETİCİSİ erişebilir (sadece kendi şirketindeki kullanıcılar)
             if (pathname === '/admin') {
               setHasAccess(true);
               setLoading(false);

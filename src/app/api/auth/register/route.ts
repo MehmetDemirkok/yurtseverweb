@@ -96,13 +96,13 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Kullanıcı oluştur (varsayılan rol: KULLANICI, şirket sahibi olarak MUDUR rolü verilebilir)
+      // Kullanıcı oluştur - Yeni üyeler otomatik olarak kendi şirketinin yöneticisi olur
       const newUser = await tx.user.create({
         data: {
           name: user.name,
           email: user.email,
           password: hashedPassword,
-          role: 'MUDUR', // Şirket sahibi olarak MUDUR rolü
+          role: 'SIRKET_YONETICISI', // Şirket sahibi olarak ŞİRKET_YÖNETİCİSİ rolü
           permissions: ['dashboard', 'sales', 'statistics'],
           companyId: newCompany.id,
         },

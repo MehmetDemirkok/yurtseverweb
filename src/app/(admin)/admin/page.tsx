@@ -8,10 +8,13 @@ interface User {
   id: number;
   email: string;
   name: string | null;
-  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
+  role: 'ADMIN' | 'SIRKET_YONETICISI';
   createdAt: string;
   permissions?: string[];
   companyId?: number;
+  company?: {
+    name: string;
+  };
 }
 
 interface Company {
@@ -25,7 +28,7 @@ type CurrentUser = {
   id: number;
   email: string;
   name?: string;
-  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
+  role: 'ADMIN' | 'SIRKET_YONETICISI';
   companyId?: number;
   companyName?: string;
 };
@@ -34,7 +37,7 @@ type NewUser = {
   email: string;
   name: string;
   password: string;
-  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
+  role: 'ADMIN' | 'SIRKET_YONETICISI';
   permissions: string[];
   companyId: number;
 };
@@ -60,7 +63,7 @@ export default function AdminPage() {
     email: '',
     name: '',
     password: '',
-    role: 'KULLANICI',
+    role: 'SIRKET_YONETICISI',
     permissions: [],
     companyId: 0
   });
@@ -68,7 +71,7 @@ export default function AdminPage() {
   const [editUser, setEditUser] = useState({
     id: 0,
     name: '',
-    role: 'KULLANICI' as 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI',
+    role: 'SIRKET_YONETICISI' as 'ADMIN' | 'SIRKET_YONETICISI',
     permissions: [] as string[],
     companyId: 0
   });
@@ -84,9 +87,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState({
     total: 0,
     admin: 0,
-    mudur: 0,
-    operator: 0,
-    kullanici: 0
+    sirketYoneticisi: 0
   });
 
   // İzinler listesi - Dashboard modüllerine göre
@@ -101,26 +102,23 @@ export default function AdminPage() {
     { key: 'tedarikciler', label: 'Tedarikçiler' },
   ];
 
-  // Rol seçenekleri - MUDUR sadece OPERATOR ve KULLANICI oluşturabilir
+  // Rol seçenekleri - ŞİRKET_YÖNETİCİSİ sadece ŞİRKET_YÖNETİCİSİ oluşturabilir
   const getRoleOptions = () => {
-    if (currentUser?.role === 'MUDUR') {
+    if (currentUser?.role === 'SIRKET_YONETICISI') {
       return [
-        { value: 'OPERATOR', label: 'Operatör' },
-        { value: 'KULLANICI', label: 'Kullanıcı' }
+        { value: 'SIRKET_YONETICISI', label: 'Şirket Yöneticisi' }
       ];
     }
     return [
       { value: 'ADMIN', label: 'Admin' },
-      { value: 'MUDUR', label: 'Müdür' },
-      { value: 'OPERATOR', label: 'Operatör' },
-      { value: 'KULLANICI', label: 'Kullanıcı' }
+      { value: 'SIRKET_YONETICISI', label: 'Şirket Yöneticisi' }
     ];
   };
 
-  // Şirket seçenekleri - MUDUR sadece kendi şirketini görebilir
+  // Şirket seçenekleri - ŞİRKET_YÖNETİCİSİ sadece kendi şirketini görebilir
   const getCompanyOptions = () => {
-    if (currentUser?.role === 'MUDUR') {
-      return []; // MUDUR için şirket listesi gerekli değil
+    if (currentUser?.role === 'SIRKET_YONETICISI') {
+      return []; // ŞİRKET_YÖNETİCİSİ için şirket listesi gerekli değil
     }
     return companies;
   };
@@ -132,7 +130,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     // currentUser değiştiğinde şirketleri yükle
-    if (currentUser) {
+    if (currentUser && currentUser.role === 'ADMIN') {
       fetchCompanies();
     }
   }, [currentUser]);
@@ -141,11 +139,9 @@ export default function AdminPage() {
     // İstatistikleri hesapla
     const total = users?.length || 0;
     const admin = users?.filter(u => u.role === 'ADMIN').length || 0;
-    const mudur = users?.filter(u => u.role === 'MUDUR').length || 0;
-    const operator = users?.filter(u => u.role === 'OPERATOR').length || 0;
-    const kullanici = users?.filter(u => u.role === 'KULLANICI').length || 0;
+    const sirketYoneticisi = users?.filter(u => u.role === 'SIRKET_YONETICISI').length || 0;
 
-    setStats({ total, admin, mudur, operator, kullanici });
+    setStats({ total, admin, sirketYoneticisi });
   }, [users]);
 
   useEffect(() => {
@@ -212,8 +208,8 @@ export default function AdminPage() {
         let user = data.user;
 
         // Eğer companyId eksikse, token'ı güncelle
-        if (!user.companyId && user.role === 'MUDUR') {
-          console.log('MUDUR kullanıcısının companyId bilgisi eksik, token güncelleniyor...');
+        if (!user.companyId && user.role === 'SIRKET_YONETICISI') {
+          console.log('ŞİRKET_YÖNETİCİSİ kullanıcısının companyId bilgisi eksik, token güncelleniyor...');
           const refreshRes = await fetch('/api/user/refresh-token', {
             method: 'POST',
             credentials: 'include'
@@ -264,8 +260,13 @@ export default function AdminPage() {
   };
 
   const fetchCompanies = async () => {
-    // MUDUR rolü için şirket listesi gerekli değil
-    if (currentUser?.role === 'MUDUR') {
+    // ŞİRKET_YÖNETİCİSİ rolü için şirket listesi gerekli değil
+    if (currentUser?.role === 'SIRKET_YONETICISI') {
+      return;
+    }
+
+    // Sadece ADMIN şirketleri görebilir
+    if (currentUser?.role !== 'ADMIN') {
       return;
     }
 
@@ -275,23 +276,24 @@ export default function AdminPage() {
         const data = await res.json();
         setCompanies(Array.isArray(data) ? data : []);
       } else {
-        console.error('Şirketler yüklenemedi');
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Şirketler yüklenemedi:', errorData.error || res.statusText);
         setCompanies([]);
       }
-    } catch {
-      console.error('Şirketler yüklenirken hata oluştu');
+    } catch (error) {
+      console.error('Şirketler yüklenirken hata oluştu:', error);
       setCompanies([]);
     }
   };
 
   // Modal handlers
   const openAddModal = () => {
-    const initialCompanyId = currentUser?.role === 'MUDUR' ? (currentUser.companyId || 0) : 0;
+    const initialCompanyId = currentUser?.role === 'SIRKET_YONETICISI' ? (currentUser.companyId || 0) : 0;
     setNewUser({
       email: '',
       name: '',
       password: '',
-      role: 'KULLANICI',
+      role: 'SIRKET_YONETICISI',
       permissions: [],
       companyId: initialCompanyId
     });
@@ -322,13 +324,13 @@ export default function AdminPage() {
 
   const closeAddModal = () => {
     setShowAddModal(false);
-    setNewUser({ email: '', name: '', password: '', role: 'KULLANICI', permissions: [], companyId: 0 });
+    setNewUser({ email: '', name: '', password: '', role: 'SIRKET_YONETICISI', permissions: [], companyId: 0 });
   };
 
   const closeEditModal = () => {
     setShowEditModal(false);
     setSelectedUser(null);
-    setEditUser({ id: 0, name: '', role: 'KULLANICI', permissions: [], companyId: 0 });
+    setEditUser({ id: 0, name: '', role: 'SIRKET_YONETICISI', permissions: [], companyId: 0 });
   };
 
   const closeDeleteModal = () => {
@@ -339,9 +341,9 @@ export default function AdminPage() {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // MUDUR rolü için user-management ve logs iznini otomatik olarak ekle
+      // ŞİRKET_YÖNETİCİSİ rolü için user-management ve logs iznini otomatik olarak ekle
       let permissions = newUser.permissions;
-      if (newUser.role === 'MUDUR') {
+      if (newUser.role === 'SIRKET_YONETICISI') {
         if (!permissions.includes('user-management')) {
           permissions = [...permissions, 'user-management'];
         }
@@ -377,9 +379,9 @@ export default function AdminPage() {
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // MUDUR rolü için user-management ve logs iznini otomatik olarak ekle
+      // ŞİRKET_YÖNETİCİSİ rolü için user-management ve logs iznini otomatik olarak ekle
       let permissions = editUser.permissions;
-      if (editUser.role === 'MUDUR') {
+      if (editUser.role === 'SIRKET_YONETICISI') {
         if (!permissions.includes('user-management')) {
           permissions = [...permissions, 'user-management'];
         }
@@ -443,9 +445,7 @@ export default function AdminPage() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'ADMIN': return 'bg-red-100 text-red-800 border-red-200';
-      case 'MUDUR': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'OPERATOR': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'KULLANICI': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'SIRKET_YONETICISI': return 'bg-purple-100 text-purple-800 border-purple-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -453,9 +453,7 @@ export default function AdminPage() {
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'ADMIN': return 'Admin';
-      case 'MUDUR': return 'Müdür';
-      case 'OPERATOR': return 'Operatör';
-      case 'KULLANICI': return 'Kullanıcı';
+      case 'SIRKET_YONETICISI': return 'Şirket Yöneticisi';
       default: return role;
     }
   };
@@ -522,7 +520,7 @@ export default function AdminPage() {
   }
 
   // Admin yetkisi kontrolü
-  if (currentUser && !['ADMIN', 'MUDUR'].includes(currentUser.role)) {
+  if (currentUser && !['ADMIN', 'SIRKET_YONETICISI'].includes(currentUser.role)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -544,22 +542,32 @@ export default function AdminPage() {
 
   return (
     <>
-      <main className="p-6">
-        {/* Navigation */}
-        <div className="flex justify-end mb-8">
-          <button
-            onClick={openAddModal}
-            className="btn btn-primary text-lg px-8 py-3 flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Yeni Kullanıcı Ekle
-          </button>
+      <main className="p-6 bg-gray-50 min-h-screen">
+        {/* Page Header */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Kullanıcı Yönetimi</h1>
+              <p className="text-gray-600">
+                {currentUser?.role === 'ADMIN' 
+                  ? 'Tüm kullanıcıları ve şirketleri yönetin' 
+                  : 'Kendi şirketinizin kullanıcılarını yönetin'}
+              </p>
+            </div>
+            <button
+              onClick={openAddModal}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md hover:shadow-lg"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Yeni Kullanıcı Ekle
+            </button>
+          </div>
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-blue-100 text-blue-600">
@@ -582,7 +590,7 @@ export default function AdminPage() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Yönetici</p>
+                <p className="text-sm font-medium text-gray-600">Admin</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.admin}</p>
               </div>
             </div>
@@ -596,37 +604,8 @@ export default function AdminPage() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Müdür</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.mudur}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Operatör</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.operator}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-gray-500">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-gray-100 text-gray-600">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Kullanıcı</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.kullanici}</p>
+                <p className="text-sm font-medium text-gray-600">Şirket Yöneticisi</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.sirketYoneticisi}</p>
               </div>
             </div>
           </div>
@@ -634,7 +613,7 @@ export default function AdminPage() {
 
         {/* Search and Filter Section */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-1 ${currentUser?.role === 'ADMIN' ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
             {/* Search */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -660,27 +639,27 @@ export default function AdminPage() {
               >
                 <option value="all">Tüm Roller</option>
                 <option value="ADMIN">Admin</option>
-                <option value="MUDUR">Müdür</option>
-                <option value="OPERATOR">Operatör</option>
-                <option value="KULLANICI">Kullanıcı</option>
+                <option value="SIRKET_YONETICISI">Şirket Yöneticisi</option>
               </select>
             </div>
 
-            {/* Company Filter */}
-            <div>
-              <select
-                value={companyFilter}
-                onChange={(e) => setCompanyFilter(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              >
-                <option value="all">Tüm Şirketler</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Company Filter - Sadece ADMIN için */}
+            {currentUser?.role === 'ADMIN' && (
+              <div>
+                <select
+                  value={companyFilter}
+                  onChange={(e) => setCompanyFilter(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                >
+                  <option value="all">Tüm Şirketler</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Sort */}
             <div>
@@ -738,9 +717,11 @@ export default function AdminPage() {
                       <SortIcon column="role" />
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    <span>Şirket</span>
-                  </th>
+                  {currentUser?.role === 'ADMIN' && (
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      <span>Şirket</span>
+                    </th>
+                  )}
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('createdAt')}>
                     <div className="flex items-center justify-between">
                       <span>Kayıt Tarihi</span>
@@ -775,23 +756,29 @@ export default function AdminPage() {
                         {getRoleLabel(user.role)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.companyId ? (
-                        <div className="flex items-center">
-                          <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                          {companies.find(c => c.id === user.companyId)?.name || 'Bilinmeyen Şirket'}
-                        </div>
-                      ) : (
-                        <span className="text-orange-600 font-medium flex items-center">
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Şirket Atanmamış
-                        </span>
-                      )}
-                    </td>
+                    {currentUser?.role === 'ADMIN' && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {user.companyId ? (
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span className="font-medium text-gray-700">
+                              {user.company?.name || 
+                               companies.find(c => c.id === user.companyId)?.name || 
+                               'Bilinmeyen Şirket'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-orange-600 font-medium flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Şirket Atanmamış
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center">
                         <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -927,7 +914,7 @@ export default function AdminPage() {
                   <select
                     value={newUser.role}
                     onChange={(e) => {
-                      const newRole = e.target.value as 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
+                      const newRole = e.target.value as 'ADMIN' | 'SIRKET_YONETICISI';
                       let newPermissions = newUser.permissions;
 
                       // Admin rolü seçilirse tüm izinleri ekle
@@ -950,8 +937,8 @@ export default function AdminPage() {
                   <label className="block text-sm font-semibold text-gray-700">
                     Şirket
                   </label>
-                  {currentUser?.role === 'MUDUR' ? (
-                    // MUDUR için şirket seçimi otomatik ve değiştirilemez
+                  {currentUser?.role === 'SIRKET_YONETICISI' ? (
+                    // ŞİRKET_YÖNETİCİSİ için şirket seçimi otomatik ve değiştirilemez
                     <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
                       {currentUser.companyName || 'Şirket bilgisi yükleniyor...'}
                     </div>
@@ -970,7 +957,7 @@ export default function AdminPage() {
                       ))}
                     </select>
                   )}
-                  {newUser.companyId === 0 && currentUser?.role !== 'MUDUR' && (
+                  {newUser.companyId === 0 && currentUser?.role !== 'SIRKET_YONETICISI' && (
                     <p className="text-sm text-orange-600 mt-1">
                       ⚠️ Kullanıcının bir şirkete atanması gerekiyor
                     </p>
@@ -1062,7 +1049,7 @@ export default function AdminPage() {
                   <select
                     value={editUser.role}
                     onChange={(e) => {
-                      const newRole = e.target.value as 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
+                      const newRole = e.target.value as 'ADMIN' | 'SIRKET_YONETICISI';
                       let newPermissions = editUser.permissions;
 
                       // Admin rolü seçilirse tüm izinleri ekle
@@ -1083,8 +1070,8 @@ export default function AdminPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">Şirket</label>
-                  {currentUser?.role === 'MUDUR' ? (
-                    // MUDUR için şirket seçimi otomatik ve değiştirilemez
+                  {currentUser?.role === 'SIRKET_YONETICISI' ? (
+                    // ŞİRKET_YÖNETİCİSİ için şirket seçimi otomatik ve değiştirilemez
                     <div className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
                       {currentUser.companyName || 'Şirket bilgisi yükleniyor...'}
                     </div>
@@ -1103,7 +1090,7 @@ export default function AdminPage() {
                       ))}
                     </select>
                   )}
-                  {editUser.companyId === 0 && currentUser?.role !== 'MUDUR' && (
+                  {editUser.companyId === 0 && currentUser?.role !== 'SIRKET_YONETICISI' && (
                     <p className="text-sm text-orange-600 mt-1">
                       ⚠️ Kullanıcının bir şirkete atanması gerekiyor
                     </p>

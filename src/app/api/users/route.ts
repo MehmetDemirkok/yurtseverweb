@@ -8,7 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 type MyJwtPayload = JwtPayload & { role: string; userId: number; companyId?: number };
 
-// Tüm kullanıcıları listele - ADMIN tümünü, MUDUR sadece kendi şirketini
+// Tüm kullanıcıları listele - ADMIN tümünü, ŞİRKET_YÖNETİCİSİ sadece kendi şirketini
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -18,12 +18,12 @@ export async function GET() {
     }
     
     const decoded = jwt.verify(token, JWT_SECRET) as MyJwtPayload;
-    if (!['ADMIN', 'MUDUR'].includes(decoded.role)) {
+    if (!['ADMIN', 'SIRKET_YONETICISI'].includes(decoded.role)) {
       return NextResponse.json({ error: 'Bu işlem için yetki gereklidir.' }, { status: 403 });
     }
     
-    // MUDUR sadece kendi şirketindeki kullanıcıları görebilir
-    const whereClause = decoded.role === 'MUDUR' 
+    // ŞİRKET_YÖNETİCİSİ sadece kendi şirketindeki kullanıcıları görebilir
+    const whereClause = decoded.role === 'SIRKET_YONETICISI' 
       ? { companyId: decoded.companyId }
       : {};
     
@@ -54,7 +54,7 @@ export async function GET() {
   }
 }
 
-// Yeni kullanıcı oluştur - ADMIN tüm şirketler için, MUDUR sadece kendi şirketi için
+// Yeni kullanıcı oluştur - ADMIN tüm şirketler için, ŞİRKET_YÖNETİCİSİ sadece kendi şirketi için
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     }
     
     const decoded = jwt.verify(token, JWT_SECRET) as MyJwtPayload;
-    if (!['ADMIN', 'MUDUR'].includes(decoded.role)) {
+    if (!['ADMIN', 'SIRKET_YONETICISI'].includes(decoded.role)) {
       return NextResponse.json({ error: 'Bu işlem için yetki gereklidir.' }, { status: 403 });
     }
     
@@ -74,13 +74,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Email ve şifre zorunludur.' }, { status: 400 });
     }
     
-    // MUDUR sadece OPERATOR ve KULLANICI rolünde kullanıcı oluşturabilir
-    if (decoded.role === 'MUDUR' && ['ADMIN', 'MUDUR'].includes(data.role)) {
-      return NextResponse.json({ error: 'Müdür sadece OPERATOR ve KULLANICI rolünde kullanıcı oluşturabilir.' }, { status: 403 });
+    // ŞİRKET_YÖNETİCİSİ sadece kendi şirketi için kullanıcı oluşturabilir ve sadece ŞİRKET_YÖNETİCİSİ rolü verebilir
+    if (decoded.role === 'SIRKET_YONETICISI' && data.role === 'ADMIN') {
+      return NextResponse.json({ error: 'Şirket yöneticisi ADMIN rolü oluşturamaz.' }, { status: 403 });
     }
     
-    // MUDUR sadece kendi şirketi için kullanıcı oluşturabilir
-    const companyId = decoded.role === 'MUDUR' ? decoded.companyId : data.companyId;
+    // ŞİRKET_YÖNETİCİSİ sadece kendi şirketi için kullanıcı oluşturabilir
+    const companyId = decoded.role === 'SIRKET_YONETICISI' ? decoded.companyId : data.companyId;
     
     // Email kontrolü (şirket bazlı)
     const existingUser = await prisma.user.findFirst({
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
         email: data.email,
         name: data.name || '',
         password: hashedPassword,
-        role: data.role || 'KULLANICI',
+        role: data.role || 'SIRKET_YONETICISI',
         permissions: data.permissions || [],
         companyId: companyId
       },

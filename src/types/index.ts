@@ -10,8 +10,7 @@ export interface User {
 
 export enum UserRole {
   ADMIN = 'ADMIN',
-  YONETICI = 'YONETICI',
-  KULLANICI = 'KULLANICI'
+  SIRKET_YONETICISI = 'SIRKET_YONETICISI'
 }
 
 // Accommodation Types

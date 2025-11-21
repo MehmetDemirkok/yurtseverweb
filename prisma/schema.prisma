@@ -33,6 +33,11 @@ model Company {
   arventoLastTest     DateTime?
   arventoIsConnected  Boolean   @default(false)
   
+  // Ödeme sistemi
+  plan                CompanyPlan @default(FREE)
+  planExpiresAt       DateTime?
+  freeLimitReached    Boolean   @default(false)
+  
   // Relations
   users              User[]
   accommodations     Accommodation[]
@@ -40,6 +45,7 @@ model Company {
   hotels             Hotel[]
   logs               Log[]
   organizations      Organization[]
+  payments           Payment[]
 }
 
 model User {
@@ -48,7 +54,7 @@ model User {
   name        String?
   createdAt   DateTime @default(now())
   password    String
-  role        Role     @default(KULLANICI)
+  role        Role     @default(SIRKET_YONETICISI)
   permissions String[] @default([])
   companyId   Int
   logs        Log[]
@@ -188,6 +194,31 @@ model Hotel {
 }
 
 // ============================================
+// PAYMENT MODELS
+// ============================================
+
+model Payment {
+  id              Int         @id @default(autoincrement())
+  companyId       Int
+  amount          Float       // Ödeme tutarı (USD)
+  currency        String      @default("USD")
+  plan            CompanyPlan // Hangi plan için ödeme yapıldı
+  status          PaymentStatus @default(PENDING)
+  paymentMethod   String?     // Ödeme yöntemi (stripe, paypal, vb.)
+  transactionId   String?     // Ödeme işlem ID'si
+  notes           String?     // Notlar
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime   @updatedAt
+  paidAt          DateTime?   // Ödeme yapıldığı tarih
+  
+  // Relations
+  company         Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  @@index([companyId])
+  @@index([status])
+}
+
+// ============================================
 // SYSTEM MODELS
 // ============================================
 
@@ -220,9 +251,7 @@ enum CompanyStatus {
 
 enum Role {
   ADMIN
-  MUDUR
-  OPERATOR
-  KULLANICI
+  SIRKET_YONETICISI
 }
 
 enum HotelDurum {
@@ -248,4 +277,17 @@ enum SalePaymentStatus {
   ODENMEDI
   KISMI_ODENDI
   ODENDI
+}
+
+enum CompanyPlan {
+  FREE
+  PRO
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
 }

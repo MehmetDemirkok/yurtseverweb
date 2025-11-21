@@ -37,12 +37,12 @@ export async function GET() {
       }
     });
     
-    if (!user || (!user.permissions?.includes('logs') && user.role !== 'ADMIN' && user.role !== 'MUDUR')) {
+    if (!user || (!user.permissions?.includes('logs') && user.role !== 'ADMIN' && user.role !== 'SIRKET_YONETICISI')) {
       return NextResponse.json({ error: 'Bu sayfaya erişim yetkiniz yok.' }, { status: 403 });
     }
     
-    // Logları çek - ADMIN tüm logları, MUDUR sadece kendi şirketinin loglarını
-    const whereClause = user.role === 'MUDUR' 
+    // Logları çek - ADMIN tüm logları, ŞİRKET_YÖNETİCİSİ sadece kendi şirketinin loglarını
+    const whereClause = user.role === 'SIRKET_YONETICISI' 
       ? { companyId: user.companyId }
       : {};
     

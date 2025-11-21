@@ -15,8 +15,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Şirket bilgisi bulunamadı' }, { status: 400 });
     }
 
-    // Rol kontrolü - sadece MUDUR ve ADMIN silebilir
-    if (!['ADMIN', 'MUDUR'].includes(user.role)) {
+    // Rol kontrolü - sadece ŞİRKET_YÖNETİCİSİ ve ADMIN silebilir
+    if (!['ADMIN', 'SIRKET_YONETICISI'].includes(user.role)) {
       return NextResponse.json({ error: 'Toplu silme yetkiniz yok' }, { status: 403 });
     }
 

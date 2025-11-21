@@ -53,7 +53,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  if (!currentUser || !['ADMIN', 'MUDUR'].includes(currentUser.role)) {
+  if (!currentUser || !['ADMIN', 'SIRKET_YONETICISI'].includes(currentUser.role)) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">

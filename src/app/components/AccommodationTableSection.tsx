@@ -6,6 +6,7 @@ import BulkActionsMenu from "./BulkActionsMenu";
 import AccommodationFormModal from "./AccommodationFormModal";
 import AdvancedFilters, { FilterState } from "./AdvancedFilters";
 import Pagination from "./Pagination";
+import PaymentModal from "@/components/payment/PaymentModal";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -41,7 +42,7 @@ interface User {
   id: number;
   email: string;
   name?: string;
-  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
+  role: 'ADMIN' | 'SIRKET_YONETICISI';
   permissions?: string[];
 }
 
@@ -82,6 +83,12 @@ export default function AccommodationTableSection({
   const [availableColumns, setAvailableColumns] = useState<Array<{ key: string, label: string }>>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentData, setPaymentData] = useState<{
+    accommodationCount: number;
+    accommodationSaleCount: number;
+    message: string;
+  } | null>(null);
 
   // Form state'leri
   const [formData, setFormData] = useState({
@@ -549,7 +556,19 @@ export default function AccommodationTableSection({
         window.location.reload();
       } else {
         const errorData = await response.json();
-        alert(`Hata: ${errorData.error || errorData.message || 'Bir hata oluştu'}`);
+        
+        // Ödeme gerekli hatası
+        if (response.status === 402 && errorData.error === 'PAYMENT_REQUIRED') {
+          setPaymentData({
+            accommodationCount: errorData.accommodationCount || 0,
+            accommodationSaleCount: errorData.accommodationSaleCount || 0,
+            message: errorData.message || 'Ücretsiz plan limitine ulaştınız.',
+          });
+          setShowPaymentModal(true);
+          closeAddModal();
+        } else {
+          alert(`Hata: ${errorData.error || errorData.message || 'Bir hata oluştu'}`);
+        }
       }
     } catch (error) {
       console.error('Kayıt eklenirken hata oluştu:', error);
@@ -940,7 +959,19 @@ export default function AccommodationTableSection({
           window.location.reload();
         } else {
           const errorData = await res.json().catch(() => ({ error: 'Bilinmeyen hata' }));
-          alert(`Kayıtlar içe aktarılamadı: ${errorData.error || 'Bilinmeyen hata'}`);
+          
+          // Ödeme gerekli hatası
+          if (res.status === 402 && errorData.error === 'PAYMENT_REQUIRED') {
+            setPaymentData({
+              accommodationCount: errorData.accommodationCount || 0,
+              accommodationSaleCount: errorData.accommodationSaleCount || 0,
+              message: errorData.message || 'Ücretsiz plan limitine ulaştınız.',
+            });
+            setShowPaymentModal(true);
+            setShowImportModal(false);
+          } else {
+            alert(`Kayıtlar içe aktarılamadı: ${errorData.error || 'Bilinmeyen hata'}`);
+          }
         }
       } catch (error: any) {
         console.error('Excel import error:', error);
@@ -1493,6 +1524,26 @@ export default function AccommodationTableSection({
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
       />
+
+      {/* Payment Modal */}
+      {showPaymentModal && paymentData && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setPaymentData(null);
+          }}
+          onSuccess={() => {
+            setShowPaymentModal(false);
+            setPaymentData(null);
+            // Sayfayı yenile
+            window.location.reload();
+          }}
+          accommodationCount={paymentData.accommodationCount}
+          accommodationSaleCount={paymentData.accommodationSaleCount}
+          message={paymentData.message}
+        />
+      )}
 
       {/* Edit Modal */}
       {showEditModal && editingRecord && (

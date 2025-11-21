@@ -11,7 +11,7 @@ interface User {
   id: number;
   email: string;
   name?: string;
-  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
+  role: 'ADMIN' | 'SIRKET_YONETICISI';
   permissions?: string[];
 }
 

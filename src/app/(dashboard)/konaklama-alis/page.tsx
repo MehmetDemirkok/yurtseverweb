@@ -7,6 +7,7 @@ import AccommodationFolderTree from '@/app/components/AccommodationFolderTree';
 import QuickAddRow from '@/app/components/QuickAddRow';
 import AccommodationStatistics from '@/app/components/AccommodationStatistics';
 import SalesPriceModal from '@/app/components/SalesPriceModal';
+import PaymentModal from '@/components/payment/PaymentModal';
 import { transferToSales } from '@/lib/transferToSales';
 import {
   BedDouble,
@@ -38,6 +39,12 @@ export default function KonaklamaAlisPage() {
   const [showSalesPriceModal, setShowSalesPriceModal] = useState(false);
   const [pendingTransferIds, setPendingTransferIds] = useState<number[]>([]);
   const [transferredRecordIds, setTransferredRecordIds] = useState<Set<number>>(new Set());
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentData, setPaymentData] = useState<{
+    accommodationCount: number;
+    accommodationSaleCount: number;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     // Fetch accommodation purchase statistics
@@ -129,7 +136,15 @@ export default function KonaklamaAlisPage() {
       // Sayfayı yenile
       window.location.reload();
     } catch (error: any) {
-      alert(error.message || 'Satışa aktarma başarısız oldu');
+      // Ödeme gerekli hatası
+      if (error.status === 402 && error.paymentData) {
+        setPaymentData(error.paymentData);
+        setShowPaymentModal(true);
+        setShowSalesPriceModal(false);
+        setPendingTransferIds([]);
+      } else {
+        alert(error.message || 'Satışa aktarma başarısız oldu');
+      }
     }
   };
 
@@ -274,6 +289,26 @@ export default function KonaklamaAlisPage() {
                 setPendingTransferIds([]);
               }}
               onConfirm={handleSalesPriceConfirm}
+            />
+          )}
+
+          {/* Ödeme Modal */}
+          {showPaymentModal && paymentData && (
+            <PaymentModal
+              isOpen={showPaymentModal}
+              onClose={() => {
+                setShowPaymentModal(false);
+                setPaymentData(null);
+              }}
+              onSuccess={() => {
+                setShowPaymentModal(false);
+                setPaymentData(null);
+                // Sayfayı yenile
+                window.location.reload();
+              }}
+              accommodationCount={paymentData.accommodationCount}
+              accommodationSaleCount={paymentData.accommodationSaleCount}
+              message={paymentData.message}
             />
           )}
         </div>

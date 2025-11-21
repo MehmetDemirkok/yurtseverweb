@@ -9,7 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
 
 type MyJwtPayload = JwtPayload & { role: string; userId: number; companyId?: number };
 
-// Kullanıcı güncelle - ADMIN tümünü, MUDUR sadece kendi şirketini
+// Kullanıcı güncelle - ADMIN tümünü, ŞİRKET_YÖNETİCİSİ sadece kendi şirketini
 export async function PUT(request: Request, context: any) {
   try {
     const cookieStore = await cookies();
@@ -19,7 +19,7 @@ export async function PUT(request: Request, context: any) {
     }
     
     const decoded = jwt.verify(token, JWT_SECRET) as MyJwtPayload;
-    if (!['ADMIN', 'MUDUR'].includes(decoded.role)) {
+    if (!['ADMIN', 'SIRKET_YONETICISI'].includes(decoded.role)) {
       return NextResponse.json({ error: 'Bu işlem için yetki gereklidir.' }, { status: 403 });
     }
     
@@ -27,8 +27,8 @@ export async function PUT(request: Request, context: any) {
     const params = await context.params;
     const userId = parseInt(params.id);
     
-    // MUDUR için kullanıcının kendi şirketinde olup olmadığını kontrol et
-    if (decoded.role === 'MUDUR') {
+    // ŞİRKET_YÖNETİCİSİ için kullanıcının kendi şirketinde olup olmadığını kontrol et
+    if (decoded.role === 'SIRKET_YONETICISI') {
       const targetUser = await prisma.user.findUnique({
         where: { id: userId },
         select: { companyId: true, role: true }
@@ -38,9 +38,9 @@ export async function PUT(request: Request, context: any) {
         return NextResponse.json({ error: 'Bu kullanıcıyı düzenleme yetkiniz yok.' }, { status: 403 });
       }
       
-      // MUDUR sadece OPERATOR ve KULLANICI rollerini düzenleyebilir
-      if (['ADMIN', 'MUDUR'].includes(targetUser.role)) {
-        return NextResponse.json({ error: 'Müdür sadece OPERATOR ve KULLANICI rollerini düzenleyebilir.' }, { status: 403 });
+      // ŞİRKET_YÖNETİCİSİ ADMIN rolüne değiştiremez
+      if (targetUser.role === 'ADMIN') {
+        return NextResponse.json({ error: 'Şirket yöneticisi ADMIN rolünü düzenleyemez.' }, { status: 403 });
       }
     }
     
@@ -51,9 +51,9 @@ export async function PUT(request: Request, context: any) {
     }
     
     if (data.role !== undefined) {
-      // MUDUR sadece OPERATOR ve KULLANICI rolüne değiştirebilir
-      if (decoded.role === 'MUDUR' && ['ADMIN', 'MUDUR'].includes(data.role)) {
-        return NextResponse.json({ error: 'Müdür sadece OPERATOR ve KULLANICI rolüne değiştirebilir.' }, { status: 403 });
+      // ŞİRKET_YÖNETİCİSİ ADMIN rolüne değiştiremez
+      if (decoded.role === 'SIRKET_YONETICISI' && data.role === 'ADMIN') {
+        return NextResponse.json({ error: 'Şirket yöneticisi ADMIN rolüne değiştiremez.' }, { status: 403 });
       }
       updateData.role = data.role;
     }
@@ -96,7 +96,7 @@ export async function PUT(request: Request, context: any) {
   }
 }
 
-// Kullanıcı sil - ADMIN tümünü, MUDUR sadece kendi şirketini
+// Kullanıcı sil - ADMIN tümünü, ŞİRKET_YÖNETİCİSİ sadece kendi şirketini
 export async function DELETE(request: Request, context: any) {
   try {
     const cookieStore = await cookies();
@@ -106,7 +106,7 @@ export async function DELETE(request: Request, context: any) {
     }
     
     const decoded = jwt.verify(token, JWT_SECRET) as MyJwtPayload;
-    if (!['ADMIN', 'MUDUR'].includes(decoded.role)) {
+    if (!['ADMIN', 'SIRKET_YONETICISI'].includes(decoded.role)) {
       return NextResponse.json({ error: 'Bu işlem için yetki gereklidir.' }, { status: 403 });
     }
     
@@ -118,8 +118,8 @@ export async function DELETE(request: Request, context: any) {
       return NextResponse.json({ error: 'Kendi hesabınızı silemezsiniz.' }, { status: 400 });
     }
     
-    // MUDUR için kullanıcının kendi şirketinde olup olmadığını kontrol et
-    if (decoded.role === 'MUDUR') {
+    // ŞİRKET_YÖNETİCİSİ için kullanıcının kendi şirketinde olup olmadığını kontrol et
+    if (decoded.role === 'SIRKET_YONETICISI') {
       const targetUser = await prisma.user.findUnique({
         where: { id: userId },
         select: { companyId: true, role: true }
@@ -129,9 +129,9 @@ export async function DELETE(request: Request, context: any) {
         return NextResponse.json({ error: 'Bu kullanıcıyı silme yetkiniz yok.' }, { status: 403 });
       }
       
-      // MUDUR sadece OPERATOR ve KULLANICI rollerini silebilir
-      if (['ADMIN', 'MUDUR'].includes(targetUser.role)) {
-        return NextResponse.json({ error: 'Müdür sadece OPERATOR ve KULLANICI rollerini silebilir.' }, { status: 403 });
+      // ŞİRKET_YÖNETİCİSİ ADMIN rolünü silemez
+      if (targetUser.role === 'ADMIN') {
+        return NextResponse.json({ error: 'Şirket yöneticisi ADMIN rolünü silemez.' }, { status: 403 });
       }
     }
     

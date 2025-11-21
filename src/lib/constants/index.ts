@@ -61,9 +61,7 @@ export const TRANSFER_STATUS = {
 // User Roles
 export const USER_ROLES = {
   ADMIN: 'ADMIN',
-  MUDUR: 'MUDUR',
-  OPERATOR: 'OPERATOR',
-  KULLANICI: 'KULLANICI',
+  SIRKET_YONETICISI: 'SIRKET_YONETICISI',
 } as const;
 
 // Customer Types

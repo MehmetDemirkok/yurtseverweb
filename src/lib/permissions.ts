@@ -74,7 +74,7 @@ export const ROLE_PERMISSIONS: Record<string, RolePermissions> = {
       suppliers: { canView: true, canAdd: true, canEdit: true, canDelete: true },
     },
   },
-  MUDUR: {
+  SIRKET_YONETICISI: {
     canManageUsers: false,
     canViewLogs: false,
     modules: {
@@ -85,32 +85,6 @@ export const ROLE_PERMISSIONS: Record<string, RolePermissions> = {
       drivers: { canView: true, canAdd: true, canEdit: true, canDelete: true },
       customers: { canView: true, canAdd: true, canEdit: true, canDelete: true },
       suppliers: { canView: true, canAdd: true, canEdit: true, canDelete: true },
-    },
-  },
-  OPERATOR: {
-    canManageUsers: false,
-    canViewLogs: false,
-    modules: {
-      accommodation: { canView: true, canAdd: true, canEdit: false, canDelete: false },
-      hotels: { canView: true, canAdd: true, canEdit: false, canDelete: false },
-      transfer: { canView: true, canAdd: true, canEdit: false, canDelete: false },
-      vehicles: { canView: true, canAdd: true, canEdit: false, canDelete: false },
-      drivers: { canView: true, canAdd: true, canEdit: false, canDelete: false },
-      customers: { canView: true, canAdd: true, canEdit: false, canDelete: false },
-      suppliers: { canView: true, canAdd: true, canEdit: false, canDelete: false },
-    },
-  },
-  KULLANICI: {
-    canManageUsers: false,
-    canViewLogs: false,
-    modules: {
-      accommodation: { canView: true, canAdd: false, canEdit: false, canDelete: false },
-      hotels: { canView: true, canAdd: false, canEdit: false, canDelete: false },
-      transfer: { canView: true, canAdd: false, canEdit: false, canDelete: false },
-      vehicles: { canView: true, canAdd: false, canEdit: false, canDelete: false },
-      drivers: { canView: true, canAdd: false, canEdit: false, canDelete: false },
-      customers: { canView: true, canAdd: false, canEdit: false, canDelete: false },
-      suppliers: { canView: true, canAdd: false, canEdit: false, canDelete: false },
     },
   },
 };

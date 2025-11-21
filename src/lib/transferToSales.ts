@@ -17,6 +17,19 @@ export const transferToSales = async (
 
     if (!res.ok) {
       const error = await res.json();
+      
+      // Ödeme gerekli hatası
+      if (res.status === 402 && error.error === 'PAYMENT_REQUIRED') {
+        const paymentError: any = new Error(error.error || 'Satışa aktarma başarısız');
+        paymentError.status = 402;
+        paymentError.paymentData = {
+          accommodationCount: error.accommodationCount || 0,
+          accommodationSaleCount: error.accommodationSaleCount || 0,
+          message: error.message || 'Ücretsiz plan limitine ulaştınız.',
+        };
+        throw paymentError;
+      }
+      
       throw new Error(error.error || 'Satışa aktarma başarısız');
     }
 

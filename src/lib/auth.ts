@@ -7,24 +7,20 @@ export interface UserToken {
   id: number;
   email: string;
   name?: string;
-  role: 'ADMIN' | 'MUDUR' | 'OPERATOR' | 'KULLANICI';
+  role: 'ADMIN' | 'SIRKET_YONETICISI';
   companyId: number;
   companyName?: string;
 }
 
 export enum Role {
   ADMIN = 'ADMIN',
-  MUDUR = 'MUDUR', 
-  OPERATOR = 'OPERATOR',
-  KULLANICI = 'KULLANICI'
+  SIRKET_YONETICISI = 'SIRKET_YONETICISI'
 }
 
-// Role hiyerarşisi - yüksek roller düşük rollerin yetkilerine sahip
+// Role hiyerarşisi - ADMIN en yüksek yetkiye sahip
 export const roleHierarchy = {
-  [Role.ADMIN]: 4,
-  [Role.MUDUR]: 3,
-  [Role.OPERATOR]: 2,
-  [Role.KULLANICI]: 1
+  [Role.ADMIN]: 2,
+  [Role.SIRKET_YONETICISI]: 1
 };
 
 // JWT'den kullanıcı bilgilerini çıkar
@@ -76,7 +72,7 @@ export function hasCompanyAccess(userCompanyId: number, targetCompanyId: number)
 }
 
 // API route'ları için yetkilendirme middleware'i
-export async function requireAuth(requiredRole: Role = Role.USER) {
+export async function requireAuth(requiredRole: Role = Role.SIRKET_YONETICISI) {
   const user = await getUserFromToken();
   
   if (!user) {

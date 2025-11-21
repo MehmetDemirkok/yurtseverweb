@@ -64,7 +64,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     }
 
     // Kullanıcının düzenleme yetkisi kontrol et
-    if (!['ADMIN', 'MUDUR', 'OPERATOR'].includes(user.role)) {
+    if (!['ADMIN', 'SIRKET_YONETICISI'].includes(user.role)) {
       return NextResponse.json({ error: 'Düzenleme yetkiniz yok' }, { status: 403 });
     }
 
@@ -167,7 +167,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     }
 
     // Kullanıcının silme yetkisi kontrol et
-    if (!['ADMIN', 'MUDUR'].includes(user.role)) {
+    if (!['ADMIN', 'SIRKET_YONETICISI'].includes(user.role)) {
       return NextResponse.json({ error: 'Silme yetkiniz yok' }, { status: 403 });
     }
     
