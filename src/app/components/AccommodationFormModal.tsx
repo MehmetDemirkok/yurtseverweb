@@ -80,26 +80,28 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 p-6 relative animate-fade-in">
+      <div className="bg-[var(--card)] rounded-2xl shadow-2xl w-full max-w-4xl mx-4 p-6 relative animate-fade-in">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none z-10"
+          className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-2xl font-bold focus:outline-none z-10 transition-colors"
           aria-label="Kapat"
         >
           <X className="w-6 h-6" />
         </button>
         
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
+        <div className="bg-[var(--muted-background)] border-2 border-[var(--card-border)] rounded-lg p-4 mb-4" style={{
+            background: 'linear-gradient(to right, var(--muted-background), var(--card))'
+        }}>
           <div className="flex items-center gap-2 mb-4">
-            <Plus className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-bold text-gray-800">Yeni Konaklama Kaydı</h2>
+            <Plus className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+            <h2 className="text-xl font-bold text-[var(--text-primary)]">Yeni Konaklama Kaydı</h2>
           </div>
 
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
               {/* Adı Soyadı */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Adı Soyadı *</label>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Adı Soyadı *</label>
                 <input
                   type="text"
                   name="adiSoyadi"
@@ -107,13 +109,13 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
                   onChange={onChange}
                   placeholder="Adı Soyadı"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder:text-[var(--text-muted)]"
                 />
               </div>
 
               {/* Unvanı */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Unvanı *</label>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Unvanı *</label>
                 <input
                   type="text"
                   name="unvani"
@@ -121,7 +123,7 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
                   onChange={onChange}
                   placeholder="Unvanı"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder:text-[var(--text-muted)]"
                 />
               </div>
 
@@ -159,12 +161,12 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
 
               {/* Oda Tipi */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Oda Tipi</label>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Oda Tipi</label>
                 <select
                   name="odaTipi"
                   value={formData.odaTipi}
                   onChange={onChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 >
                   <option value="Single Oda">Single Oda</option>
                   <option value="Double Oda">Double Oda</option>
@@ -175,12 +177,12 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
 
               {/* Konaklama Tipi */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Konaklama Tipi</label>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Konaklama Tipi</label>
                 <select
                   name="konaklamaTipi"
                   value={formData.konaklamaTipi}
                   onChange={onChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 >
                   <option value="BB">BB (Oda Kahvaltı)</option>
                   <option value="HB">HB (Yarım Pansiyon)</option>
@@ -191,7 +193,7 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
 
               {/* Gecelik Ücret */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Gecelik Ücret *</label>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Gecelik Ücret *</label>
                 <input
                   type="number"
                   name="gecelikUcret"
@@ -201,22 +203,22 @@ const AccommodationFormModal: React.FC<AccommodationFormModalProps> = ({
                   min="0"
                   step="0.01"
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder:text-[var(--text-muted)]"
                 />
               </div>
 
               {/* Toplam Ücret (Otomatik) */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Toplam Ücret</label>
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Toplam Ücret</label>
                 <input
                   type="text"
                   value={formData.toplamUcret > 0 ? `₺${formData.toplamUcret.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '₺0,00'}
                   disabled
                   readOnly
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 text-sm font-semibold cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-[var(--card-border)] rounded-lg bg-[var(--muted-background)] text-[var(--text-secondary)] text-sm font-semibold cursor-not-allowed"
                 />
                 {formData.numberOfNights > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
                     {formData.numberOfNights} gece × ₺{(formData.gecelikUcret || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 )}

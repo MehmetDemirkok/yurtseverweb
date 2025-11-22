@@ -190,36 +190,38 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
     };
 
     return (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4 mt-4">
+        <div className="bg-[var(--muted-background)] border-2 border-[var(--card-border)] rounded-lg p-4 mt-4" style={{
+            background: 'linear-gradient(to right, var(--muted-background), var(--card))'
+        }}>
             <div className="flex items-center gap-2 mb-3">
-                <Plus className="w-5 h-5 text-blue-600" />
-                <h3 className="font-semibold text-gray-800">Hızlı Kayıt Ekle</h3>
+                <Plus className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+                <h3 className="font-semibold text-[var(--text-primary)]">Hızlı Kayıt Ekle</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
                 {/* Adı Soyadı */}
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Adı Soyadı *</label>
+                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Adı Soyadı *</label>
                     <input
                         type="text"
                         name="adiSoyadi"
                         value={quickFormData.adiSoyadi}
                         onChange={handleInputChange}
                         placeholder="Adı Soyadı"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder:text-[var(--text-muted)]"
                     />
                 </div>
 
                 {/* Unvanı */}
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Unvanı *</label>
+                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Unvanı *</label>
                     <input
                         type="text"
                         name="unvani"
                         value={quickFormData.unvani}
                         onChange={handleInputChange}
                         placeholder="Unvanı"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder:text-[var(--text-muted)]"
                     />
                 </div>
 
@@ -251,12 +253,12 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
 
                 {/* Oda Tipi */}
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Oda Tipi</label>
+                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Oda Tipi</label>
                     <select
                         name="odaTipi"
                         value={quickFormData.odaTipi}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                     >
                         <option value="Single Oda">Single Oda</option>
                         <option value="Double Oda">Double Oda</option>
@@ -267,12 +269,12 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
 
                 {/* Konaklama Tipi */}
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Konaklama Tipi</label>
+                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Konaklama Tipi</label>
                     <select
                         name="konaklamaTipi"
                         value={quickFormData.konaklamaTipi}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                     >
                         <option value="BB">BB (Oda Kahvaltı)</option>
                         <option value="HB">HB (Yarım Pansiyon)</option>
@@ -283,7 +285,7 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
 
                 {/* Gecelik Ücret */}
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Gecelik Ücret *</label>
+                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Gecelik Ücret *</label>
                     <input
                         type="number"
                         name="gecelikUcret"
@@ -292,22 +294,22 @@ export default function QuickAddRow({ onAddRecord }: QuickAddRowProps) {
                         placeholder="0"
                         min="0"
                         step="0.01"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder:text-[var(--text-muted)]"
                     />
                 </div>
 
                 {/* Toplam Ücret (Otomatik) */}
                 <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Toplam Ücret</label>
+                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Toplam Ücret</label>
                     <input
                         type="text"
                         value={quickFormData.toplamUcret ? `₺${parseFloat(quickFormData.toplamUcret).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '₺0,00'}
                         disabled
                         readOnly
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 text-sm font-semibold cursor-not-allowed"
+                        className="w-full px-3 py-2 border border-[var(--card-border)] rounded-lg bg-[var(--muted-background)] text-[var(--text-secondary)] text-sm font-semibold cursor-not-allowed"
                     />
                     {quickFormData.numberOfNights > 0 && (
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-[var(--text-muted)] mt-1">
                             {quickFormData.numberOfNights} gece × ₺{parseFloat(quickFormData.gecelikUcret || '0').toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                     )}

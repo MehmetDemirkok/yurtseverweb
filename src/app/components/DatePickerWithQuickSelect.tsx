@@ -75,7 +75,7 @@ export default function DatePickerWithQuickSelect({
 
   return (
     <div ref={containerRef} className="relative">
-      <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+      <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">{label}</label>
       <div className="relative">
         <input
           type="date"
@@ -84,7 +84,7 @@ export default function DatePickerWithQuickSelect({
           min={minDate}
           max={maxDate}
           required={required}
-          className={`w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${className}`}
+          className={`w-full px-3 py-2 pr-10 border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${className}`}
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
           <button
@@ -93,7 +93,7 @@ export default function DatePickerWithQuickSelect({
               e.preventDefault();
               setShowQuickSelect(!showQuickSelect);
             }}
-            className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+            className="p-1 text-[var(--text-muted)] hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             title="Hızlı Seçim"
           >
             <Calendar className="w-4 h-4" />
@@ -103,18 +103,18 @@ export default function DatePickerWithQuickSelect({
 
       {/* Hızlı Seçim Dropdown */}
       {showQuickSelect && (
-        <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+        <div className="absolute top-full left-0 mt-1 w-full bg-[var(--card)] border border-[var(--card-border)] rounded-lg shadow-lg z-50">
           <div className="p-2">
-            <div className="text-xs font-semibold text-gray-500 mb-2 px-2">Hızlı Seçim</div>
+            <div className="text-xs font-semibold text-[var(--text-muted)] mb-2 px-2">Hızlı Seçim</div>
             {getQuickDateOptions().map((option) => (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => handleQuickSelect(option.value)}
-                className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 rounded-md transition-colors flex items-center justify-between"
+                className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--hover-bg)] rounded-md transition-colors flex items-center justify-between"
               >
-                <span className="text-gray-700">{option.label}</span>
-                <span className="text-xs text-gray-500">
+                <span className="text-[var(--text-primary)]">{option.label}</span>
+                <span className="text-xs text-[var(--text-muted)]">
                   {option.date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' })}
                 </span>
               </button>

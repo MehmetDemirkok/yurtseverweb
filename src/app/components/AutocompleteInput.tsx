@@ -103,7 +103,7 @@ export default function AutocompleteInput({
   return (
     <div ref={containerRef} className="relative">
       {label && (
-        <label className="block text-xs font-medium text-gray-700 mb-1">
+        <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
@@ -118,14 +118,14 @@ export default function AutocompleteInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           required={required}
-          className={`w-full px-3 py-2 pr-20 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm ${className}`}
+          className={`w-full px-3 py-2 pr-20 border border-[var(--card-border)] bg-[var(--card)] text-[var(--text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm placeholder:text-[var(--text-muted)] ${className}`}
         />
         <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
           {value && (
             <button
               type="button"
               onClick={handleClear}
-              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
               aria-label="Temizle"
             >
               <X className="w-4 h-4" />
@@ -134,7 +134,7 @@ export default function AutocompleteInput({
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
-            className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
             aria-label="Önerileri göster/gizle"
           >
             <ChevronDown
@@ -145,18 +145,18 @@ export default function AutocompleteInput({
       </div>
 
       {isOpen && filteredSuggestions.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full mt-1 bg-[var(--card)] border border-[var(--card-border)] rounded-lg shadow-lg max-h-60 overflow-auto">
           {filteredSuggestions.map((suggestion, index) => (
             <button
               key={index}
               type="button"
               onClick={() => handleSelect(suggestion)}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors ${
-                index === highlightedIndex ? 'bg-blue-100' : ''
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-[var(--hover-bg)] transition-colors ${
+                index === highlightedIndex ? 'bg-[var(--active-bg)]' : ''
               } ${
                 suggestion.toLowerCase() === value.toLowerCase()
-                  ? 'font-semibold text-blue-600'
-                  : 'text-gray-700'
+                  ? 'font-semibold text-blue-600 dark:text-blue-400'
+                  : 'text-[var(--text-primary)]'
               }`}
             >
               {suggestion}
@@ -166,7 +166,7 @@ export default function AutocompleteInput({
       )}
 
       {isOpen && filteredSuggestions.length === 0 && value.trim() !== '' && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-3 text-sm text-gray-500">
+        <div className="absolute z-50 w-full mt-1 bg-[var(--card)] border border-[var(--card-border)] rounded-lg shadow-lg p-3 text-sm text-[var(--text-muted)]">
           Eşleşen öneri bulunamadı
         </div>
       )}

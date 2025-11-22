@@ -572,6 +572,16 @@ html {
   color: var(--text-primary) !important;
 }
 
+/* Select option dark mode support */
+[data-theme="dark"] select option {
+  background-color: var(--card);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] select {
+  color: var(--text-primary);
+}
+
 /* Responsive utilities */
 @media (max-width: 768px) {
   .card {
