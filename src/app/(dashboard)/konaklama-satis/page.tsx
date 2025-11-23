@@ -199,51 +199,324 @@ export default function AccommodationSalesPage() {
     }
   };
 
-  const handleExportExcel = () => {
-    const exportData = filteredSales.map(sale => ({
-      'Misafir': sale.adiSoyadi,
-      'Ünvan': sale.unvani,
-      'Otel': sale.otelAdi || '-',
-      'Giriş': sale.girisTarihi,
-      'Çıkış': sale.cikisTarihi,
-      'Alış Fiyatı': `₺${sale.toplamAlisFiyati.toFixed(2)}`,
-      'Satış Fiyatı': `₺${sale.toplamSatisFiyati.toFixed(2)}`,
-      'Kar': `₺${sale.kar.toFixed(2)}`,
-      'Kar Oranı': `%${sale.karOrani.toFixed(2)}`,
-      'Müşteri': sale.musteriAdi || '-',
-      'Fatura': sale.faturaDurumu,
-      'Ödeme': sale.odemeDurumu,
-      'Ödenen': `₺${sale.odenenTutar.toFixed(2)}`,
-      'Kalan': `₺${sale.kalanTutar.toFixed(2)}`
-    }));
+  const handleExportExcel = async () => {
+    const ExcelJS = (await import('exceljs')).default;
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Satışlar');
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Satışlar');
-    XLSX.writeFile(wb, `Konaklama_Satislar_${new Date().toISOString().split('T')[0]}.xlsx`);
+    // Başlık
+    worksheet.mergeCells('A1:O1');
+    worksheet.getCell('A1').value = 'Konaklama Satış Listesi';
+    worksheet.getCell('A1').font = { size: 16, bold: true, name: 'Arial' };
+    worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(1).height = 25;
+
+    // Başlık satırı
+    const headerRow = worksheet.addRow([
+      'Misafir',
+      'Ünvan',
+      'Otel',
+      'Giriş',
+      'Çıkış',
+      'Alış Fiyatı',
+      'Satış Fiyatı',
+      'Kar',
+      'Kar Oranı',
+      'Müşteri',
+      'Fatura',
+      'Ödeme',
+      'Ödenen',
+      'Kalan'
+    ]);
+    headerRow.font = { 
+      bold: true, 
+      size: 11,
+      name: 'Arial',
+      color: { argb: 'FFFFFFFF' }
+    };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4285F4' },
+    };
+    headerRow.alignment = { 
+      horizontal: 'center', 
+      vertical: 'middle',
+      wrapText: true
+    };
+    headerRow.height = 25;
+
+    // Veri satırları
+    filteredSales.forEach(sale => {
+      const row = worksheet.addRow([
+        sale.adiSoyadi,
+        sale.unvani || '-',
+        sale.otelAdi || '-',
+        new Date(sale.girisTarihi).toLocaleDateString('tr-TR'),
+        new Date(sale.cikisTarihi).toLocaleDateString('tr-TR'),
+        sale.toplamAlisFiyati,
+        sale.toplamSatisFiyati,
+        sale.kar,
+        sale.karOrani,
+        sale.musteriAdi || '-',
+        sale.faturaDurumu,
+        sale.odemeDurumu,
+        sale.odenenTutar,
+        sale.kalanTutar
+      ]);
+      row.font = { size: 10, name: 'Arial' };
+      row.alignment = { vertical: 'middle', wrapText: true };
+
+      // Para birimi formatları
+      row.getCell(6).numFmt = '#,##0.00 ₺';
+      row.getCell(7).numFmt = '#,##0.00 ₺';
+      row.getCell(8).numFmt = '#,##0.00 ₺';
+      row.getCell(9).numFmt = '0.00%';
+      row.getCell(13).numFmt = '#,##0.00 ₺';
+      row.getCell(14).numFmt = '#,##0.00 ₺';
+
+      // Hizalama
+      row.getCell(6).alignment = { horizontal: 'right', vertical: 'middle' };
+      row.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
+      row.getCell(8).alignment = { horizontal: 'right', vertical: 'middle' };
+      row.getCell(9).alignment = { horizontal: 'right', vertical: 'middle' };
+      row.getCell(13).alignment = { horizontal: 'right', vertical: 'middle' };
+      row.getCell(14).alignment = { horizontal: 'right', vertical: 'middle' };
+      row.getCell(4).alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell(5).alignment = { horizontal: 'center', vertical: 'middle' };
+    });
+
+    // Sütun genişlikleri
+    worksheet.getColumn(1).width = 25; // Misafir
+    worksheet.getColumn(2).width = 20; // Ünvan
+    worksheet.getColumn(3).width = 25; // Otel
+    worksheet.getColumn(4).width = 12; // Giriş
+    worksheet.getColumn(5).width = 12; // Çıkış
+    worksheet.getColumn(6).width = 15; // Alış Fiyatı
+    worksheet.getColumn(7).width = 15; // Satış Fiyatı
+    worksheet.getColumn(8).width = 15; // Kar
+    worksheet.getColumn(9).width = 12; // Kar Oranı
+    worksheet.getColumn(10).width = 20; // Müşteri
+    worksheet.getColumn(11).width = 15; // Fatura
+    worksheet.getColumn(12).width = 15; // Ödeme
+    worksheet.getColumn(13).width = 15; // Ödenen
+    worksheet.getColumn(14).width = 15; // Kalan
+
+    // Border ekle
+    worksheet.eachRow((row, rowNumber) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    });
+
+    // Alternatif satır renkleri
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 2 && rowNumber % 2 === 0) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF5F5F5' }
+          };
+        });
+      }
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Konaklama_Satislar_${new Date().toISOString().split('T')[0]}.xlsx`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const handleExportPDF = () => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4',
+      compress: true,
+      putOnlyUsedFonts: true,
+      floatPrecision: 16
+    });
+
+    // PDF metadata ve encoding ayarları
+    doc.setProperties({
+      title: 'Konaklama Satış Listesi',
+      subject: 'Satış Raporu',
+      author: 'Yurtsever Konaklama Yönetim Sistemi',
+      creator: 'TrackInn Web',
+      keywords: 'konaklama, satış, rapor'
+    });
+
+    // Türkçe karakter desteği için font ayarları
+    doc.setFont('helvetica', 'normal');
+
+    // Başlık
     doc.setFontSize(18);
-    doc.text('Konaklama Satış Listesi', 14, 22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Konaklama Satış Listesi', 14, 22, { encoding: 'UTF8' });
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const createDate = `Oluşturulma Tarihi: ${new Date().toLocaleDateString('tr-TR')}`;
+    const totalRecords = `Toplam Kayıt: ${filteredSales.length}`;
+    doc.text(createDate, 14, 28, { encoding: 'UTF8' });
+    doc.text(totalRecords, 14, 33, { encoding: 'UTF8' });
 
     const tableData = filteredSales.map(sale => [
-      sale.adiSoyadi,
+      sale.adiSoyadi || '-',
       sale.otelAdi || '-',
-      `₺${sale.toplamAlisFiyati.toFixed(0)}`,
-      `₺${sale.toplamSatisFiyati.toFixed(0)}`,
-      `₺${sale.kar.toFixed(0)}`,
-      `%${sale.karOrani.toFixed(1)}`,
-      sale.odemeDurumu
+      `${parseFloat(sale.toplamAlisFiyati.toFixed(2)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`,
+      `${parseFloat(sale.toplamSatisFiyati.toFixed(2)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`,
+      `${parseFloat(sale.kar.toFixed(2)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`,
+      `%${sale.karOrani.toFixed(2)}`,
+      sale.odemeDurumu || '-'
     ]);
 
     autoTable(doc, {
       head: [['Misafir', 'Otel', 'Alış', 'Satış', 'Kar', 'Kar %', 'Ödeme']],
       body: tableData,
-      startY: 30,
-      styles: { fontSize: 8 }
+      startY: 38,
+      styles: { 
+        fontSize: 10,
+        font: 'helvetica',
+        fontStyle: 'normal',
+        textColor: [0, 0, 0],
+        cellPadding: { top: 4, right: 3, bottom: 4, left: 3 },
+        overflow: 'linebreak',
+        cellWidth: 'wrap',
+        halign: 'left',
+        valign: 'middle',
+        lineWidth: 0.2,
+        lineColor: [180, 180, 180],
+        minCellHeight: 8
+      },
+      headStyles: { 
+        fillColor: [66, 139, 202],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 11,
+        font: 'helvetica',
+        halign: 'center',
+        valign: 'middle',
+        cellPadding: { top: 5, right: 3, bottom: 5, left: 3 },
+        lineWidth: 0.2,
+        lineColor: [180, 180, 180],
+        minCellHeight: 10
+      },
+      alternateRowStyles: {
+        fillColor: [250, 250, 250],
+        textColor: [0, 0, 0]
+      },
+      didParseCell: function (data: any) {
+        // Türkçe karakterleri korumak için text'i normalize etme
+        if (data.cell && data.cell.text !== undefined && data.cell.text !== null) {
+          if (Array.isArray(data.cell.text)) {
+            data.cell.text = data.cell.text.map((t: any) => {
+              if (t === null || t === undefined) return '';
+              return String(t);
+            });
+          } else {
+            data.cell.text = String(data.cell.text);
+          }
+        }
+      },
+      willDrawCell: function (data: any) {
+        // autoTable'ın kendi text rendering'ini devre dışı bırak
+        if (data.cell && data.cell.text !== undefined && data.cell.text !== null) {
+          data.cell._customText = Array.isArray(data.cell.text) 
+            ? data.cell.text.join(' ')
+            : String(data.cell.text);
+          data.cell.text = '';
+        }
+      },
+      didDrawCell: function (data: any) {
+        // Türkçe karakterleri doğru render etmek için manuel text rendering
+        if (data.cell && data.cell._customText !== undefined) {
+          const text = data.cell._customText;
+          
+          if (text && text.length > 0) {
+            const fontSize = data.cell.styles?.fontSize || (data.section === 'head' ? 11 : 10);
+            const textColor = data.cell.styles?.textColor || (data.section === 'head' ? [255, 255, 255] : [0, 0, 0]);
+            const fontStyle = data.cell.styles?.fontStyle || (data.section === 'head' ? 'bold' : 'normal');
+            const halign = data.cell.styles?.halign || 'left';
+            
+            doc.setFontSize(fontSize);
+            doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+            doc.setFont('helvetica', fontStyle);
+            
+            const paddingLeft = data.cell.padding?.left || 3;
+            const paddingTop = data.cell.padding?.top || 4;
+            const cellWidth = data.cell.width || 30;
+            
+            let x = data.cell.x + paddingLeft;
+            const y = data.cell.y + paddingTop + (fontSize * 0.35);
+            
+            if (halign === 'center') {
+              const textWidth = doc.getTextWidth(text);
+              x = data.cell.x + (cellWidth / 2) - (textWidth / 2);
+            } else if (halign === 'right') {
+              const textWidth = doc.getTextWidth(text);
+              x = data.cell.x + cellWidth - paddingLeft - textWidth;
+            }
+            
+            try {
+              const maxWidth = cellWidth - paddingLeft - (data.cell.padding?.right || 3);
+              if (doc.getTextWidth(text) <= maxWidth) {
+                doc.text(text, x, y);
+              } else {
+                let truncatedText = text;
+                while (doc.getTextWidth(truncatedText) > maxWidth && truncatedText.length > 0) {
+                  truncatedText = truncatedText.slice(0, -1);
+                }
+                if (truncatedText.length < text.length) {
+                  truncatedText += '...';
+                }
+                doc.text(truncatedText, x, y);
+              }
+            } catch (e) {
+              console.warn('Text render hatası:', e);
+            }
+          }
+        }
+      },
+      columnStyles: {
+        0: { halign: 'left', cellWidth: 35, fontSize: 10 },
+        1: { halign: 'left', cellWidth: 35, fontSize: 10 },
+        2: { halign: 'right', cellWidth: 25, fontSize: 10 },
+        3: { halign: 'right', cellWidth: 25, fontSize: 10 },
+        4: { halign: 'right', cellWidth: 25, fontSize: 10 },
+        5: { halign: 'right', cellWidth: 20, fontSize: 10 },
+        6: { halign: 'center', cellWidth: 25, fontSize: 10 }
+      },
+      margin: { top: 38, right: 10, bottom: 20, left: 10 },
+      showHead: 'everyPage',
+      pageBreak: 'auto',
+      theme: 'striped',
+      horizontalPageBreak: false
     });
+
+    // Sayfa numaraları
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      const pageText = `Sayfa ${i} / ${pageCount}`;
+      doc.text(
+        pageText,
+        doc.internal.pageSize.getWidth() / 2,
+        doc.internal.pageSize.getHeight() - 5,
+        { align: 'center', encoding: 'UTF8' }
+      );
+    }
 
     doc.save(`Konaklama_Satislar_${new Date().toISOString().split('T')[0]}.pdf`);
   };

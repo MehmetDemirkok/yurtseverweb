@@ -1021,34 +1021,132 @@ export default function AccommodationTableSection({
     });
   };
 
-  const handleExportFilteredExcel = () => {
+  const handleExportFilteredExcel = async () => {
     if (selectedColumns.length === 0) {
       alert('En az bir sütun seçilmelidir!');
       return;
     }
 
-    // Seçili sütunlara göre veriyi filtrele
-    const exportData = displayRecords.map(record => {
-      const filteredRecord: any = {};
-      selectedColumns.forEach(column => {
-        const colDef = availableColumns.find(c => c.key === column);
-        const label = colDef ? colDef.label : column;
+    // ExcelJS kullanarak daha iyi formatlama
+    const ExcelJS = (await import('exceljs')).default;
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Konaklamalar');
 
+    // Başlık satırı
+    const headers = selectedColumns.map(column => {
+      const colDef = availableColumns.find(c => c.key === column);
+      return colDef ? colDef.label : column;
+    });
+
+    const headerRow = worksheet.addRow(headers);
+    headerRow.font = { 
+      bold: true, 
+      size: 11,
+      name: 'Arial',
+      color: { argb: 'FFFFFFFF' }
+    };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4285F4' },
+    };
+    headerRow.alignment = { 
+      horizontal: 'center', 
+      vertical: 'middle',
+      wrapText: true
+    };
+    headerRow.height = 25;
+
+    // Veri satırları
+    displayRecords.forEach(record => {
+      const rowData = selectedColumns.map(column => {
         let value: any = record[column as keyof AccommodationRecord];
 
         if (column === 'girisTarihi' || column === 'cikisTarihi') {
           value = formatDate(value as string);
+        } else if (column === 'gecelikUcret' || column === 'toplamUcret') {
+          value = typeof value === 'number' ? value : 0;
+        } else if (value === null || value === undefined) {
+          value = '-';
         }
 
-        filteredRecord[label] = value;
+        return value;
       });
-      return filteredRecord;
+
+      const row = worksheet.addRow(rowData);
+      row.font = { size: 10, name: 'Arial' };
+      row.alignment = { vertical: 'middle', wrapText: true };
+
+      // Sütun tipine göre hizalama
+      selectedColumns.forEach((column, index) => {
+        if (column === 'gecelikUcret' || column === 'toplamUcret' || column === 'numberOfNights' || column === 'id') {
+          row.getCell(index + 1).alignment = { horizontal: 'right', vertical: 'middle' };
+          if (column === 'gecelikUcret' || column === 'toplamUcret') {
+            row.getCell(index + 1).numFmt = '#,##0.00 ₺';
+          }
+        } else if (column === 'girisTarihi' || column === 'cikisTarihi') {
+          row.getCell(index + 1).alignment = { horizontal: 'center', vertical: 'middle' };
+        }
+      });
     });
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Konaklamalar");
-    XLSX.writeFile(wb, "Konaklama_Listesi.xlsx");
+    // Sütun genişliklerini ayarla
+    selectedColumns.forEach((column, index) => {
+      if (column === 'id') {
+        worksheet.getColumn(index + 1).width = 10;
+      } else if (column === 'adiSoyadi' || column === 'unvani') {
+        worksheet.getColumn(index + 1).width = 25;
+      } else if (column === 'girisTarihi' || column === 'cikisTarihi') {
+        worksheet.getColumn(index + 1).width = 15;
+      } else if (column === 'gecelikUcret' || column === 'toplamUcret') {
+        worksheet.getColumn(index + 1).width = 18;
+      } else if (column === 'otelAdi') {
+        worksheet.getColumn(index + 1).width = 30;
+      } else if (column === 'ulke' || column === 'sehir') {
+        worksheet.getColumn(index + 1).width = 15;
+      } else if (column === 'odaTipi' || column === 'konaklamaTipi') {
+        worksheet.getColumn(index + 1).width = 20;
+      } else if (column === 'numberOfNights') {
+        worksheet.getColumn(index + 1).width = 12;
+      } else {
+        worksheet.getColumn(index + 1).width = 20;
+      }
+    });
+
+    // Border ekle
+    worksheet.eachRow((row, rowNumber) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    });
+
+    // Alternatif satır renkleri
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber > 1 && rowNumber % 2 === 0) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFF5F5F5' }
+          };
+        });
+      }
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Konaklama_Listesi_${new Date().toISOString().split('T')[0]}.xlsx`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+
     setShowExportFilterModal(false);
   };
 
@@ -1061,22 +1159,41 @@ export default function AccommodationTableSection({
     const doc = new jsPDF({
       orientation: 'landscape', // Yatay yönlendirme daha geniş tablo için
       unit: 'mm',
-      format: 'a4'
+      format: 'a4',
+      compress: true,
+      putOnlyUsedFonts: true,
+      floatPrecision: 16
+    });
+
+    // PDF metadata ve encoding ayarları
+    doc.setProperties({
+      title: 'Konaklama Listesi',
+      subject: 'Konaklama Raporu',
+      author: 'Yurtsever Konaklama Yönetim Sistemi',
+      creator: 'TrackInn Web',
+      keywords: 'konaklama, rapor, liste'
     });
 
     // Türkçe karakter desteği için font ayarları
     doc.setFont('helvetica', 'normal');
-
-    // Başlık
+    
+    // Başlık - Türkçe karakterleri doğru render etmek için
     doc.setFontSize(18);
-    doc.text("Konaklama Listesi", 14, 15);
+    doc.setFont('helvetica', 'bold');
+    const title = "Konaklama Listesi";
+    doc.text(title, 14, 15, { encoding: 'UTF8' });
+    
     doc.setFontSize(10);
-    doc.text(`Oluşturulma Tarihi: ${new Date().toLocaleDateString('tr-TR', { 
+    doc.setFont('helvetica', 'normal');
+    const createDate = `Oluşturulma Tarihi: ${new Date().toLocaleDateString('tr-TR', { 
       day: '2-digit', 
       month: '2-digit', 
       year: 'numeric' 
-    })}`, 14, 22);
-    doc.text(`Toplam Kayıt: ${displayRecords.length}`, 14, 27);
+    })}`;
+    doc.text(createDate, 14, 22, { encoding: 'UTF8' });
+    
+    const totalRecords = `Toplam Kayıt: ${displayRecords.length}`;
+    doc.text(totalRecords, 14, 27, { encoding: 'UTF8' });
 
     // Tablo başlıkları ve verileri
     const tableHeaders = selectedColumns.map(col => {
@@ -1092,8 +1209,16 @@ export default function AccommodationTableSection({
         if (column === 'girisTarihi' || column === 'cikisTarihi') {
           value = formatDate(value as string);
         } else if (column === 'gecelikUcret' || column === 'toplamUcret') {
-          // Para birimi formatı
-          value = typeof value === 'number' ? `₺${value.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (value || '₺0,00');
+          // Para birimi formatı - TL kullanarak daha iyi uyumluluk
+          if (typeof value === 'number') {
+            const formatted = value.toLocaleString('tr-TR', { 
+              minimumFractionDigits: 2, 
+              maximumFractionDigits: 2 
+            });
+            value = `${formatted} TL`;
+          } else {
+            value = '0,00 TL';
+          }
         } else if (column === 'numberOfNights') {
           // Gece sayısı formatı
           value = value ? `${value} gece` : '0 gece';
@@ -1130,35 +1255,138 @@ export default function AccommodationTableSection({
       body: tableData,
       startY: 32,
       styles: { 
-        fontSize: 7, 
-        cellPadding: 2,
+        fontSize: 10, 
+        cellPadding: { top: 4, right: 3, bottom: 4, left: 3 },
         font: 'helvetica',
+        fontStyle: 'normal',
         textColor: [0, 0, 0],
         overflow: 'linebreak',
-        cellWidth: 'wrap'
+        cellWidth: 'wrap',
+        halign: 'left',
+        valign: 'middle',
+        lineWidth: 0.2,
+        lineColor: [180, 180, 180],
+        minCellHeight: 8
       },
       headStyles: { 
         fillColor: [66, 139, 202],
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 8
+        fontSize: 11,
+        font: 'helvetica',
+        halign: 'center',
+        valign: 'middle',
+        cellPadding: { top: 5, right: 3, bottom: 5, left: 3 },
+        lineWidth: 0.2,
+        lineColor: [180, 180, 180],
+        minCellHeight: 10
       },
       alternateRowStyles: {
-        fillColor: [245, 245, 245]
+        fillColor: [250, 250, 250],
+        textColor: [0, 0, 0]
+      },
+      didParseCell: function (data: any) {
+        // Türkçe karakterleri korumak için text'i normalize etme
+        if (data.cell && data.cell.text !== undefined && data.cell.text !== null) {
+          // Text'i olduğu gibi bırak, normalize etme
+          if (Array.isArray(data.cell.text)) {
+            data.cell.text = data.cell.text.map((t: any) => {
+              if (t === null || t === undefined) return '';
+              return String(t);
+            });
+          } else {
+            data.cell.text = String(data.cell.text);
+          }
+        }
+      },
+      willDrawCell: function (data: any) {
+        // autoTable'ın kendi text rendering'ini devre dışı bırak
+        if (data.cell && data.cell.text !== undefined && data.cell.text !== null) {
+          // Text'i sakla ama autoTable'ın render etmesini engelle
+          data.cell._customText = Array.isArray(data.cell.text) 
+            ? data.cell.text.join(' ')
+            : String(data.cell.text);
+          // autoTable'ın kendi rendering'ini devre dışı bırak
+          data.cell.text = '';
+        }
+      },
+      didDrawCell: function (data: any) {
+        // Türkçe karakterleri doğru render etmek için manuel text rendering
+        if (data.cell && data.cell._customText !== undefined) {
+          const text = data.cell._customText;
+          
+          if (text && text.length > 0) {
+            // Font ayarlarını al
+            const fontSize = data.cell.styles?.fontSize || (data.section === 'head' ? 11 : 10);
+            const textColor = data.cell.styles?.textColor || (data.section === 'head' ? [255, 255, 255] : [0, 0, 0]);
+            const fontStyle = data.cell.styles?.fontStyle || (data.section === 'head' ? 'bold' : 'normal');
+            const halign = data.cell.styles?.halign || 'left';
+            
+            // Font ayarlarını uygula
+            doc.setFontSize(fontSize);
+            doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+            doc.setFont('helvetica', fontStyle);
+            
+            // Text pozisyonunu hesapla
+            const paddingLeft = data.cell.padding?.left || 3;
+            const paddingTop = data.cell.padding?.top || 4;
+            const cellWidth = data.cell.width || 30;
+            const cellHeight = data.cell.height || 8;
+            
+            let x = data.cell.x + paddingLeft;
+            const y = data.cell.y + paddingTop + (fontSize * 0.35);
+            
+            // Hizalama ayarla
+            if (halign === 'center') {
+              const textWidth = doc.getTextWidth(text);
+              x = data.cell.x + (cellWidth / 2) - (textWidth / 2);
+            } else if (halign === 'right') {
+              const textWidth = doc.getTextWidth(text);
+              x = data.cell.x + cellWidth - paddingLeft - textWidth;
+            }
+            
+            // Text'i render et - Unicode desteği ile
+            try {
+              // Text'i doğrudan render et (Unicode karakterler korunur)
+              const maxWidth = cellWidth - paddingLeft - (data.cell.padding?.right || 3);
+              if (doc.getTextWidth(text) <= maxWidth) {
+                doc.text(text, x, y);
+              } else {
+                // Text çok uzunsa kısalt
+                let truncatedText = text;
+                while (doc.getTextWidth(truncatedText) > maxWidth && truncatedText.length > 0) {
+                  truncatedText = truncatedText.slice(0, -1);
+                }
+                if (truncatedText.length < text.length) {
+                  truncatedText += '...';
+                }
+                doc.text(truncatedText, x, y);
+              }
+            } catch (e) {
+              // Hata durumunda basit render
+              console.warn('Text render hatası:', e);
+            }
+          }
+        }
       },
       columnStyles: selectedColumns.reduce((acc, col, index) => {
         acc[index] = { 
           cellWidth: columnWidths[index],
           halign: col === 'gecelikUcret' || col === 'toplamUcret' || col === 'numberOfNights' || col === 'id' ? 'right' : 
-                  col === 'girisTarihi' || col === 'cikisTarihi' ? 'center' : 'left'
+                  col === 'girisTarihi' || col === 'cikisTarihi' ? 'center' : 'left',
+          valign: 'middle',
+          fontSize: 10,
+          cellPadding: { top: 4, right: 3, bottom: 4, left: 3 }
         };
         return acc;
       }, {} as any),
-      margin: { top: 32, right: 10, bottom: 10, left: 10 },
+      margin: { top: 32, right: 10, bottom: 20, left: 10 },
       tableWidth: 'wrap',
       showHead: 'everyPage',
       pageBreak: 'auto',
       theme: 'striped',
+      horizontalPageBreak: false,
+      showFoot: false
     });
 
     // Her sayfaya sayfa numarası ekle
@@ -1166,11 +1394,13 @@ export default function AccommodationTableSection({
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      const pageText = `Sayfa ${i} / ${pageCount}`;
       doc.text(
-        `Sayfa ${i} / ${pageCount}`,
+        pageText,
         doc.internal.pageSize.getWidth() / 2,
         doc.internal.pageSize.getHeight() - 5,
-        { align: 'center' }
+        { align: 'center', encoding: 'UTF8' }
       );
     }
 

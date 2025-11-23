@@ -229,34 +229,109 @@ export default function MunferitKonaklamaPage() {
         return row;
       });
 
-      // Excel dosyası oluştur
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+      // ExcelJS kullanarak Excel dosyası oluştur
+      const ExcelJS = (await import('exceljs')).default;
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Puantaj Raporu');
+
+      // Başlık satırı
+      const headerRow = worksheet.addRow(headers);
+      headerRow.font = { 
+        bold: true, 
+        size: 11,
+        name: 'Arial',
+        color: { argb: 'FFFFFFFF' }
+      };
+      headerRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF4285F4' },
+      };
+      headerRow.alignment = { 
+        horizontal: 'center', 
+        vertical: 'middle',
+        wrapText: true
+      };
+      headerRow.height = 25;
+
+      // Veri satırları
+      dataRows.forEach((rowData, index) => {
+        const row = worksheet.addRow(rowData);
+        row.font = { size: 10, name: 'Arial' };
+        row.alignment = { vertical: 'middle', wrapText: true };
+
+        // Para birimi formatları
+        row.getCell(7).numFmt = '#,##0.00 ₺'; // Gecelik Ücret
+        row.getCell(8).numFmt = '#,##0.00 ₺'; // Toplam Ücret
+
+        // Hizalama
+        row.getCell(7).alignment = { horizontal: 'right', vertical: 'middle' };
+        row.getCell(8).alignment = { horizontal: 'right', vertical: 'middle' };
+        row.getCell(9).alignment = { horizontal: 'center', vertical: 'middle' };
+        row.getCell(10).alignment = { horizontal: 'center', vertical: 'middle' };
+        row.getCell(11).alignment = { horizontal: 'right', vertical: 'middle' };
+
+        // Tarih sütunlarını ortala
+        for (let i = 12; i <= headers.length; i++) {
+          row.getCell(i).alignment = { horizontal: 'center', vertical: 'middle' };
+        }
+      });
 
       // Sütun genişliklerini ayarla
-      const colWidths = [
-        { wch: 20 }, // Adı Soyadı
-        { wch: 15 }, // Unvanı
-        { wch: 20 }, // Cari
-        { wch: 20 }, // Otel Adı
-        { wch: 15 }, // Oda Tipi
-        { wch: 15 }, // Konaklama Tipi
-        { wch: 15 }, // Gecelik Ücret
-        { wch: 15 }, // Toplam Ücret
-        { wch: 15 }, // Giriş Tarihi
-        { wch: 15 }, // Çıkış Tarihi
-        { wch: 10 }, // Gece Sayısı
-        ...dateRange.map(() => ({ wch: 8 })) // Tarihler için genişlik
-      ];
-      ws['!cols'] = colWidths;
+      worksheet.getColumn(1).width = 20; // Adı Soyadı
+      worksheet.getColumn(2).width = 15; // Unvanı
+      worksheet.getColumn(3).width = 20; // Cari
+      worksheet.getColumn(4).width = 20; // Otel Adı
+      worksheet.getColumn(5).width = 15; // Oda Tipi
+      worksheet.getColumn(6).width = 18; // Konaklama Tipi
+      worksheet.getColumn(7).width = 15; // Gecelik Ücret
+      worksheet.getColumn(8).width = 15; // Toplam Ücret
+      worksheet.getColumn(9).width = 15; // Giriş Tarihi
+      worksheet.getColumn(10).width = 15; // Çıkış Tarihi
+      worksheet.getColumn(11).width = 12; // Gece Sayısı
+      
+      // Tarih sütunları için genişlik
+      for (let i = 12; i <= headers.length; i++) {
+        worksheet.getColumn(i).width = 8;
+      }
 
-      XLSX.utils.book_append_sheet(wb, ws, 'Puantaj Raporu');
+      // Border ekle
+      worksheet.eachRow((row, rowNumber) => {
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+      });
+
+      // Alternatif satır renkleri
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1 && rowNumber % 2 === 0) {
+          row.eachCell((cell) => {
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFF5F5F5' }
+            };
+          });
+        }
+      });
 
       // Dosya adını oluştur
       const fileName = `Münferit_Konaklama_Puantaj_${startDate.toISOString().split('T')[0]}_${endDate.toISOString().split('T')[0]}.xlsx`;
 
       // Dosyayı indir
-      XLSX.writeFile(wb, fileName);
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Puantaj raporu oluşturulurken hata:', error);
       alert('Puantaj raporu oluşturulurken bir hata oluştu.');

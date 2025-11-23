@@ -57,29 +57,53 @@ export async function GET(request: NextRequest) {
     });
 
     if (format === 'pdf') {
-      const doc = new jsPDF();
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true,
+        putOnlyUsedFonts: true,
+        floatPrecision: 16
+      });
+      
+      // PDF metadata ve encoding ayarları
+      doc.setProperties({
+        title: 'Finansal İşlemler Raporu',
+        subject: 'Finansal Rapor',
+        author: 'Yurtsever Konaklama Yönetim Sistemi',
+        creator: 'TrackInn Web',
+        keywords: 'finans, işlem, rapor'
+      });
+      
+      // Türkçe karakter desteği için font ayarları
+      doc.setFont('helvetica', 'normal');
       
       // Başlık
       doc.setFontSize(18);
-      doc.text('Finansal İşlemler Raporu', 14, 22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Finansal İşlemler Raporu', 14, 22, { encoding: 'UTF8' });
       
       // Tarih aralığı
       if (startDate || endDate) {
-        doc.setFontSize(10);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        const startDateFormatted = startDate ? new Date(startDate).toLocaleDateString('tr-TR') : 'Başlangıç';
+        const endDateFormatted = endDate ? new Date(endDate).toLocaleDateString('tr-TR') : 'Bitiş';
         doc.text(
-          `Tarih: ${startDate || 'Başlangıç'} - ${endDate || 'Bitiş'}`,
+          `Tarih: ${startDateFormatted} - ${endDateFormatted}`,
           14,
-          30
+          30,
+          { encoding: 'UTF8' }
         );
       }
 
-      // Tablo verileri
+      // Tablo verileri - Fiyatları TL formatında
       const tableData = transactions.map((t) => [
         new Date(t.date).toLocaleDateString('tr-TR'),
         t.type === 'GELIR' ? 'Gelir' : 'Gider',
         getCategoryLabel(t.category),
-        t.description,
-        t.amount.toFixed(2) + ' ₺',
+        t.description || '-',
+        `${parseFloat(t.amount.toFixed(2)).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL`,
         t.user?.name || '-',
       ]);
 
@@ -87,8 +111,122 @@ export async function GET(request: NextRequest) {
         head: [['Tarih', 'Tip', 'Kategori', 'Açıklama', 'Tutar', 'Kullanıcı']],
         body: tableData,
         startY: startDate || endDate ? 35 : 30,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [59, 130, 246] },
+        styles: { 
+          fontSize: 10,
+          font: 'helvetica',
+          fontStyle: 'normal',
+          textColor: [0, 0, 0],
+          cellPadding: { top: 4, right: 3, bottom: 4, left: 3 },
+          overflow: 'linebreak',
+          cellWidth: 'wrap',
+          halign: 'left',
+          valign: 'middle',
+          lineWidth: 0.2,
+          lineColor: [180, 180, 180],
+          minCellHeight: 8
+        },
+        headStyles: { 
+          fillColor: [59, 130, 246],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 11,
+          font: 'helvetica',
+          halign: 'center',
+          valign: 'middle',
+          cellPadding: { top: 5, right: 3, bottom: 5, left: 3 },
+          lineWidth: 0.2,
+          lineColor: [180, 180, 180],
+          minCellHeight: 10
+        },
+        alternateRowStyles: {
+          fillColor: [250, 250, 250],
+          textColor: [0, 0, 0]
+        },
+        didParseCell: function (data: any) {
+          // Türkçe karakterleri korumak için text'i normalize etme
+          if (data.cell && data.cell.text !== undefined && data.cell.text !== null) {
+            if (Array.isArray(data.cell.text)) {
+              data.cell.text = data.cell.text.map((t: any) => {
+                if (t === null || t === undefined) return '';
+                return String(t);
+              });
+            } else {
+              data.cell.text = String(data.cell.text);
+            }
+          }
+        },
+        willDrawCell: function (data: any) {
+          // autoTable'ın kendi text rendering'ini devre dışı bırak
+          if (data.cell && data.cell.text !== undefined && data.cell.text !== null) {
+            data.cell._customText = Array.isArray(data.cell.text) 
+              ? data.cell.text.join(' ')
+              : String(data.cell.text);
+            data.cell.text = '';
+          }
+        },
+        didDrawCell: function (data: any) {
+          // Türkçe karakterleri doğru render etmek için manuel text rendering
+          if (data.cell && data.cell._customText !== undefined) {
+            const text = data.cell._customText;
+            
+            if (text && text.length > 0) {
+              const fontSize = data.cell.styles?.fontSize || (data.section === 'head' ? 11 : 10);
+              const textColor = data.cell.styles?.textColor || (data.section === 'head' ? [255, 255, 255] : [0, 0, 0]);
+              const fontStyle = data.cell.styles?.fontStyle || (data.section === 'head' ? 'bold' : 'normal');
+              const halign = data.cell.styles?.halign || 'left';
+              
+              doc.setFontSize(fontSize);
+              doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+              doc.setFont('helvetica', fontStyle);
+              
+              const paddingLeft = data.cell.padding?.left || 3;
+              const paddingTop = data.cell.padding?.top || 4;
+              const cellWidth = data.cell.width || 30;
+              
+              let x = data.cell.x + paddingLeft;
+              const y = data.cell.y + paddingTop + (fontSize * 0.35);
+              
+              if (halign === 'center') {
+                const textWidth = doc.getTextWidth(text);
+                x = data.cell.x + (cellWidth / 2) - (textWidth / 2);
+              } else if (halign === 'right') {
+                const textWidth = doc.getTextWidth(text);
+                x = data.cell.x + cellWidth - paddingLeft - textWidth;
+              }
+              
+              try {
+                const maxWidth = cellWidth - paddingLeft - (data.cell.padding?.right || 3);
+                if (doc.getTextWidth(text) <= maxWidth) {
+                  doc.text(text, x, y);
+                } else {
+                  let truncatedText = text;
+                  while (doc.getTextWidth(truncatedText) > maxWidth && truncatedText.length > 0) {
+                    truncatedText = truncatedText.slice(0, -1);
+                  }
+                  if (truncatedText.length < text.length) {
+                    truncatedText += '...';
+                  }
+                  doc.text(truncatedText, x, y);
+                }
+              } catch (e) {
+                console.warn('Text render hatası:', e);
+              }
+            }
+          }
+        },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 25, fontSize: 10 },
+          1: { halign: 'center', cellWidth: 20, fontSize: 10 },
+          2: { halign: 'left', cellWidth: 30, fontSize: 10 },
+          3: { halign: 'left', cellWidth: 50, fontSize: 10 },
+          4: { halign: 'right', cellWidth: 25, fontSize: 10 },
+          5: { halign: 'left', cellWidth: 30, fontSize: 10 }
+        },
+        margin: { top: startDate || endDate ? 35 : 30, right: 14, bottom: 20, left: 14 },
+        showHead: 'everyPage',
+        pageBreak: 'auto',
+        theme: 'striped',
+        horizontalPageBreak: false
       });
 
       // Toplamlar
@@ -102,10 +240,14 @@ export async function GET(request: NextRequest) {
 
       // Son tablo pozisyonunu al
       const finalY = (doc as any).lastAutoTable?.finalY || (startDate || endDate ? 35 : 30) + (tableData.length * 10);
-      doc.setFontSize(10);
-      doc.text(`Toplam Gelir: ${totalIncome.toFixed(2)} ₺`, 14, finalY + 10);
-      doc.text(`Toplam Gider: ${totalExpense.toFixed(2)} ₺`, 14, finalY + 16);
-      doc.text(`Net Kar: ${profit.toFixed(2)} ₺`, 14, finalY + 22);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      const totalIncomeText = `Toplam Gelir: ${totalIncome.toFixed(2).replace('.', ',')} TL`;
+      const totalExpenseText = `Toplam Gider: ${totalExpense.toFixed(2).replace('.', ',')} TL`;
+      const profitText = `Net Kar: ${profit.toFixed(2).replace('.', ',')} TL`;
+      doc.text(totalIncomeText, 14, finalY + 10, { encoding: 'UTF8' });
+      doc.text(totalExpenseText, 14, finalY + 16, { encoding: 'UTF8' });
+      doc.text(profitText, 14, finalY + 22, { encoding: 'UTF8' });
 
       const pdfOutput = doc.output('arraybuffer');
       const pdfBuffer = Buffer.from(pdfOutput);
@@ -144,25 +286,47 @@ export async function GET(request: NextRequest) {
         'Kullanıcı',
         'Notlar',
       ]);
-      headerRow.font = { bold: true };
+      headerRow.font = { 
+        bold: true, 
+        size: 11,
+        name: 'Arial',
+        color: { argb: 'FFFFFFFF' }
+      };
       headerRow.fill = {
         type: 'pattern',
         pattern: 'solid',
         fgColor: { argb: 'FF3B82F6' },
       };
-      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      headerRow.alignment = { 
+        horizontal: 'center', 
+        vertical: 'middle',
+        wrapText: true
+      };
+      headerRow.height = 25;
 
       // Veri satırları
       transactions.forEach((transaction) => {
-        worksheet.addRow([
+        const row = worksheet.addRow([
           new Date(transaction.date).toLocaleDateString('tr-TR'),
           transaction.type === 'GELIR' ? 'Gelir' : 'Gider',
           getCategoryLabel(transaction.category),
-          transaction.description,
+          transaction.description || '-',
           transaction.amount,
           transaction.user?.name || '-',
           transaction.notes || '-',
         ]);
+        row.font = { 
+          size: 10,
+          name: 'Arial'
+        };
+        row.alignment = { 
+          vertical: 'middle',
+          wrapText: true
+        };
+        // Tutar sütununu sağa hizala
+        row.getCell(5).alignment = { horizontal: 'right', vertical: 'middle' };
+        row.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+        row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
       });
 
       // Toplam satırı
@@ -184,15 +348,56 @@ export async function GET(request: NextRequest) {
         '',
         '',
       ]);
-      summaryRow.font = { bold: true };
+      summaryRow.font = { bold: true, size: 11, name: 'Arial' };
+      summaryRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF3F4F6' },
+      };
 
-      worksheet.addRow(['', '', '', 'Toplam Gelir:', totalIncome, '', '']);
-      worksheet.addRow(['', '', '', 'Toplam Gider:', totalExpense, '', '']);
-      worksheet.addRow(['', '', '', 'Net Kar:', profit, '', '']);
+      const incomeRow = worksheet.addRow(['', '', '', 'Toplam Gelir:', totalIncome, '', '']);
+      incomeRow.getCell(4).font = { bold: true, size: 10, name: 'Arial' };
+      incomeRow.getCell(5).font = { bold: true, size: 10, name: 'Arial' };
+      incomeRow.getCell(5).numFmt = '#,##0.00 ₺';
+      incomeRow.getCell(5).alignment = { horizontal: 'right', vertical: 'middle' };
 
-      // Sütun genişlikleri
-      worksheet.columns.forEach((column) => {
-        column.width = 15;
+      const expenseRow = worksheet.addRow(['', '', '', 'Toplam Gider:', totalExpense, '', '']);
+      expenseRow.getCell(4).font = { bold: true, size: 10, name: 'Arial' };
+      expenseRow.getCell(5).font = { bold: true, size: 10, name: 'Arial' };
+      expenseRow.getCell(5).numFmt = '#,##0.00 ₺';
+      expenseRow.getCell(5).alignment = { horizontal: 'right', vertical: 'middle' };
+
+      const profitRow = worksheet.addRow(['', '', '', 'Net Kar:', profit, '', '']);
+      profitRow.getCell(4).font = { bold: true, size: 11, name: 'Arial' };
+      profitRow.getCell(5).font = { bold: true, size: 11, name: 'Arial' };
+      profitRow.getCell(5).numFmt = '#,##0.00 ₺';
+      profitRow.getCell(5).alignment = { horizontal: 'right', vertical: 'middle' };
+      profitRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0F2FE' },
+      };
+
+      // Sütun genişlikleri ve formatları
+      worksheet.getColumn(1).width = 15; // Tarih
+      worksheet.getColumn(2).width = 12; // Tip
+      worksheet.getColumn(3).width = 20; // Kategori
+      worksheet.getColumn(4).width = 40; // Açıklama
+      worksheet.getColumn(5).width = 15; // Tutar
+      worksheet.getColumn(5).numFmt = '#,##0.00 ₺'; // Para formatı
+      worksheet.getColumn(6).width = 20; // Kullanıcı
+      worksheet.getColumn(7).width = 30; // Notlar
+      
+      // Tüm hücreler için border
+      worksheet.eachRow((row, rowNumber) => {
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
       });
 
       const buffer = await workbook.xlsx.writeBuffer();
