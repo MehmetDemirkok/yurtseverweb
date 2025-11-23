@@ -9,47 +9,47 @@ datasource db {
 }
 
 model Company {
-  id                 Int                 @id @default(autoincrement())
-  name               String
-  email              String              @unique
-  phone              String?
-  address            String?
-  city               String?
-  country            String              @default("Türkiye")
-  taxNumber          String?
-  taxOffice          String?
-  logo               String?
-  status             CompanyStatus       @default(ACTIVE)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  arventoApiKey      String?
-  arventoBaseUrl     String?             @default("https://api.arvento.com")
-  arventoIsConnected Boolean             @default(false)
-  arventoLastTest    DateTime?
-  plan               CompanyPlan         @default(FREE)
-  planExpiresAt      DateTime?
-  freeLimitReached   Boolean             @default(false)
-  accommodations     Accommodation[]
-  accommodationSales AccommodationSale[]
-  hotels             Hotel[]
-  logs               Log[]
-  organizations      Organization[]
-  payments                Payment[]
-  users                   User[]
-  financialTransactions   FinancialTransaction[]
+  id                    Int                    @id @default(autoincrement())
+  name                  String
+  email                 String                 @unique
+  phone                 String?
+  address               String?
+  city                  String?
+  country               String                 @default("Türkiye")
+  taxNumber             String?
+  taxOffice             String?
+  logo                  String?
+  status                CompanyStatus          @default(ACTIVE)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  arventoApiKey         String?
+  arventoBaseUrl        String?                @default("https://api.arvento.com")
+  arventoIsConnected    Boolean                @default(false)
+  arventoLastTest       DateTime?
+  plan                  CompanyPlan            @default(FREE)
+  planExpiresAt         DateTime?
+  freeLimitReached      Boolean                @default(false)
+  accommodations        Accommodation[]
+  accommodationSales    AccommodationSale[]
+  hotels                Hotel[]
+  logs                  Log[]
+  organizations         Organization[]
+  payments              Payment[]
+  users                 User[]
+  financialTransactions FinancialTransaction[]
 }
 
 model User {
-  id          Int      @id @default(autoincrement())
-  email       String   @unique
-  name        String?
-  createdAt   DateTime @default(now())
-  password    String
-  role        Role     @default(SIRKET_YONETICISI)
-  permissions String[] @default([])
-  companyId   Int
-  logs        Log[]
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id                    Int                    @id @default(autoincrement())
+  email                 String                 @unique
+  name                  String?
+  createdAt             DateTime               @default(now())
+  password              String
+  role                  Role                   @default(SIRKET_YONETICISI)
+  permissions           String[]               @default([])
+  companyId             Int
+  logs                  Log[]
+  company               Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
   financialTransactions FinancialTransaction[]
 
   @@unique([email, companyId])
@@ -104,6 +104,10 @@ model Accommodation {
   company         Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
   organization    Organization?       @relation(fields: [organizationId], references: [id])
   sales           AccommodationSale[]
+
+  @@index([companyId])
+  @@index([companyId, createdAt])
+  @@index([companyId, girisTarihi, cikisTarihi])
 }
 
 model AccommodationSale {
@@ -136,6 +140,9 @@ model AccommodationSale {
   companyId         Int
   accommodation     Accommodation     @relation(fields: [accommodationId], references: [id], onDelete: Cascade)
   company           Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([companyId, createdAt])
 }
 
 model Hotel {
@@ -257,7 +264,7 @@ enum FinancialTransactionCategory {
 }
 
 model FinancialTransaction {
-  id          Int                        @id @default(autoincrement())
+  id          Int                          @id @default(autoincrement())
   type        FinancialTransactionType
   category    FinancialTransactionCategory
   description String
@@ -266,11 +273,11 @@ model FinancialTransaction {
   companyId   Int
   userId      Int?
   notes       String?
-  createdAt   DateTime                   @default(now())
-  updatedAt   DateTime                   @updatedAt
+  createdAt   DateTime                     @default(now())
+  updatedAt   DateTime                     @updatedAt
 
-  company     Company                    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  user        User?                      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([companyId])
   @@index([date])
