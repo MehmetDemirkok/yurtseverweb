@@ -1492,8 +1492,8 @@ export default function AccommodationTableSection({
 
       {/* Tablo */}
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto" style={{ touchAction: 'pan-x', WebkitOverflowScrolling: 'touch' }}>
+          <table className="min-w-full divide-y divide-gray-200" style={{ touchAction: 'manipulation' }}>
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1542,7 +1542,7 @@ export default function AccommodationTableSection({
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200" style={{ touchAction: 'manipulation' }}>
               {loading ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
@@ -1605,26 +1605,60 @@ export default function AccommodationTableSection({
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" style={{ touchAction: 'manipulation' }}>
                       {!isTransferred && (
-                        <>
+                        <div className="flex items-center justify-end gap-2" style={{ touchAction: 'manipulation' }}>
                           {canEdit() && (
                             <button
-                              onClick={() => handleEditClick(record.id)}
-                              className="text-indigo-600 hover:text-indigo-900 mr-4"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleEditClick(record.id);
+                              }}
+                              onTouchEnd={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleEditClick(record.id);
+                              }}
+                              className="text-indigo-600 hover:text-indigo-900 active:text-indigo-700 touch-manipulation select-none px-3 py-2 rounded transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center font-medium"
+                              style={{ 
+                                touchAction: 'manipulation',
+                                WebkitTapHighlightColor: 'transparent',
+                                userSelect: 'none',
+                                WebkitUserSelect: 'none',
+                                cursor: 'pointer',
+                                zIndex: 10
+                              }}
                             >
                               Düzenle
                             </button>
                           )}
                           {canDelete() && (
                             <button
-                              onClick={() => handleDeleteClick(record.id)}
-                              className="text-red-600 hover:text-red-900"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDeleteClick(record.id);
+                              }}
+                              onTouchEnd={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDeleteClick(record.id);
+                              }}
+                              className="text-red-600 hover:text-red-900 active:text-red-700 active:bg-red-50 touch-manipulation select-none px-3 py-2 rounded transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center font-medium"
+                              style={{ 
+                                touchAction: 'manipulation',
+                                WebkitTapHighlightColor: 'transparent',
+                                userSelect: 'none',
+                                WebkitUserSelect: 'none',
+                                cursor: 'pointer',
+                                zIndex: 10
+                              }}
                             >
                               Sil
                             </button>
                           )}
-                        </>
+                        </div>
                       )}
                       {isTransferred && (
                         <span className="text-xs text-gray-500 italic">Satış sayfasında görüntülenebilir</span>
